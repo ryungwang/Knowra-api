@@ -9,7 +9,7 @@
         <relativePath/>
     </parent>
     <groupId>com</groupId>
-    <artifactId>Knowra</artifactId>
+    <artifactId>Knowra-api</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <packaging>war</packaging>
     <name>Knowra-api</name>
