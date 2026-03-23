@@ -1,4 +1,4 @@
-package com.knowra.user.service.user;
+package com.knowra.user.service;
 
 import com.knowra.cmm.service.RedisApiService;
 import com.knowra.user.repository.user.TblUserRepository;

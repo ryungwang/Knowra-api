@@ -1,6 +1,6 @@
 package com.knowra.user.controller;
 
-import com.knowra.user.service.user.UserService;
+import com.knowra.user.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.RestController;

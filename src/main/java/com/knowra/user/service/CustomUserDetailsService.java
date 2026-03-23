@@ -1,4 +1,4 @@
-package com.knowra.user.service.user;
+package com.knowra.user.service;
 
 import com.knowra.user.entity.user.TblUser;
 import com.knowra.user.repository.user.TblUserRepository;
