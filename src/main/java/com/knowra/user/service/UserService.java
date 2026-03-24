@@ -1,7 +1,7 @@
 package com.knowra.user.service;
 
 import com.knowra.cmm.service.RedisApiService;
-import com.knowra.user.repository.user.TblUserRepository;
+import com.knowra.user.repository.TblUserRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;

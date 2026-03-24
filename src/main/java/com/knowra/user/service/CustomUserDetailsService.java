@@ -1,7 +1,7 @@
 package com.knowra.user.service;
 
 import com.knowra.user.entity.user.TblUser;
-import com.knowra.user.repository.user.TblUserRepository;
+import com.knowra.user.repository.TblUserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.User;

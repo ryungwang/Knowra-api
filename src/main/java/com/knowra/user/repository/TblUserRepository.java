@@ -1,4 +1,4 @@
-package com.knowra.user.repository.user;
+package com.knowra.user.repository;
 
 import com.knowra.user.entity.user.TblUser;
 import org.springframework.data.jpa.repository.JpaRepository;

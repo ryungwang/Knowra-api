@@ -3,8 +3,12 @@ package com.knowra.community.service;
 import com.knowra.cmm.model.ResponseCode;
 import com.knowra.cmm.model.ResultVO;
 import com.knowra.cmm.service.RedisApiService;
+import com.knowra.cmm.util.FileUtil;
+import com.knowra.common.entity.QTblComFile;
+import com.knowra.common.repository.TblComFileRepository;
 import com.knowra.community.entity.TblCommunity;
 import com.knowra.community.repository.TblCommunityRepository;
+import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
@@ -12,7 +16,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartRequest;
+import org.springframework.web.multipart.MultipartHttpServletRequest;
+
+import static com.knowra.admin.entity.QTblPst.tblPst;
 
 
 @Service
@@ -22,24 +28,39 @@ public class CommunityService {
 
     private static final Logger logger = LoggerFactory.getLogger(CommunityService.class);
     private final TblCommunityRepository tblCommunityRepository;
+    private final TblComFileRepository tblComFileRepository;
+    private final FileUtil fileUtil;
 
     @PersistenceContext
     private EntityManager em;
 
     private final RedisApiService redisApiService;
 
-    public ResultVO setCommunity(TblCommunity tblCommunity, MultipartRequest request) {
+    public ResultVO setCommunity(TblCommunity tblCommunity, MultipartHttpServletRequest request) {
         ResultVO resultVO = new ResultVO();
 
         try {
-            System.out.println(request.getFiles("bannerImage"));
-//            tblCommunityRepository.save(tblCommunity);
+            tblCommunityRepository.save(tblCommunity);
 
+            if(request.getFile("logoImage") != null) {
+                tblComFileRepository.save(
+                        fileUtil.devFileInf(
+                                request.getFile("logoImage"),
+                                "/communities/" + tblCommunity.getCommunitySn() + "/logo",
+                                "community_" + tblCommunity.getCommunitySn()
+                        )
+                );
+            }
 
-//            TblUserBalance tblUserBalance = new TblUserBalance();
-//            tblUserBalance.setUserSn(tblUser.getUserSn());
-//            tblUserBalance.setCreatrSn(tblUser.getUserSn());
-//            tblUserBalanceRepository.save(tblUserBalance);
+            if(request.getFile("bannerImage") != null) {
+                tblComFileRepository.save(
+                        fileUtil.devFileInf(
+                                request.getFile("bannerImage"),
+                                "/communities/" + tblCommunity.getCommunitySn() + "/banner",
+                                "community_" + tblCommunity.getCommunitySn()
+                        )
+                );
+            }
 
 //            resultVO.putResult("userSn", tblUser.getUserSn());
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
