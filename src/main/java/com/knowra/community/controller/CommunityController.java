@@ -4,11 +4,8 @@ import com.knowra.cmm.model.ResultVO;
 import com.knowra.community.entity.TblCommunity;
 import com.knowra.community.service.CommunityService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.multipart.MultipartRequest;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartHttpServletRequest;
 
 @RestController
 @CrossOrigin("*")
@@ -18,7 +15,9 @@ public class CommunityController {
     private final CommunityService communityService;
 
     @PostMapping("/api/community/setCommunity")
-    public ResultVO setCommunity(@RequestBody TblCommunity tblCommunity, MultipartRequest request) {
+    public ResultVO setCommunity(
+            @ModelAttribute TblCommunity tblCommunity,
+            MultipartHttpServletRequest request) {
         return communityService.setCommunity(tblCommunity, request);
     }
 
