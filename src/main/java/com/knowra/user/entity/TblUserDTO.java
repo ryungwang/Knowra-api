@@ -1,6 +1,6 @@
 package com.knowra.user.entity;
 
-import com.knowra.user.entity.user.TblUser;
+import com.knowra.user.entity.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;

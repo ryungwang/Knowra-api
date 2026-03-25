@@ -8,7 +8,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @AllArgsConstructor
-public class CommunitytDTO {
+public class CommunityDTO {
 
     TblCommunities tblCommunities;
     Long totalUser;

@@ -1,7 +1,7 @@
 package com.knowra.admin.entity;
 
 import com.knowra.common.entity.TblComFile;
-import com.knowra.user.entity.user.TblUser;
+import com.knowra.user.entity.*;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
