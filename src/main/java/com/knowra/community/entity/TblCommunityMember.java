@@ -28,15 +28,15 @@ public class TblCommunityMember {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "MEMBER_SN")
     @Comment("멤버 일련번호")
-    private Integer memberSn;
+    private Long memberSn;
 
     @Column(name = "COMMUNITY_SN", nullable = false)
     @Comment("커뮤니티 일련번호")
-    private Integer communitySn;
+    private long communitySn;
 
     @Column(name = "USER_SN", nullable = false)
     @Comment("유저 일련번호")
-    private Integer userSn;
+    private long userSn;
 
     @Column(name = "ROLE", length = 20, nullable = false)
     @Comment("역할 (OWNER, ADMIN, MEMBER)")
@@ -66,7 +66,7 @@ public class TblCommunityMember {
 
     @Column(name = "CREATR_SN", nullable = false, updatable = false)
     @Comment("생성자 일련번호")
-    private Integer creatrSn;
+    private long creatrSn;
 
     @Column(name = "FRST_CRT_DT", nullable = false, updatable = false,
             columnDefinition = "DATETIME DEFAULT CURRENT_TIMESTAMP")
@@ -76,7 +76,7 @@ public class TblCommunityMember {
 
     @Column(name = "MDFR_SN", insertable = false)
     @Comment("수정자 일련번호")
-    private Integer mdfrSn;
+    private Long mdfrSn;
 
     @Column(name = "MDFCN_DT", columnDefinition = "DATETIME ON UPDATE CURRENT_TIMESTAMP")
     @Comment("수정일")

@@ -11,7 +11,7 @@ import lombok.Setter;
 public class CommunitytDTO {
 
     TblCommunities tblCommunities;
-    Integer totalUser;
+    Long totalUser;
     TblComFile logoFile;
     TblComFile bannerFile;
 }
