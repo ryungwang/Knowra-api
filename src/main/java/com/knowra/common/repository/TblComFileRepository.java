@@ -12,4 +12,5 @@ public interface TblComFileRepository extends JpaRepository<TblComFile, String> 
     TblComFile findByAtchFileSn(Long atchFileSn);
     List<TblComFile> findAllByPsnTblSn(String psnTblSn);
     TblComFile findByPsnTblSn(String psnTblSn);
+    TblComFile findByPsnTblSnAndAtchFilePathNmContaining(String psnTblSn, String pathKeyword);
 }

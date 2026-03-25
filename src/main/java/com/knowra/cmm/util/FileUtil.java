@@ -48,7 +48,7 @@ public class FileUtil {
 			long _size = f.getSize();
 			if (!"".equals(orginFileName)) {
 				filePath = storePathString + File.separator + newName + "." + fileExt;
-				f.transferTo(new File(filePathBlackList(filePath)));
+				f.transferTo(new File(filePathBlackList(filePath)).getAbsoluteFile());
 			}
 			comFile.setStrgFileNm(newName);
 			comFile.setAtchFileNm(orginFileName);
@@ -83,7 +83,7 @@ public class FileUtil {
 		long _size = file.getSize();
 		if (!"".equals(orginFileName)) {
 			filePath = storePathString + File.separator + newName + "." + fileExt;
-			file.transferTo(new File(filePathBlackList(filePath)));
+			file.transferTo(new File(filePathBlackList(filePath)).getAbsoluteFile());
 		}
 		result.setStrgFileNm(newName);
 		result.setAtchFileNm(orginFileName);

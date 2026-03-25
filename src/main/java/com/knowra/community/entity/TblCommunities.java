@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class TblCommunity {
+public class TblCommunities {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -62,4 +62,6 @@ public class TblCommunity {
   @Column(name = "MDFCN_DT", columnDefinition = "DATETIME ON UPDATE CURRENT_TIMESTAMP")
   @Comment("수정일")
   private LocalDateTime mdfcnDt;
+
+
 }
