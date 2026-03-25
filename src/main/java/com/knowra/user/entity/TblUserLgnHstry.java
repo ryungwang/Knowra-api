@@ -1,4 +1,4 @@
-package com.knowra.user.entity.user;
+package com.knowra.user.entity;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;

@@ -6,8 +6,17 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-@Repository
-public interface TblCommunitiesRepository extends JpaRepository<TblCommunities, String> {
+import java.util.List;
 
-    TblCommunities findByCommunityNm(String communityNm);
+@Repository
+public interface TblCommunitiesRepository extends JpaRepository<TblCommunities, Long> {
+
+    TblCommunities findByCommNm(String commNm);
+
+    TblCommunities findByCommSn(Long commSn);
+
+    List<TblCommunities> findAllByCommSnIn(List<Long> commSnList);
+
+    @Query("SELECT c FROM TblCommunities c LEFT JOIN FETCH c.logoFile LEFT JOIN FETCH c.bnrFile JOIN c.members m WHERE m.userSn = :userSn AND m.stat = 'ACTIVE' AND m.actvtnYn = 'Y'")
+    List<TblCommunities> findAllByMemberUserSn(@Param("userSn") long userSn);
 }

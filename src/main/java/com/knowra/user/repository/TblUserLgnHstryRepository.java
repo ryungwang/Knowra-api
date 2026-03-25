@@ -1,6 +1,6 @@
-package com.knowra.user.repository.user;
+package com.knowra.user.repository;
 
-import com.knowra.user.entity.user.TblUserLgnHstry;
+import com.knowra.user.entity.TblUserLgnHstry;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;

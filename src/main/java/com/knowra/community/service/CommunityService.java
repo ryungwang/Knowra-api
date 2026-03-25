@@ -4,16 +4,11 @@ import com.knowra.cmm.model.ResponseCode;
 import com.knowra.cmm.model.ResultVO;
 import com.knowra.cmm.service.RedisApiService;
 import com.knowra.cmm.util.FileUtil;
-import com.knowra.common.entity.QTblComFile;
 import com.knowra.common.entity.TblComFile;
 import com.knowra.common.repository.TblComFileRepository;
 import com.knowra.community.entity.*;
 import com.knowra.community.repository.TblCommunitiesRepository;
 import com.knowra.community.repository.TblCommunityMemberRepository;
-import com.querydsl.core.types.Projections;
-import com.querydsl.core.types.dsl.Expressions;
-import com.querydsl.jpa.JPAExpressions;
-import com.querydsl.jpa.JPQLQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -23,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartHttpServletRequest;
 
 import java.util.List;
+import java.util.Map;
 
 
 @Service
@@ -39,36 +35,44 @@ public class CommunityService {
     @PersistenceContext
     private EntityManager em;
 
-    public ResultVO setCommunity(TblCommunities tblCommunities, MultipartHttpServletRequest request) {
+    public ResultVO setCommunity(TblCommunities tblCommunities, MultipartHttpServletRequest request, String token) {
         ResultVO resultVO = new ResultVO();
 
         try {
+            long userSn = 1L; // TODO: 레디스에서 추출
+            tblCommunities.setCreatrSn(userSn);
             tblCommunitiesRepository.save(tblCommunities);
 
-            if(request.getFile("logoImage") != null) {
-                tblComFileRepository.save(
-                        fileUtil.devFileInf(
-                                request.getFile("logoImage"),
-                                "/communities/" + tblCommunities.getCommunitySn() + "/logo",
-                                "community_" + tblCommunities.getCommunitySn()
-                        )
+            String psnTblSn = "community_" + tblCommunities.getCommSn();
+
+            if (request.getFile("logoImage") != null) {
+                TblComFile logoFile = fileUtil.devFileInf(
+                        request.getFile("logoImage"),
+                        "/communities/" + tblCommunities.getCommSn() + "/logo",
+                        psnTblSn
                 );
+                logoFile.setCreatrSn(userSn);
+                TblComFile savedLogo = tblComFileRepository.save(logoFile);
+                tblCommunities.setLogoFileSn(savedLogo.getAtchFileSn());
             }
 
-            if(request.getFile("bannerImage") != null) {
-                tblComFileRepository.save(
-                        fileUtil.devFileInf(
-                                request.getFile("bannerImage"),
-                                "/communities/" + tblCommunities.getCommunitySn() + "/banner",
-                                "community_" + tblCommunities.getCommunitySn()
-                        )
+            if (request.getFile("bannerImage") != null) {
+                TblComFile bannerFile = fileUtil.devFileInf(
+                        request.getFile("bannerImage"),
+                        "/communities/" + tblCommunities.getCommSn() + "/banner",
+                        psnTblSn
                 );
+                bannerFile.setCreatrSn(userSn);
+                TblComFile savedBanner = tblComFileRepository.save(bannerFile);
+                tblCommunities.setBnrFileSn(savedBanner.getAtchFileSn());
             }
 
-            resultVO.putResult("communitySn", tblCommunities.getCommunitySn());
+            tblCommunitiesRepository.save(tblCommunities);
+
+            resultVO.putResult("commSn", tblCommunities.getCommSn());
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
             resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
-        }catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
             resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
             resultVO.setResultMessage(ResponseCode.SAVE_ERROR.getMessage());
@@ -77,71 +81,102 @@ public class CommunityService {
         return resultVO;
     }
 
-    public ResultVO getCommunity(String communityNm) {
+    public ResultVO getCommunity(String commNm, String token) {
         ResultVO resultVO = new ResultVO();
 
         try {
-            TblCommunities tblCommunities = tblCommunitiesRepository.findByCommunityNm(communityNm);
-            if(tblCommunities == null) throw new IllegalStateException("Community not found: " + communityNm);
+            long userSn = 1L; // TODO: 레디스에서 추출
 
-//            QTblCommunities qTblCommunities = QTblCommunities.tblCommunities;
-//            QTblCommunityMember qTblCommunityMember = QTblCommunityMember.tblCommunityMember;
-            QTblComFile qLogoFile = new QTblComFile("logoFile");
-            QTblComFile qBannerFile = new QTblComFile("bannerFile");
+            TblCommunities tblCommunities = tblCommunitiesRepository.findByCommNm(commNm);
+            if (tblCommunities == null) throw new IllegalStateException("Community not found: " + commNm);
 
-//            JPQLQuery<Long> communityMemberCnt = JPAExpressions
-//                    .select(qTblCommunityMember.count())
-//                    .from(qTblCommunityMember)
-//                    .where(qTblCommunityMember.communitySn.eq(qTblCommunities.communitySn));
-//
-//            CommunitytDTO result = new JPAQueryFactory(em)
-//                    .select(
-//                            Projections.constructor(
-//                                    CommunitytDTO.class,
-//                                    qTblCommunities,
-//                                    communityMemberCnt,
-//                                    logoFile,
-//                                    bannerFile
-//                            )
-//                    )
-//                    .from(qTblCommunities)
-//                    .leftJoin(logoFile).on(
-//                            logoFile.psnTblSn.eq(Expressions.stringTemplate("CONCAT('community_', {0})", qTblCommunities.communitySn))
-//                            .and(logoFile.atchFilePathNm.contains("logo"))
-//                    )
-//                    .leftJoin(bannerFile).on(
-//                            bannerFile.psnTblSn.eq(Expressions.stringTemplate("CONCAT('community_', {0})", qTblCommunities.communitySn))
-//                            .and(bannerFile.atchFilePathNm.contains("banner"))
-//                    )
-//                    .where(qTblCommunities.communityNm.eq(communityNm))
-//                    .fetchOne();
-
-//            if (result == null) throw new IllegalStateException("Community not found: " + communityNm);
-
-            TblComFile logoFile = new JPAQueryFactory(em)
-                    .selectFrom(qLogoFile)
-                    .where(
-                            qLogoFile.psnTblSn.eq(
-                                            Expressions.stringTemplate("CONCAT('community_', {0})", tblCommunities.getCommunitySn())
-                                    )
-                                    .and(qLogoFile.atchFilePathNm.contains("logo"))).fetchOne();
-
-            TblComFile bannerFile = new JPAQueryFactory(em)
-                    .selectFrom(qBannerFile)
-                    .where(
-                            qBannerFile.psnTblSn.eq(
-                                Expressions.stringTemplate("CONCAT('community_', {0})", tblCommunities.getCommunitySn())
-                            )
-                            .and(qBannerFile.atchFilePathNm.contains("banner"))).fetchOne();
+            TblCommunityMember myMember = tblCommunities.getMembers().stream()
+                    .filter(m -> m.getUserSn() == userSn)
+                    .findFirst().orElse(null);
 
             resultVO.putResult("community", tblCommunities);
-            resultVO.putResult("communityMembers", tblCommunityMemberRepository.findAllByCommunitySn(tblCommunities.getCommunitySn()));
-            resultVO.putResult("logoFile", logoFile);
-            resultVO.putResult("bannerFile", bannerFile);
-
+            resultVO.putResult("isMember", myMember != null);
+            resultVO.putResult("memberStatus", myMember != null ? myMember.getStat() : null);
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
             resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
-        }catch (Exception e){
+        } catch (Exception e) {
+            e.printStackTrace();
+            resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
+            resultVO.setResultMessage(ResponseCode.SELECT_ERROR.getMessage());
+        }
+
+        return resultVO;
+    }
+
+    public ResultVO getMyCommunityList(String token) {
+        ResultVO resultVO = new ResultVO();
+
+        try {
+            long userSn = 1L; // TODO: 레디스에서 추출
+
+            List<TblCommunities> communities = tblCommunitiesRepository.findAllByMemberUserSn(userSn);
+
+            resultVO.putResult("communities", communities);
+            resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
+            resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
+        } catch (Exception e) {
+            e.printStackTrace();
+            resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
+            resultVO.setResultMessage(ResponseCode.SELECT_ERROR.getMessage());
+        }
+
+        return resultVO;
+    }
+
+    public ResultVO setMember(Map<String, Object> params, String token) {
+        ResultVO resultVO = new ResultVO();
+
+        try {
+            long userSn = 1L; // TODO: 레디스에서 추출
+
+            TblCommunities tblCommunities = tblCommunitiesRepository.findByCommSn(
+                    Long.valueOf(params.get("communitySn").toString()));
+
+            JPAQueryFactory q = new JPAQueryFactory(em);
+            QTblCommunityMember qTblCommunityMember = QTblCommunityMember.tblCommunityMember;
+
+            boolean isMember = Boolean.parseBoolean(params.get("isMember").toString());
+            String memberStatus;
+
+            if (!isMember) {
+                /** 탈퇴 */
+                q.update(qTblCommunityMember)
+                    .set(qTblCommunityMember.stat, "WITHDRAWN")
+                    .where(
+                        qTblCommunityMember.commSn.eq(tblCommunities.getCommSn())
+                        .and(qTblCommunityMember.userSn.eq(userSn))
+                    ).execute();
+                memberStatus = "WITHDRAWN";
+            } else {
+                /** 가입 - prvcyStng에 따라 분기 */
+                String privacy = tblCommunities.getPrvcyStng();
+                if ("public".equals(privacy) || "anonymous".equals(privacy)) {
+                    memberStatus = "ACTIVE";
+                } else {
+                    memberStatus = "PENDING";
+                }
+                String joinTyp = "ACTIVE".equals(memberStatus) ? "AUTO" : "APPLY";
+
+                TblCommunityMember tblCommunityMember = TblCommunityMember.builder()
+                        .commSn(tblCommunities.getCommSn())
+                        .userSn(userSn)
+                        .stat(memberStatus)
+                        .joinTyp(joinTyp)
+                        .actvtnYn("Y")
+                        .creatrSn(userSn)
+                        .build();
+                tblCommunityMemberRepository.save(tblCommunityMember);
+            }
+
+            resultVO.putResult("memberStatus", memberStatus);
+            resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
+            resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
+        } catch (Exception e) {
             e.printStackTrace();
             resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
             resultVO.setResultMessage(ResponseCode.SELECT_ERROR.getMessage());
