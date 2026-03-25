@@ -30,6 +30,7 @@ public class FileUtil {
 	public List<TblComFile> devFilesInf(List<MultipartFile> files, String subPath, String psnTblSn, long fileCnt) throws IOException {
 		long fileKey = fileCnt;
 		String storePathString = fileStorePath + subPath;
+		String relativePathString = "/upload" + subPath;
 
 		File saveFolder = new File(filePathBlackList(storePathString));
 		if (!saveFolder.exists() || saveFolder.isFile()) {
@@ -52,7 +53,7 @@ public class FileUtil {
 			}
 			comFile.setStrgFileNm(newName);
 			comFile.setAtchFileNm(orginFileName);
-			comFile.setAtchFilePathNm(storePathString);
+			comFile.setAtchFilePathNm(relativePathString);
 			comFile.setAtchFileSz(_size);
 			comFile.setAtchFileExtnNm(fileExt);
 			comFile.setPsnTblSn(psnTblSn);
@@ -67,6 +68,7 @@ public class FileUtil {
 
 	public TblComFile devFileInf(MultipartFile file, String subPath, String psnTblSn) throws IOException {
 		String storePathString = fileStorePath + subPath;
+		String relativePathString = "/upload" + subPath;
 
 		File saveFolder = new File(filePathBlackList(storePathString));
 		if (!saveFolder.exists() || saveFolder.isFile()) {
@@ -87,7 +89,7 @@ public class FileUtil {
 		}
 		result.setStrgFileNm(newName);
 		result.setAtchFileNm(orginFileName);
-		result.setAtchFilePathNm(storePathString);
+		result.setAtchFilePathNm(relativePathString);
 		result.setAtchFileSz(_size);
 		result.setAtchFileExtnNm(fileExt);
 		result.setPsnTblSn(psnTblSn);
