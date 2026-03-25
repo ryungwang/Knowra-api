@@ -9,7 +9,7 @@ import org.hibernate.annotations.Comment;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "TBL_COM_FILE", catalog = "SCHM_COM")
+@Table(name = "TBL_COM_FILE", catalog = "KNOWRA_COM")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
