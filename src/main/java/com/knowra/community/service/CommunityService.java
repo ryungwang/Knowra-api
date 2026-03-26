@@ -198,6 +198,8 @@ public class CommunityService {
                         qTblCommMbr.commSn.eq(tblComm.getCommSn())
                         .and(qTblCommMbr.userSn.eq(userSn))
                     ).execute();
+                tblComm.setMemberCnt(Math.max(0, tblComm.getMemberCnt() - 1));
+                tblCommRepository.save(tblComm);
                 memberStatus = "WITHDRAWN";
             } else {
                 String privacy = tblComm.getPrvcyStng();
@@ -234,6 +236,10 @@ public class CommunityService {
                             .creatrSn(userSn)
                             .build();
                     tblCommMbrRepository.save(tblCommMbr);
+                }
+                if ("ACTIVE".equals(memberStatus)) {
+                    tblComm.setMemberCnt(tblComm.getMemberCnt() + 1);
+                    tblCommRepository.save(tblComm);
                 }
             }
 

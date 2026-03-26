@@ -33,10 +33,14 @@ public class CommunityPostController {
     }
 
     @PostMapping("/api/community/getCommPostList")
-    public ResultVO getCommPostList(
-                                    @RequestBody Map<String, Object> params,
-                                    HttpServletRequest request) {
+    public ResultVO getCommPostList(@RequestBody Map<String, Object> params, HttpServletRequest request) {
         String token = request.getHeader("Authorization");
         return communityPostService.getCommPostList(params, token);
+    }
+
+    @GetMapping("/api/community/getCommPost")
+    public ResultVO getCommPost(@ModelAttribute TblCommPost tblCommPost, HttpServletRequest request) {
+        String token = request.getHeader("Authorization");
+        return communityPostService.getCommPost(tblCommPost, token);
     }
 }

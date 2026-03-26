@@ -218,4 +218,98 @@ public class CommunityPostService {
 
         return resultVO;
     }
+
+    public ResultVO getCommPost(TblCommPost tblCommPost, String token) {
+        ResultVO resultVO = new ResultVO();
+
+        try {
+            JPAQueryFactory q = new JPAQueryFactory(em);
+            long commPostSn = tblCommPost.getCommPostSn();
+
+            QTblCommPost post = QTblCommPost.tblCommPost;
+            QTblCommPostTag postTag = QTblCommPostTag.tblCommPostTag;
+            QTblTag tag = QTblTag.tblTag;
+            QTblUser user = QTblUser.tblUser;
+            QTblCommMbr mbr = QTblCommMbr.tblCommMbr;
+            QTblComm comm = QTblComm.tblComm;
+            QTblCommPostCmt cmt = QTblCommPostCmt.tblCommPostCmt;
+
+            // 게시글 + 작성자
+            com.querydsl.core.Tuple postTuple = q.select(post, user.name)
+                    .from(post)
+                    .join(user).on(post.userSn.eq(user.userSn))
+                    .where(post.commPostSn.eq(commPostSn), post.stat.eq("ACTIVE"))
+                    .fetchOne();
+
+            if (postTuple == null) {
+                resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
+                resultVO.setResultMessage("게시글을 찾을 수 없습니다.");
+                return resultVO;
+            }
+
+            TblCommPost p = postTuple.get(post);
+
+            // 커뮤니티 (memberCnt 캐시 포함)
+            TblComm community = q.selectFrom(comm)
+                    .where(comm.commSn.eq(p.getCommSn()))
+                    .fetchOne();
+
+            // 태그
+            List<String> tagNms = q.select(tag.tagNm)
+                    .from(postTag)
+                    .join(tag).on(postTag.tagSn.eq(tag.tagSn))
+                    .where(postTag.commPostSn.eq(commPostSn))
+                    .fetch();
+
+            // 댓글 + 작성자 (부모/대댓글 한번에)
+            QTblUser cmtUser = new QTblUser("cmtUser");
+            List<com.querydsl.core.Tuple> cmtTuples = q.select(cmt, cmtUser.name)
+                    .from(cmt)
+                    .join(cmtUser).on(cmt.userSn.eq(cmtUser.userSn))
+                    .where(cmt.commPostSn.eq(commPostSn), cmt.stat.eq("ACTIVE"), cmt.actvtnYn.eq("Y"))
+                    .orderBy(cmt.commPostCmtSn.asc())
+                    .fetch();
+
+            // 댓글 트리 조립 (부모 → 대댓글)
+            Map<Long, CommCmtDTO> cmtMap = new java.util.LinkedHashMap<>();
+            List<CommCmtDTO> rootCmts = new ArrayList<>();
+
+            for (com.querydsl.core.Tuple t : cmtTuples) {
+                TblCommPostCmt c = t.get(cmt);
+                CommCmtDTO dto = new CommCmtDTO(
+                        c.getCommPostCmtSn(), c.getUserSn(), t.get(cmtUser.name),
+                        c.getCmtCntnt(), c.getLikeCnt(), c.getFrstCrtDt(), new ArrayList<>()
+                );
+                cmtMap.put(c.getCommPostCmtSn(), dto);
+                if (c.getPrntCmtSn() == null) {
+                    rootCmts.add(dto);
+                } else {
+                    CommCmtDTO parent = cmtMap.get(c.getPrntCmtSn());
+                    if (parent != null) parent.getReplies().add(dto);
+                }
+            }
+
+            resultVO.putResult("comm", java.util.Map.of(
+                    "commSn", community.getCommSn(),
+                    "commDsplNm", community.getCommDsplNm(),
+                    "memberCnt", community.getMemberCnt()
+            ));
+            resultVO.putResult("post", new CommunityPostDTO(
+                    p.getCommPostSn(), p.getCommSn(), p.getUserSn(),
+                    postTuple.get(user.name), p.getPostTyp(), p.getPostTtl(), p.getFrstCrtDt(),
+                    p.getViewCnt(), p.getLikeCnt(), p.getCmtCnt(), tagNms
+            ));
+            resultVO.putResult("postCntnt", p.getPostCntnt());
+            resultVO.putResult("comments", rootCmts);
+            resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
+            resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
+            resultVO.setResultMessage(ResponseCode.SELECT_ERROR.getMessage());
+        }
+
+        return resultVO;
+    }
 }
