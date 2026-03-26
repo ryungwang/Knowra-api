@@ -1,4 +1,4 @@
-package com.knowra.community.entity;
+package com.knowra.common.entity;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -10,13 +10,13 @@ import java.util.List;
 @Getter
 @Setter
 @AllArgsConstructor
-public class CommCmtDTO {
+public class CmtDTO {
 
-    private long commPostCmtSn;
+    private long cmtSn;
     private long userSn;
     private String authorNm;
     private String cmtCntnt;
     private int likeCnt;
     private LocalDateTime frstCrtDt;
-    private List<CommCmtDTO> replies;
+    private List<CmtDTO> replies;
 }

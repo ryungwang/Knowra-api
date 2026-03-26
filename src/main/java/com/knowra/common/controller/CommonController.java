@@ -1,6 +1,5 @@
 package com.knowra.common.controller;
 
-import com.knowra.admin.entity.TblPst;
 import com.knowra.cmm.model.ResultVO;
 import com.knowra.common.entity.TblComFile;
 import com.knowra.common.service.CommonService;
