@@ -7,6 +7,7 @@ import com.knowra.community.service.CommunityPostService;
 import com.knowra.community.service.CommunityService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.parameters.P;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartHttpServletRequest;
 
@@ -23,5 +24,19 @@ public class CommunityPostController {
     public ResultVO setCommPost(@RequestBody Map<String, Object> params, HttpServletRequest request) {
         String token = request.getHeader("Authorization");
         return communityPostService.setCommPost(params, token);
+    }
+
+    @PostMapping("/api/community/viewCommPost")
+    public ResultVO viewCommPost(@RequestBody Map<String, Object> params, HttpServletRequest request) {
+        String token = request.getHeader("Authorization");
+        return communityPostService.viewCommPost(params, token);
+    }
+
+    @PostMapping("/api/community/getCommPostList")
+    public ResultVO getCommPostList(
+                                    @RequestBody Map<String, Object> params,
+                                    HttpServletRequest request) {
+        String token = request.getHeader("Authorization");
+        return communityPostService.getCommPostList(params, token);
     }
 }
