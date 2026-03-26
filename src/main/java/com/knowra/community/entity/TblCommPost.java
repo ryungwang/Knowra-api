@@ -39,6 +39,11 @@ public class TblCommPost {
     @Comment("작성자 SN (TBL_USER FK)")
     private long userSn;
 
+    @Column(name = "POST_TYP", length = 10, nullable = false)
+    @Comment("NORMAL / NOTICE")
+    @Builder.Default
+    private String postTyp = "NORMAL";
+
     @Column(name = "POST_TTL", length = 300, nullable = false)
     @Comment("제목")
     private String postTtl;
@@ -53,7 +58,7 @@ public class TblCommPost {
     private int viewCnt = 0;
 
     @Column(name = "LIKE_CNT", nullable = false)
-    @Comment("좋아요수 (캐시)")
+    @Comment("순 추천수 (UP - DOWN 캐시)")
     @Builder.Default
     private int likeCnt = 0;
 
