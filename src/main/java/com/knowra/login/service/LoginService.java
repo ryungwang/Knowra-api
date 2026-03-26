@@ -3,11 +3,11 @@ package com.knowra.login.service;
 import com.knowra.cmm.model.ResponseCode;
 import com.knowra.cmm.model.ResultVO;
 import com.knowra.cmm.service.RedisApiService;
+import com.knowra.user.entity.LoginDTO;
 import com.knowra.user.entity.*;
 import com.knowra.user.entity.TblUser;
 import com.knowra.user.repository.TblUserLgnHstryRepository;
 import com.knowra.user.repository.TblUserRepository;
-import com.querydsl.core.BooleanBuilder;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
 import jakarta.servlet.http.HttpServletRequest;
@@ -21,8 +21,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import tools.jackson.databind.ObjectMapper;
 
-import java.math.BigInteger;
-import java.util.Arrays;
 import java.util.Map;
 
 
@@ -117,7 +115,7 @@ public class LoginService {
         return resultVO;
     }
 
-    public ResultVO login(/*LoginDTO loginDto,*/ HttpServletRequest request) {
+    public ResultVO login(LoginDTO loginDto, HttpServletRequest request) {
         ResultVO resultVO = new ResultVO();
 
 //        try {
