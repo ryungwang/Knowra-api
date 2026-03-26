@@ -18,6 +18,8 @@ public interface TblUserRepository extends JpaRepository<TblUser, Long> {
 
     Optional<TblUser> findByEmail(String email);
 
+    Optional<TblUser> findByLoginId(String loginId);
+
     @Modifying
     @Query("UPDATE TblUser U SET U.lgnFailNmtm = :lgnFailNmtm WHERE U.userSn = :userSn")
     void setLgnFailNmtmUpd(@Param("userSn") long userSn, @Param("lgnFailNmtm") long lgnFailNmtm);

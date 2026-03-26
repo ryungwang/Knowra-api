@@ -10,7 +10,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "TBL_USER_LGN_HSTRY", catalog = "SCHM_USER")
+@Table(name = "TBL_USER_LGN_HSTRY", catalog = "KNOWRA_USER")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

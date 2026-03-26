@@ -10,7 +10,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "TBL_USER", catalog = "SCHM_USER")
+@Table(name = "TBL_USER", catalog = "KNOWRA_USER")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -25,6 +25,10 @@ public class TblUser {
   @Column(name = "EMAIL", length = 320, nullable = false)
   @Comment("사용자이메일")
   private String email;
+
+  @Column(name = "LOGIN_ID", length = 100, nullable = false)
+  @Comment("로그인아이디")
+  private String loginId;
 
   @Column(name = "PASSWORD", length = 200, nullable = false)
   @Comment("비밀번호")

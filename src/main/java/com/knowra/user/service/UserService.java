@@ -25,15 +25,15 @@ public class UserService {
 
     private final RedisApiService redisApiService;
 
-    public Long getUserSn(String email) {
-        return tblUserRepository.findByEmail(email)
-                .orElseThrow(() -> new IllegalStateException("User not found: " + email))
+    public Long getUserSn(String loginId) {
+        return tblUserRepository.findByLoginId(loginId)
+                .orElseThrow(() -> new IllegalStateException("User not found: " + loginId))
                 .getUserSn();
     }
 
-    public TblUser getUser(String email) {
-        return tblUserRepository.findByEmail(email)
-                .orElseThrow(() -> new IllegalStateException("User not found: " + email));
+    public TblUser getUser(String loginId) {
+        return tblUserRepository.findByLoginId(loginId)
+                .orElseThrow(() -> new IllegalStateException("User not found: " + loginId));
     }
 
 }
