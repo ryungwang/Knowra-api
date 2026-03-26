@@ -10,7 +10,7 @@ import lombok.Setter;
 @AllArgsConstructor
 public class CommunityDTO {
 
-    TblCommunities tblCommunities;
+    TblComm tblComm;
     Long totalUser;
     TblComFile logoFile;
     TblComFile bannerFile;

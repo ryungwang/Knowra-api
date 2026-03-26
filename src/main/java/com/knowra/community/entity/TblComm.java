@@ -16,7 +16,7 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class TblCommunities {
+public class TblComm {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -62,7 +62,7 @@ public class TblCommunities {
 
   @OneToMany(fetch = FetchType.LAZY)
   @JoinColumn(name = "COMM_SN", insertable = false, updatable = false)
-  private List<TblCommunityMember> members;
+  private List<TblCommMbr> members;
 
   @Column(name = "STAT", length = 1, nullable = false)
   @Comment("Y / N")

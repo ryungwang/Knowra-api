@@ -1,7 +1,8 @@
 package com.knowra.community.controller;
 
 import com.knowra.cmm.model.ResultVO;
-import com.knowra.community.entity.TblCommunities;
+import com.knowra.community.entity.TblComm;
+import com.knowra.community.service.CommunityPostService;
 import com.knowra.community.service.CommunityService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -17,13 +18,19 @@ public class CommunityController {
 
     private final CommunityService communityService;
 
+    @GetMapping("/api/community/getCommunityList")
+    public ResultVO getCommunityList(Map<String, Object> params, HttpServletRequest request) {
+        String token = request.getHeader("Authorization");
+        return communityService.getCommunityList(params, token);
+    }
+
     @PostMapping("/api/community/setCommunity")
     public ResultVO setCommunity(
-            @ModelAttribute TblCommunities tblCommunities,
+            @ModelAttribute TblComm tblComm,
             MultipartHttpServletRequest request,
             HttpServletRequest httpServletRequest) {
         String token = httpServletRequest.getHeader("Authorization");
-        return communityService.setCommunity(tblCommunities, request, token);
+        return communityService.setCommunity(tblComm, request, token);
     }
 
     @GetMapping("/api/community/getCommunity")
