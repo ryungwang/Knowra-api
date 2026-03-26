@@ -64,6 +64,10 @@ public class TblComm {
   @JoinColumn(name = "COMM_SN", insertable = false, updatable = false)
   private List<TblCommMbr> members;
 
+  @Column(name = "MEMBER_CNT", nullable = false)
+  @Comment("멤버 수 (캐시)")
+  private long memberCnt = 0;
+
   @Column(name = "STAT", length = 1, nullable = false)
   @Comment("Y / N")
   private String stat = "Y";
