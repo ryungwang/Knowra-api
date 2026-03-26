@@ -1,6 +1,5 @@
-# Knowra 로그인 구현 전체 단계 가이드
+# Knowra 커뮤니티 탐색 - 백엔드 작업 가이드
 
-> 스택: Spring Boot · Spring Security · JWT · BCrypt · MariaDB
 > 최종 수정: 2026-03-26
 
 ---
@@ -12,328 +11,269 @@
 
 ---
 
-## Step 1. 의존성 추가 (`pom.xml`)
+## Step 1. 테이블 설계
 
-- [ ] jjwt-api 추가
-- [ ] jjwt-impl 추가
-- [ ] jjwt-jackson 추가
-- [ ] spring-security-crypto (BCrypt) → spring-boot-starter-security에 포함됨 확인
-
-```xml
-<dependency>
-    <groupId>io.jsonwebtoken</groupId>
-    <artifactId>jjwt-api</artifactId>
-    <version>0.11.5</version>
-</dependency>
-<dependency>
-<groupId>io.jsonwebtoken</groupId>
-<artifactId>jjwt-impl</artifactId>
-<version>0.11.5</version>
-<scope>runtime</scope>
-</dependency>
-<dependency>
-<groupId>io.jsonwebtoken</groupId>
-<artifactId>jjwt-jackson</artifactId>
-<version>0.11.5</version>
-<scope>runtime</scope>
-</dependency>
-```
-
----
-
-## Step 2. `application.properties` 설정
-
-- [ ] jwt.secret 추가 (32자 이상)
-- [ ] jwt.expiration 추가
-
-```properties
-# JWT
-jwt.secret=knowra-secret-key-must-be-at-least-32-characters-long
-jwt.access-token-expiration=3600000
-jwt.refresh-token-expiration=604800000
-```
-
----
-
-## Step 3. DB 테스트 데이터 세팅
-
-- [ ] `/api/auth/encode` 임시 API로 BCrypt 값 추출 (1111 → BCrypt)
-- [ ] 아래 쿼리로 테스트 유저 INSERT or UPDATE
+### 1-1. 기존 테이블 컬럼 추가 확인
+- [ ] `tbl_communities`에 `CATEGORY_SN` 컬럼 있는지 확인
+- [ ] `tbl_communities`에 `MEMBER_COUNT` 컬럼 추가 (캐싱용)
 
 ```sql
--- 테스트 유저 삽입 (BCrypt 값은 /encode API에서 뽑은 값)
-INSERT INTO tbl_user (email, password)
-VALUES ('deerrk', '뽑은_BCrypt값');
-
--- 이미 있으면
-UPDATE tbl_user
-SET password = '뽑은_BCrypt값'
-WHERE email = 'deerrk';
+ALTER TABLE tbl_communities
+    ADD COLUMN CATEGORY_SN BIGINT NOT NULL COMMENT '카테고리일련번호',
+    ADD COLUMN MEMBER_COUNT INT DEFAULT 0 COMMENT '멤버수';
 ```
 
-- [ ] `/api/auth/encode` 임시 API 삭제
+### 1-2. 신규 테이블
 
----
+```sql
+-- 사용자 관심사 카테고리 (회원가입 시 선택)
+CREATE TABLE tbl_user_interest_category (
+    USER_SN         BIGINT NOT NULL COMMENT '사용자일련번호',
+    CATEGORY_SN     BIGINT NOT NULL COMMENT '카테고리일련번호',
+    FRST_CRT_DT     DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '최초생성일시',
+    PRIMARY KEY (USER_SN, CATEGORY_SN)
+);
 
-## Step 4. `SecurityConfig` 설정
+-- 행동 로그 (추천 알고리즘용)
+CREATE TABLE tbl_user_action_log (
+    LOG_SN          BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '로그일련번호',
+    USER_SN         BIGINT NOT NULL COMMENT '사용자일련번호',
+    TARGET_TYPE     VARCHAR(20) NOT NULL COMMENT 'COMMUNITY/POST/COMMENT',
+    TARGET_SN       BIGINT NOT NULL COMMENT '대상일련번호',
+    ACTION_TYPE     VARCHAR(20) NOT NULL COMMENT 'VIEW/LIKE/COMMENT/JOIN/LEAVE',
+    STAY_SECONDS    INT DEFAULT 0 COMMENT '체류시간(초)',
+    FRST_CRT_DT     DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '최초생성일시',
+    INDEX idx_user_action (USER_SN, TARGET_TYPE, FRST_CRT_DT)
+);
 
-- [ ] `PasswordEncoder` 빈 등록
-- [ ] Security FilterChain 설정 (로그인 API는 인증 없이 허용)
-
-```java
-@Configuration
-@EnableWebSecurity
-@RequiredArgsConstructor
-public class SecurityConfig {
-
-    private final JwtFilter jwtFilter;
-
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
-
-    @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http
-                .csrf(csrf -> csrf.disable())
-                .sessionManagement(session ->
-                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**").permitAll()  // 로그인은 허용
-                        .anyRequest().authenticated()                 // 나머지는 인증 필요
-                )
-                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
-
-        return http.build();
-    }
-}
+-- 사용자 관심도 점수 (배치로 계산된 결과 캐싱)
+CREATE TABLE tbl_user_interest_score (
+    USER_SN         BIGINT NOT NULL COMMENT '사용자일련번호',
+    CATEGORY_SN     BIGINT NOT NULL COMMENT '카테고리일련번호',
+    SCORE           DOUBLE DEFAULT 0 COMMENT '관심도점수',
+    UPDATED_AT      DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (USER_SN, CATEGORY_SN)
+);
 ```
 
 ---
 
-## Step 5. `JwtUtil` 작성
+## Step 2. 엔티티 / Repository
 
-- [ ] 토큰 생성 메서드 (`generateToken`)
-- [ ] 토큰 파싱 메서드 (`getUserSn`)
-
-```java
-@Component
-public class JwtUtil {
-
-    @Value("${jwt.secret}")
-    private String secretKey;
-
-    @Value("${jwt.access-token-expiration}")
-    private long accessTokenExpiration;  // 1시간
-
-    public String generateToken(Integer userSn) {
-        return Jwts.builder()
-                .claim("userSn", userSn)
-                .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + accessTokenExpiration))
-                .signWith(Keys.hmacShaKeyFor(secretKey.getBytes()))
-                .compact();
-    }
-
-    public Integer getUserSn(String token) {
-        return Jwts.parserBuilder()
-                .setSigningKey(Keys.hmacShaKeyFor(secretKey.getBytes()))
-                .build()
-                .parseClaimsJws(token)
-                .getBody()
-                .get("userSn", Integer.class);
-    }
-}
-```
+- [ ] `TblUserInterestCategory` 엔티티 작성
+- [ ] `TblUserActionLog` 엔티티 작성
+- [ ] `TblUserInterestScore` 엔티티 작성
+- [ ] `TblUserInterestCategoryRepository` 작성
+- [ ] `TblUserActionLogRepository` 작성
+- [ ] `TblUserInterestScoreRepository` 작성
+- [ ] `tbl_communities`에 `categorySn`, `memberCount` 필드 추가
 
 ---
 
-## Step 6. `JwtFilter` 작성
+## Step 3. 회원가입 시 관심사 카테고리 저장
 
-- [ ] `OncePerRequestFilter` 상속
-- [ ] Authorization 헤더에서 토큰 추출
-- [ ] SecurityContext에 USER_SN 저장
-
-```java
-@Component
-@RequiredArgsConstructor
-public class JwtFilter extends OncePerRequestFilter {
-
-    private final JwtUtil jwtUtil;
-
-    @Override
-    protected void doFilterInternal(HttpServletRequest request,
-                                    HttpServletResponse response,
-                                    FilterChain filterChain)
-            throws ServletException, IOException {
-
-        String header = request.getHeader("Authorization");
-
-        if (header != null && header.startsWith("Bearer ")) {
-            String token = header.substring(7);
-            Integer userSn = jwtUtil.getUserSn(token);
-
-            UsernamePasswordAuthenticationToken auth =
-                    new UsernamePasswordAuthenticationToken(userSn, null, List.of());
-            SecurityContextHolder.getContext().setAuthentication(auth);
-        }
-
-        filterChain.doFilter(request, response);
-    }
-}
-```
-
----
-
-## Step 7. DTO 작성
-
-- [ ] `LoginRequest` 작성
-- [ ] `LoginResponse` 작성
+- [ ] 회원가입 Request에 `categorySnList` 추가
+- [ ] 회원가입 시 `tbl_user_interest_category`에 일괄 저장
+- [ ] 개수 제한 없음
 
 ```java
-// 요청
 @Getter
-public class LoginRequest {
-    private String loginId;   // 이메일 or 아이디
+public class SignupRequest {
+    private String loginId;
+    private String email;
     private String password;
+    private String name;
+    private List<Long> categorySnList;  // 관심사 카테고리
 }
 
-// 응답
-@Getter
-@AllArgsConstructor
-public class LoginResponse {
-    private String accessToken;
+@Transactional
+public void signup(SignupRequest request) {
+    TblUser user = ...; // 기존 유저 저장 로직
+    userRepository.save(user);
+
+    // 관심사 카테고리 일괄 저장
+    List<TblUserInterestCategory> interests = request.getCategorySnList().stream()
+            .map(categorySn -> TblUserInterestCategory.builder()
+                    .userSn(user.getUserSn())
+                    .categorySn(categorySn)
+                    .build())
+            .collect(Collectors.toList());
+    interestCategoryRepository.saveAll(interests);
 }
 ```
 
 ---
 
-## Step 8. `TblUserRepository` 작성
+## Step 4. 인기 커뮤니티 API
 
-- [ ] `findByEmail` 메서드 추가
+- [ ] `GET /api/communities/explore/popular` 구현
+- [ ] 점수 계산: 멤버수 * 0.4 + 최근7일 게시글수 * 0.4 + 최근7일 가입수 * 0.2
+- [ ] 10개 고정 반환
+- [ ] 게시글 테이블 완성 전까지는 멤버수 기준으로 임시 처리
 
 ```java
-public interface TblUserRepository extends JpaRepository<TblUser, Integer> {
-    Optional<TblUser> findByEmail(String email);
+public List<CommunityResponse> findPopular(int limit) {
+    return queryFactory
+            .select(community)
+            .from(community)
+            .where(community.actvtnYn.eq("Y"))
+            .orderBy(community.memberCount.desc())
+            .limit(limit)
+            .fetch();
 }
 ```
 
 ---
 
-## Step 9. `AuthService` 작성
+## Step 5. 맞춤 추천 API
 
-- [ ] email로 유저 조회
-- [ ] BCrypt 비밀번호 검증
-- [ ] JWT 토큰 발급 및 반환
+- [ ] `GET /api/communities/explore/recommended` 구현 (JWT 필요)
+- [ ] 행동 로그 있는 유저 → 행동 기반 추천
+- [ ] 행동 로그 없는 신규 유저 → 관심사 카테고리 기반 추천
+- [ ] 관심사도 없으면 → 인기순으로 대체
+- [ ] 이미 가입한 커뮤니티 제외
+- [ ] 10개 고정 반환
 
 ```java
 @Service
 @RequiredArgsConstructor
-public class AuthService {
+public class CommunityRecommendService {
 
-    private final TblUserRepository userRepository;
-    private final JwtUtil jwtUtil;
-    private final PasswordEncoder passwordEncoder;
+    public List<CommunityResponse> getRecommended(Long userSn) {
+        boolean hasActionLog = actionLogRepository.existsByUserSn(userSn);
 
-    public LoginResponse login(LoginRequest request) {
-        TblUser user = userRepository.findByEmail(request.getLoginId())
-                .orElseThrow(() -> new RuntimeException("존재하지 않는 계정입니다."));
+        if (hasActionLog) {
+            // 행동 기반 추천
+            return getActionBasedRecommend(userSn);
+        } else {
+            // 신규 유저 → 관심사 카테고리 기반
+            return getInterestBasedRecommend(userSn);
+        }
+    }
 
-        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            throw new RuntimeException("비밀번호가 일치하지 않습니다.");
+    private List<CommunityResponse> getInterestBasedRecommend(Long userSn) {
+        List<Long> categorySnList = interestRepository.findCategorySnByUserSn(userSn);
+
+        if (categorySnList.isEmpty()) {
+            return communityRepository.findPopular(10);  // 인기순 대체
         }
 
-        String token = jwtUtil.generateToken(user.getUserSn());
-        return new LoginResponse(token);
+        return communityRepository.findByCategorySnInAndNotJoined(
+                categorySnList, userSn, 10);
+    }
+
+    private List<CommunityResponse> getActionBasedRecommend(Long userSn) {
+        // 행동 로그 기반 점수 계산 (시간 감쇠 적용)
+        // 게시글/댓글 구현 후 완성
+        return actionLogRepository.findRecommendedByAction(userSn, 10);
     }
 }
 ```
 
 ---
 
-## Step 10. `AuthController` 작성
+## Step 6. 카테고리별 목록 API (더보기)
 
-- [ ] `POST /api/auth/login` API 작성
-
-```java
-@RestController
-@RequestMapping("/api/auth")
-@RequiredArgsConstructor
-public class AuthController {
-
-    private final AuthService authService;
-
-    @PostMapping("/login")
-    public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest request) {
-        return ResponseEntity.ok(authService.login(request));
-    }
-}
-```
-
----
-
-## Step 11. Postman 테스트
-
-- [ ] 서버 실행 확인
-- [ ] 로그인 API 호출
-
-```
-POST /api/auth/login
-Content-Type: application/json
-
-{
-    "loginId": "deerrk",
-    "password": "1111"
-}
-```
-
-- [ ] 응답에서 `accessToken` 확인
-- [ ] 다른 API 호출 시 헤더에 토큰 추가
-
-```
-Authorization: Bearer {accessToken}
-```
-
-- [ ] 커뮤니티 생성 API에서 USER_SN 정상 추출되는지 확인
-
----
-
-## Step 12. 커뮤니티 API에 JWT 연동
-
-- [ ] `CommunityController`에서 `@AuthenticationPrincipal Integer userSn` 적용
+- [ ] `GET /api/categories` 카테고리 전체 목록
+- [ ] `GET /api/communities/category/{id}?page=0&size=10` 구현
+- [ ] 멤버수 내림차순 정렬
+- [ ] 더보기 버튼 방식 (페이지네이션)
 
 ```java
-@PostMapping
-public ResponseEntity<?> createCommunity(
-        @RequestBody CommunityCreateRequest request,
-        @AuthenticationPrincipal Integer userSn) {
+@Getter
+@AllArgsConstructor
+public class CategoryPageResponse<T> {
+    private List<T> content;
+    private int currentPage;
+    private int totalPages;
+    private boolean hasNext;
+}
 
-    communityService.create(request, userSn);
-    return ResponseEntity.ok().build();
+public CategoryPageResponse<CommunityResponse> getCategoryList(
+        Long categorySn, int page, int size) {
+
+    Pageable pageable = PageRequest.of(page, size,
+            Sort.by("memberCount").descending());
+
+    Page<TblCommunity> result = communityRepository
+            .findByCategorySnAndActvtnYn(categorySn, "Y", pageable);
+
+    return new CategoryPageResponse<>(
+            result.getContent().stream().map(...).collect(Collectors.toList()),
+            result.getNumber(),
+            result.getTotalPages(),
+            result.hasNext()
+    );
 }
 ```
 
 ---
 
-## 전체 순서 요약
+## Step 7. 행동 로그 수집
 
-```
-Step 1  → pom.xml 의존성 추가
-Step 2  → application.yml 설정
-Step 3  → DB 테스트 데이터 세팅 (BCrypt)
-Step 4  → SecurityConfig 설정
-Step 5  → JwtUtil 작성
-Step 6  → JwtFilter 작성
-Step 7  → DTO 작성
-Step 8  → TblUserRepository 작성
-Step 9  → AuthService 작성
-Step 10 → AuthController 작성
-Step 11 → Postman 테스트
-Step 12 → 커뮤니티 API에 JWT 연동
+- [ ] 커뮤니티 조회 시 VIEW 로그 저장
+- [ ] 가입 시 JOIN 로그 저장 (기존 join API에 추가)
+- [ ] 탈퇴 시 LEAVE 로그 저장 (기존 leave API에 추가)
+- [ ] 게시글 좋아요/댓글 → 게시글 구현 후 추가
+- [ ] `@Async` 비동기 처리로 성능 영향 최소화
+
+```java
+@Async
+public void saveActionLog(Long userSn, String targetType,
+                          Long targetSn, String actionType) {
+    TblUserActionLog log = TblUserActionLog.builder()
+            .userSn(userSn)
+            .targetType(targetType)
+            .targetSn(targetSn)
+            .actionType(actionType)
+            .build();
+    actionLogRepository.save(log);
+}
 ```
 
 ---
 
-> ⚠️ `/api/auth/encode` 임시 API는 Step 3 완료 후 반드시 삭제
-> ✅ Step 12 완료되면 커뮤니티 작업 이어서 진행
+## Step 8. MEMBER_COUNT 동기화
+
+- [ ] 가입 시 `MEMBER_COUNT + 1`
+- [ ] 탈퇴/추방 시 `MEMBER_COUNT - 1`
+- [ ] 기존 join/leave Service에 추가
+
+```java
+// 가입 시
+community.setMemberCount(community.getMemberCount() + 1);
+
+// 탈퇴 시
+community.setMemberCount(Math.max(0, community.getMemberCount() - 1));
+```
+
+---
+
+## API 목록 요약
+
+```
+GET /api/categories                                → 카테고리 전체 목록
+GET /api/communities/explore/popular               → 인기 커뮤니티 10개
+GET /api/communities/explore/recommended           → 맞춤 추천 10개 (JWT 필요)
+GET /api/communities/category/{id}?page=0&size=10  → 카테고리별 목록 + 더보기
+```
+
+---
+
+## 작업 순서
+
+```
+Step 1 → 테이블 설계 및 생성
+Step 2 → 엔티티 / Repository 작성
+Step 3 → 회원가입 관심사 카테고리 저장
+Step 4 → 인기 커뮤니티 API
+Step 5 → 맞춤 추천 API
+Step 6 → 카테고리별 목록 API
+Step 7 → 행동 로그 수집 (게시글 구현 후 완성)
+Step 8 → MEMBER_COUNT 동기화
+```
+
+---
+
+> ⚠️ 행동 로그 기반 추천(Step 7)은 게시글/댓글 구현 후 완성
+> ✅ 신규 유저: 관심사 카테고리 기반 → 없으면 인기순 자동 대체

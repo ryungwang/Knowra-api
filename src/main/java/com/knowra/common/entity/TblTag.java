@@ -1,4 +1,4 @@
-package com.knowra.community.entity;
+package com.knowra.common.entity;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -11,47 +11,32 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(
-        name = "TBL_COMM_MBR",
-        catalog = "KNOWRA_COMMUNITY",
+        name = "TBL_TAG",
+        catalog = "KNOWRA_COM",
         uniqueConstraints = @UniqueConstraint(
-                name = "UK_COMM_MBR_USR",
-                columnNames = {"COMM_SN", "USER_SN"}
+                name = "UK_TAG_NM",
+                columnNames = {"TAG_NM"}
         )
 )
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class TblCommunityMember {
+public class TblTag {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "MBR_SN")
-    @Comment("멤버 SN (PK)")
-    private Long mbrSn;
+    @Column(name = "TAG_SN")
+    @Comment("태그 SN (PK)")
+    private Long tagSn;
 
-    @Column(name = "COMM_SN", nullable = false)
-    @Comment("커뮤니티 SN (tbl_comm FK)")
-    private long commSn;
+    @Column(name = "TAG_NM", length = 100, nullable = false)
+    @Comment("태그명 (예: #Python)")
+    private String tagNm;
 
-    @Column(name = "USER_SN", nullable = false)
-    @Comment("사용자 SN (TBL_USER FK)")
-    private long userSn;
-
-    @Column(name = "ROLE", length = 20, nullable = false)
-    @Comment("OWNER / ADMIN / MEMBER")
-    @Builder.Default
-    private String role = "MEMBER";
-
-    @Column(name = "JOIN_TYP", length = 20, nullable = false)
-    @Comment("APPLY / INVITE / AUTO")
-    @Builder.Default
-    private String joinTyp = "APPLY";
-
-    @Column(name = "STAT", length = 20, nullable = false)
-    @Comment("PENDING / ACTIVE / REJECTED / BANNED / WITHDRAWN")
-    @Builder.Default
-    private String stat = "ACTIVE";
+    @Column(name = "USE_COUNT", nullable = false)
+    @Comment("사용횟수")
+    private long useCount;
 
     @Column(name = "ACTVTN_YN", length = 1, nullable = false)
     @Comment("활성화 여부")
