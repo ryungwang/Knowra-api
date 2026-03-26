@@ -28,12 +28,16 @@ public class ViewCountSyncScheduler {
             long delta = redisApiService.getAndDeleteViewCount(REDIS_DB, key);
             if (delta == 0) continue;
 
-            // key = "post:viewcnt:{commPostSn}"
+            // key = "post:viewcnt:{commPostSn}" — 커뮤니티 게시글 조회수 동기화
             long commPostSn = Long.parseLong(key.replace("post:viewcnt:", ""));
             tblCommPostRepository.findById(commPostSn).ifPresent(post -> {
                 post.setViewCnt(post.getViewCnt() + (int) delta);
                 tblCommPostRepository.save(post);
             });
         }
+
+        // TODO: 일반 게시글 조회수 동기화
+        //       일반 게시글은 별도 프리픽스 "gen:post:viewcnt:{postSn}" 를 사용하도록 RedisApiService에 메서드 추가 후
+        //       TblPostRepository를 주입받아 동일한 방식으로 처리 예정
     }
 }

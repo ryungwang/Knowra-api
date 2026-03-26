@@ -43,4 +43,12 @@ public class CommunityPostController {
         String token = request.getHeader("Authorization");
         return communityPostService.getCommPost(tblCommPost, token);
     }
+
+    @PostMapping("/api/community/setCommPostLike")
+    public ResultVO setCommPostLike(@RequestBody Map<String, Object> params, HttpServletRequest request) {
+        String token = request.getHeader("Authorization");
+        return communityPostService.setCommPostLike(params, token);
+    }
+
+
 }

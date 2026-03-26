@@ -11,12 +11,10 @@ import com.knowra.common.entity.QTblTag;
 import com.knowra.common.entity.TblTag;
 import com.knowra.common.repository.TblComFileRepository;
 import com.knowra.common.repository.TblTagRepository;
+import com.knowra.common.entity.CmtDTO;
 import com.knowra.community.entity.*;
+import com.knowra.community.repository.*;
 import com.knowra.user.entity.QTblUser;
-import com.knowra.community.repository.TblCommMbrRepository;
-import com.knowra.community.repository.TblCommPostRepository;
-import com.knowra.community.repository.TblCommPostTagRepository;
-import com.knowra.community.repository.TblCommRepository;
 import org.modelmapper.ModelMapper;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
@@ -40,6 +38,7 @@ public class CommunityPostService {
     private final ModelMapper modelMapper;
     private final TblCommPostRepository tblCommPostRepository;
     private final TblCommPostTagRepository tblCommPostTagRepository;
+    private final TblCommPostLikeRepository tblCommPostLikeRepository;
     private final TblTagRepository tblTagRepository;
     private final RedisApiService redisApiService;
     private final JwtProvider jwtProvider;
@@ -121,6 +120,7 @@ public class CommunityPostService {
         ResultVO resultVO = new ResultVO();
 
         try {
+            Long userSn = token != null ? jwtProvider.extractUserSn(token.replace("Bearer ", "")) : null;
             JPAQueryFactory q = new JPAQueryFactory(em);
 
             long commSn = Long.parseLong(params.get("commSn").toString());
@@ -190,15 +190,23 @@ public class CommunityPostService {
                      .add(t.get(tag.tagNm)));
             }
 
+            // 내 좋아요 일괄 조회 (postSn → likeTyp 맵)
+            Map<Long, String> likeMap = new java.util.HashMap<>();
+            if (!postSns.isEmpty() && userSn != null) {
+                tblCommPostLikeRepository.findByCommPostSnInAndUserSn(postSns, userSn)
+                        .forEach(like -> likeMap.put(like.getCommPostSn(), like.getLikeTyp()));
+            }
+
             // DTO 조립
             List<CommunityPostDTO> list = new ArrayList<>();
             for (com.querydsl.core.Tuple t : tuples) {
                 TblCommPost p = t.get(post);
                 list.add(new CommunityPostDTO(
                         p.getCommPostSn(), p.getCommSn(), p.getUserSn(),
-                        t.get(user.name), p.getPostTyp(), p.getPostTtl(), p.getFrstCrtDt(),
+                        t.get(user.name), p.getPostTyp(), p.getPostTtl(), null, p.getFrstCrtDt(),
                         p.getViewCnt(), p.getLikeCnt(), p.getCmtCnt(),
-                        tagMap.getOrDefault(p.getCommPostSn(), List.of())
+                        tagMap.getOrDefault(p.getCommPostSn(), List.of()),
+                        likeMap.get(p.getCommPostSn())
                 ));
             }
 
@@ -223,6 +231,7 @@ public class CommunityPostService {
         ResultVO resultVO = new ResultVO();
 
         try {
+            Long userSn = token != null ? jwtProvider.extractUserSn(token.replace("Bearer ", "")) : null;
             JPAQueryFactory q = new JPAQueryFactory(em);
             long commPostSn = tblCommPost.getCommPostSn();
 
@@ -230,7 +239,6 @@ public class CommunityPostService {
             QTblCommPostTag postTag = QTblCommPostTag.tblCommPostTag;
             QTblTag tag = QTblTag.tblTag;
             QTblUser user = QTblUser.tblUser;
-            QTblCommMbr mbr = QTblCommMbr.tblCommMbr;
             QTblComm comm = QTblComm.tblComm;
             QTblCommPostCmt cmt = QTblCommPostCmt.tblCommPostCmt;
 
@@ -254,6 +262,7 @@ public class CommunityPostService {
                     .where(comm.commSn.eq(p.getCommSn()))
                     .fetchOne();
 
+
             // 태그
             List<String> tagNms = q.select(tag.tagNm)
                     .from(postTag)
@@ -271,12 +280,12 @@ public class CommunityPostService {
                     .fetch();
 
             // 댓글 트리 조립 (부모 → 대댓글)
-            Map<Long, CommCmtDTO> cmtMap = new java.util.LinkedHashMap<>();
-            List<CommCmtDTO> rootCmts = new ArrayList<>();
+            Map<Long, CmtDTO> cmtMap = new java.util.LinkedHashMap<>();
+            List<CmtDTO> rootCmts = new ArrayList<>();
 
             for (com.querydsl.core.Tuple t : cmtTuples) {
                 TblCommPostCmt c = t.get(cmt);
-                CommCmtDTO dto = new CommCmtDTO(
+                CmtDTO dto = new CmtDTO(
                         c.getCommPostCmtSn(), c.getUserSn(), t.get(cmtUser.name),
                         c.getCmtCntnt(), c.getLikeCnt(), c.getFrstCrtDt(), new ArrayList<>()
                 );
@@ -284,22 +293,24 @@ public class CommunityPostService {
                 if (c.getPrntCmtSn() == null) {
                     rootCmts.add(dto);
                 } else {
-                    CommCmtDTO parent = cmtMap.get(c.getPrntCmtSn());
+                    CmtDTO parent = cmtMap.get(c.getPrntCmtSn());
                     if (parent != null) parent.getReplies().add(dto);
                 }
             }
 
-            resultVO.putResult("comm", java.util.Map.of(
-                    "commSn", community.getCommSn(),
-                    "commDsplNm", community.getCommDsplNm(),
-                    "memberCnt", community.getMemberCnt()
-            ));
+            // 내 좋아요 여부 (UP / DOWN / null)
+            TblCommPostLike myLike = userSn != null
+                    ? tblCommPostLikeRepository.findByCommPostSnAndUserSn(commPostSn, userSn)
+                    : null;
+            String myLikeTyp = myLike != null ? myLike.getLikeTyp() : null;
+
+            resultVO.putResult("comm", community);
             resultVO.putResult("post", new CommunityPostDTO(
                     p.getCommPostSn(), p.getCommSn(), p.getUserSn(),
-                    postTuple.get(user.name), p.getPostTyp(), p.getPostTtl(), p.getFrstCrtDt(),
-                    p.getViewCnt(), p.getLikeCnt(), p.getCmtCnt(), tagNms
+                    postTuple.get(user.name), p.getPostTyp(), p.getPostTtl(), p.getPostCntnt(), p.getFrstCrtDt(),
+                    p.getViewCnt(), p.getLikeCnt(), p.getCmtCnt(), tagNms, myLikeTyp
             ));
-            resultVO.putResult("postCntnt", p.getPostCntnt());
+            resultVO.putResult("myLikeTyp", myLikeTyp);
             resultVO.putResult("comments", rootCmts);
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
             resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
@@ -308,6 +319,46 @@ public class CommunityPostService {
             e.printStackTrace();
             resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
             resultVO.setResultMessage(ResponseCode.SELECT_ERROR.getMessage());
+        }
+
+        return resultVO;
+    }
+
+    public ResultVO setCommPostLike(Map<String, Object> params, String token) {
+        ResultVO resultVO = new ResultVO();
+
+        try {
+            long userSn = jwtProvider.extractUserSn(token.replace("Bearer ", ""));
+            long commPostSn = Long.parseLong(params.get("commPostSn").toString());
+            String postLike = params.get("postLike").toString().toUpperCase();
+
+            TblCommPost commPost = tblCommPostRepository.findById(commPostSn).orElseThrow();
+            TblCommPostLike commPostLike = tblCommPostLikeRepository.findByCommPostSnAndUserSn(commPostSn, userSn);
+
+            if(postLike.equals("UP")){
+                commPost.setLikeCnt(commPost.getLikeCnt() + 1);
+            }else{
+                commPost.setLikeCnt(commPost.getLikeCnt() - 1);
+            }
+            tblCommPostRepository.save(commPost);
+
+            if(commPostLike == null){
+                commPostLike = TblCommPostLike.builder()
+                        .userSn(userSn)
+                        .commPostSn(commPostSn)
+                        .likeTyp(postLike)
+                        .creatrSn(userSn)
+                        .build();
+            }else{
+                commPostLike.setLikeTyp(postLike);
+            }
+            tblCommPostLikeRepository.save(commPostLike);
+
+            resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
+            resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
+        }catch (Exception e) {
+            resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
+            resultVO.setResultMessage(ResponseCode.SAVE_ERROR.getMessage());
         }
 
         return resultVO;

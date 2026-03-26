@@ -18,9 +18,11 @@ public class CommunityPostDTO {
     private String authorNm;
     private String postTyp;
     private String postTtl;
+    private String postCntnt;
     private LocalDateTime frstCrtDt;
     private int viewCnt;
     private int likeCnt;
     private int cmtCnt;
     private List<String> tagNms;
+    private String myLikeTyp; // UP / DOWN / null(안누름)
 }
