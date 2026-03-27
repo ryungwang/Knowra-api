@@ -63,6 +63,12 @@ public class JwtProvider {
         }
     }
 
+    public long getRemainingTtlSeconds(String token) {
+        Date expiration = parseClaims(token).getExpiration();
+        long remaining = expiration.getTime() - System.currentTimeMillis();
+        return Math.max(remaining / 1000, 0);
+    }
+
     private Claims parseClaims(String token) {
         return Jwts.parser()
                 .verifyWith(secretKey)

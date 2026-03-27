@@ -2,6 +2,8 @@ package com.knowra.user.controller;
 
 import com.knowra.cmm.model.ResultVO;
 import com.knowra.user.service.AuthService;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -27,9 +29,20 @@ public class AuthController {
         return authService.login(request);
     }
 
+    @PostMapping("/logout")
+    public ResultVO logout(HttpServletRequest request) {
+        String token = request.getHeader("Authorization");
+        return authService.logout(token);
+    }
+
     @PostMapping("/refresh")
     public ResultVO refresh(@RequestBody Map<String, String> request) {
         return authService.refresh(request);
+    }
+
+    @PostMapping("/join")
+    public ResultVO join(@RequestBody Map<String, Object> params) {
+        return authService.join(params);
     }
 
     //    @PostMapping("/api/auth/setRedisSession")
@@ -42,10 +55,7 @@ public class AuthController {
 //        return loginService.getEmailDuplicationCheck(params);
 //    }
 //
-//    @PostMapping("/api/auth/join")
-//    public ResultVO join(@RequestBody TblUser tblUser) {
-//        return loginService.join(tblUser);
-//    }
+
 
     //    @PostMapping("/api/auth/logOut")
 //    public ResultVO logOut(@RequestBody Map<String, Object> params, HttpServletRequest request) {

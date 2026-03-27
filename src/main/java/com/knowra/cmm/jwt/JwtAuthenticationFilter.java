@@ -1,5 +1,6 @@
 package com.knowra.cmm.jwt;
 
+import com.knowra.cmm.service.RedisApiService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -20,6 +21,9 @@ import java.util.List;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtProvider jwtProvider;
+    private final RedisApiService redisApiService;
+
+    private static final int REDIS_DB = 15;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -27,7 +31,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     FilterChain filterChain) throws ServletException, IOException {
         String token = resolveToken(request);
 
-        if (StringUtils.hasText(token) && jwtProvider.isValid(token)) {
+        if (StringUtils.hasText(token)
+                && jwtProvider.isValid(token)
+                && !redisApiService.isBlocklisted(REDIS_DB, token)) {
+
             long userSn = jwtProvider.extractUserSn(token);
 
             UsernamePasswordAuthenticationToken authentication =

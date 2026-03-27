@@ -15,6 +15,7 @@ import com.knowra.common.entity.CmtDTO;
 import com.knowra.community.entity.*;
 import com.knowra.community.repository.*;
 import com.knowra.user.entity.QTblUser;
+import com.querydsl.core.types.dsl.CaseBuilder;
 import org.modelmapper.ModelMapper;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
@@ -37,6 +38,8 @@ import java.util.Optional;
 public class CommunityPostService {
     private final ModelMapper modelMapper;
     private final TblCommPostRepository tblCommPostRepository;
+    private final TblCommPostCmtRepository tblCommPostCmtRepository;
+    private final TblCommPostCmtReactRepository tblCommPostCmtReactRepository;
     private final TblCommPostTagRepository tblCommPostTagRepository;
     private final TblCommPostLikeRepository tblCommPostLikeRepository;
     private final TblTagRepository tblTagRepository;
@@ -147,8 +150,8 @@ public class CommunityPostService {
                         .join(user).on(post.userSn.eq(user.userSn))
                         .where(condition)
                         .orderBy(post.likeCnt.desc(), post.commPostSn.desc())
-                        .offset((long) page * 20)
-                        .limit(20)
+                        .offset((long) page * 50)
+                        .limit(50)
                         .fetch();
             } else if ("NOTICE".equals(listTyp)) {
                 // 공지: postTyp = NOTICE, 커서 페이징
@@ -159,18 +162,40 @@ public class CommunityPostService {
                         .join(user).on(post.userSn.eq(user.userSn))
                         .where(condition)
                         .orderBy(post.commPostSn.desc())
-                        .limit(20)
+                        .limit(50)
                         .fetch();
             } else {
-                // ALL / LATEST: 최신순 커서 페이징
-                if (cursor != null) condition = condition.and(post.commPostSn.lt(cursor));
-                tuples = q.select(post, user.name)
-                        .from(post)
-                        .join(user).on(post.userSn.eq(user.userSn))
-                        .where(condition)
-                        .orderBy(post.commPostSn.desc())
-                        .limit(20)
-                        .fetch();
+                // ALL / LATEST: 공지 항상 상단 고정 + 일반 게시글 커서 페이징
+                if (cursor == null) {
+                    // 첫 페이지: 공지 전체 먼저 조회
+                    List<com.querydsl.core.Tuple> notices = q.select(post, user.name)
+                            .from(post)
+                            .join(user).on(post.userSn.eq(user.userSn))
+                            .where(condition.and(post.postTyp.eq("NOTICE")))
+                            .orderBy(post.commPostSn.desc())
+                            .fetch();
+                    // 일반 게시글: 50 - 공지수 만큼
+                    int normalLimit = Math.max(50 - notices.size(), 0);
+                    List<com.querydsl.core.Tuple> normals = q.select(post, user.name)
+                            .from(post)
+                            .join(user).on(post.userSn.eq(user.userSn))
+                            .where(condition.and(post.postTyp.eq("NORMAL")))
+                            .orderBy(post.commPostSn.desc())
+                            .limit(normalLimit)
+                            .fetch();
+                    tuples = new ArrayList<>(notices);
+                    tuples.addAll(normals);
+                } else {
+                    // 이후 페이지: 일반 게시글만 커서 페이징 (공지는 첫 페이지에 고정)
+                    tuples = q.select(post, user.name)
+                            .from(post)
+                            .join(user).on(post.userSn.eq(user.userSn))
+                            .where(condition.and(post.postTyp.eq("NORMAL"))
+                                           .and(post.commPostSn.lt(cursor)))
+                            .orderBy(post.commPostSn.desc())
+                            .limit(50)
+                            .fetch();
+                }
             }
 
             List<Long> postSns = tuples.stream()
@@ -210,7 +235,7 @@ public class CommunityPostService {
                 ));
             }
 
-            Long nextCursor = list.size() == 20
+            Long nextCursor = list.size() == 50
                     ? list.get(list.size() - 1).getCommPostSn()
                     : null;
 
@@ -240,7 +265,6 @@ public class CommunityPostService {
             QTblTag tag = QTblTag.tblTag;
             QTblUser user = QTblUser.tblUser;
             QTblComm comm = QTblComm.tblComm;
-            QTblCommPostCmt cmt = QTblCommPostCmt.tblCommPostCmt;
 
             // 게시글 + 작성자
             com.querydsl.core.Tuple postTuple = q.select(post, user.name)
@@ -270,34 +294,6 @@ public class CommunityPostService {
                     .where(postTag.commPostSn.eq(commPostSn))
                     .fetch();
 
-            // 댓글 + 작성자 (부모/대댓글 한번에)
-            QTblUser cmtUser = new QTblUser("cmtUser");
-            List<com.querydsl.core.Tuple> cmtTuples = q.select(cmt, cmtUser.name)
-                    .from(cmt)
-                    .join(cmtUser).on(cmt.userSn.eq(cmtUser.userSn))
-                    .where(cmt.commPostSn.eq(commPostSn), cmt.stat.eq("ACTIVE"), cmt.actvtnYn.eq("Y"))
-                    .orderBy(cmt.commPostCmtSn.asc())
-                    .fetch();
-
-            // 댓글 트리 조립 (부모 → 대댓글)
-            Map<Long, CmtDTO> cmtMap = new java.util.LinkedHashMap<>();
-            List<CmtDTO> rootCmts = new ArrayList<>();
-
-            for (com.querydsl.core.Tuple t : cmtTuples) {
-                TblCommPostCmt c = t.get(cmt);
-                CmtDTO dto = new CmtDTO(
-                        c.getCommPostCmtSn(), c.getUserSn(), t.get(cmtUser.name),
-                        c.getCmtCntnt(), c.getLikeCnt(), c.getFrstCrtDt(), new ArrayList<>()
-                );
-                cmtMap.put(c.getCommPostCmtSn(), dto);
-                if (c.getPrntCmtSn() == null) {
-                    rootCmts.add(dto);
-                } else {
-                    CmtDTO parent = cmtMap.get(c.getPrntCmtSn());
-                    if (parent != null) parent.getReplies().add(dto);
-                }
-            }
-
             // 내 좋아요 여부 (UP / DOWN / null)
             TblCommPostLike myLike = userSn != null
                     ? tblCommPostLikeRepository.findByCommPostSnAndUserSn(commPostSn, userSn)
@@ -311,7 +307,6 @@ public class CommunityPostService {
                     p.getViewCnt(), p.getLikeCnt(), p.getCmtCnt(), tagNms, myLikeTyp
             ));
             resultVO.putResult("myLikeTyp", myLikeTyp);
-            resultVO.putResult("comments", rootCmts);
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
             resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
 
@@ -324,35 +319,152 @@ public class CommunityPostService {
         return resultVO;
     }
 
+    public ResultVO getCommPostCmtList(Map<String, Object> params, String token) {
+        ResultVO resultVO = new ResultVO();
+        try {
+            Long userSn = token != null ? jwtProvider.extractUserSn(token.replace("Bearer ", "")) : null;
+            JPAQueryFactory q = new JPAQueryFactory(em);
+
+            long commPostSn = Long.parseLong(params.get("commPostSn").toString());
+            int  size       = params.get("size")   != null ? Integer.parseInt(params.get("size").toString()) : 10;
+            Long cursor     = params.get("cursor") != null ? Long.parseLong(params.get("cursor").toString()) : null;
+
+            QTblCommPostCmt cmt     = QTblCommPostCmt.tblCommPostCmt;
+            QTblUser        cmtUser = new QTblUser("cmtUser");
+
+            // ── 1. 루트 댓글만 커서 페이지네이션 (commPostCmtSn ASC) ──────────
+            var rootCondition = cmt.commPostSn.eq(commPostSn)
+                    .and(cmt.stat.eq("ACTIVE"))
+                    .and(cmt.actvtnYn.eq("Y"))
+                    .and(cmt.prntCmtSn.isNull());
+            if (cursor != null) rootCondition = rootCondition.and(cmt.commPostCmtSn.gt(cursor));
+
+            List<com.querydsl.core.Tuple> rootTuples = q.select(cmt, cmtUser.name)
+                    .from(cmt)
+                    .join(cmtUser).on(cmt.userSn.eq(cmtUser.userSn))
+                    .where(rootCondition)
+                    .orderBy(cmt.commPostCmtSn.asc())
+                    .limit(size)
+                    .fetch();
+
+            if (rootTuples.isEmpty()) {
+                resultVO.putResult("list", List.of());
+                resultVO.putResult("nextCursor", null);
+                resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
+                resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
+                return resultVO;
+            }
+
+            List<Long> rootSns = rootTuples.stream()
+                    .map(t -> t.get(cmt).getCommPostCmtSn())
+                    .toList();
+
+            // ── 2. 대댓글 배치 로드 ────────────────────────────────────────────
+            List<com.querydsl.core.Tuple> replyTuples = q.select(cmt, cmtUser.name)
+                    .from(cmt)
+                    .join(cmtUser).on(cmt.userSn.eq(cmtUser.userSn))
+                    .where(cmt.prntCmtSn.in(rootSns)
+                            .and(cmt.stat.eq("ACTIVE"))
+                            .and(cmt.actvtnYn.eq("Y")))
+                    .orderBy(cmt.commPostCmtSn.asc())
+                    .fetch();
+
+            // ── 3. 반응 수 / 내 반응 배치 조회 ───────────────────────────────
+            List<Long> allSns = new ArrayList<>(rootSns);
+            replyTuples.stream().map(t -> t.get(cmt).getCommPostCmtSn()).forEach(allSns::add);
+
+            Map<Long, Map<String, Long>> reactionsMap = new java.util.HashMap<>();
+            tblCommPostCmtReactRepository.countByCmtSns(allSns).forEach(row -> {
+                long   cmtSn = ((Number) row[0]).longValue();
+                String typ   = (String) row[1];
+                long   cnt   = ((Number) row[2]).longValue();
+                reactionsMap.computeIfAbsent(cmtSn, k -> new java.util.HashMap<>()).put(typ, cnt);
+            });
+
+            Map<Long, String> myReactMap = new java.util.HashMap<>();
+            if (userSn != null) {
+                tblCommPostCmtReactRepository.findByCommPostCmtSnInAndUserSn(allSns, userSn)
+                        .forEach(r -> myReactMap.put(r.getCommPostCmtSn(), r.getReactTyp()));
+            }
+
+            // ── 4. 트리 조립 ──────────────────────────────────────────────────
+            java.util.function.Function<com.querydsl.core.Tuple, CmtDTO> toDto = t -> {
+                TblCommPostCmt c   = t.get(cmt);
+                long           sn  = c.getCommPostCmtSn();
+                return new CmtDTO(
+                        sn, c.getUserSn(), t.get(cmtUser.name),
+                        c.getCmtCntnt(), c.getLikeCnt(), c.getFrstCrtDt(), new ArrayList<>(),
+                        reactionsMap.getOrDefault(sn, new java.util.HashMap<>()),
+                        myReactMap.get(sn)
+                );
+            };
+
+            Map<Long, CmtDTO> rootMap = new java.util.LinkedHashMap<>();
+            rootTuples.forEach(t -> rootMap.put(t.get(cmt).getCommPostCmtSn(), toDto.apply(t)));
+            replyTuples.forEach(t -> {
+                Long prnt = t.get(cmt).getPrntCmtSn();
+                CmtDTO parent = rootMap.get(prnt);
+                if (parent != null) parent.getReplies().add(toDto.apply(t));
+            });
+
+            List<CmtDTO> list = new ArrayList<>(rootMap.values());
+
+            // ── 5. nextCursor: 마지막 루트 댓글 SN (size 미달이면 null) ────────
+            Long nextCursor = list.size() == size
+                    ? rootSns.get(rootSns.size() - 1)
+                    : null;
+
+            resultVO.putResult("list", list);
+            resultVO.putResult("nextCursor", nextCursor);
+            resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
+            resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
+            resultVO.setResultMessage(ResponseCode.SELECT_ERROR.getMessage());
+        }
+        return resultVO;
+    }
+
     public ResultVO setCommPostLike(Map<String, Object> params, String token) {
         ResultVO resultVO = new ResultVO();
 
         try {
+            JPAQueryFactory q = new JPAQueryFactory(em);
+
             long userSn = jwtProvider.extractUserSn(token.replace("Bearer ", ""));
             long commPostSn = Long.parseLong(params.get("commPostSn").toString());
             String postLike = params.get("postLike").toString().toUpperCase();
 
-            TblCommPost commPost = tblCommPostRepository.findById(commPostSn).orElseThrow();
+            QTblCommPost qCommPost = QTblCommPost.tblCommPost;
             TblCommPostLike commPostLike = tblCommPostLikeRepository.findByCommPostSnAndUserSn(commPostSn, userSn);
 
-            if(postLike.equals("UP")){
-                commPost.setLikeCnt(commPost.getLikeCnt() + 1);
-            }else{
-                commPost.setLikeCnt(commPost.getLikeCnt() - 1);
-            }
-            tblCommPostRepository.save(commPost);
-
-            if(commPostLike == null){
-                commPostLike = TblCommPostLike.builder()
+            int delta;
+            if (commPostLike == null) {
+                // 처음 반응 → 추가
+                delta = "UP".equals(postLike) ? 1 : -1;
+                tblCommPostLikeRepository.save(TblCommPostLike.builder()
                         .userSn(userSn)
                         .commPostSn(commPostSn)
                         .likeTyp(postLike)
                         .creatrSn(userSn)
-                        .build();
-            }else{
+                        .build());
+            } else if (commPostLike.getLikeTyp().equals(postLike)) {
+                // 같은 반응 재클릭 → 취소
+                delta = "UP".equals(postLike) ? -1 : 1;
+                tblCommPostLikeRepository.delete(commPostLike);
+            } else {
+                // 반대 반응으로 전환 (DOWN→UP: +2, UP→DOWN: -2)
+                delta = "UP".equals(postLike) ? 2 : -2;
                 commPostLike.setLikeTyp(postLike);
+                tblCommPostLikeRepository.save(commPostLike);
             }
-            tblCommPostLikeRepository.save(commPostLike);
+
+            q.update(qCommPost)
+                    .set(qCommPost.likeCnt, qCommPost.likeCnt.add(delta))
+                    .where(qCommPost.commPostSn.eq(commPostSn))
+                    .execute();
 
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
             resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
@@ -361,6 +473,73 @@ public class CommunityPostService {
             resultVO.setResultMessage(ResponseCode.SAVE_ERROR.getMessage());
         }
 
+        return resultVO;
+    }
+
+    public ResultVO setCommPostCmtReact(Map<String, Object> params, String token) {
+        ResultVO resultVO = new ResultVO();
+        try {
+            long userSn      = jwtProvider.extractUserSn(token.replace("Bearer ", ""));
+            long commPostCmtSn = Long.parseLong(params.get("commPostCmtSn").toString());
+            String reactTyp  = params.get("reactTyp").toString();
+
+            TblCommPostCmtReact existing =
+                    tblCommPostCmtReactRepository.findByCommPostCmtSnAndUserSn(commPostCmtSn, userSn);
+
+            if (existing == null) {
+                // 처음 반응
+                tblCommPostCmtReactRepository.save(TblCommPostCmtReact.builder()
+                        .commPostCmtSn(commPostCmtSn)
+                        .userSn(userSn)
+                        .reactTyp(reactTyp)
+                        .creatrSn(userSn)
+                        .build());
+            } else if (existing.getReactTyp().equals(reactTyp)) {
+                // 같은 반응 재클릭 → 취소
+                tblCommPostCmtReactRepository.delete(existing);
+            } else {
+                // 다른 반응으로 전환
+                existing.setReactTyp(reactTyp);
+            }
+
+            resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
+        } catch (Exception e) {
+            resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
+            resultVO.setResultMessage(ResponseCode.SAVE_ERROR.getMessage());
+        }
+        return resultVO;
+    }
+
+    public ResultVO setCommPostCmt(Map<String, Object> params, String token) {
+        ResultVO resultVO = new ResultVO();
+        try {
+            long userSn = jwtProvider.extractUserSn(token.replace("Bearer ", ""));
+            long commPostSn = Long.parseLong(params.get("commPostSn").toString());
+            Long prntCmtSn = params.get("prntCmtSn") != null
+                    ? Long.parseLong(params.get("prntCmtSn").toString()) : null;
+
+            TblCommPostCmt cmt = TblCommPostCmt.builder()
+                    .commPostSn(commPostSn)
+                    .userSn(userSn)
+                    .prntCmtSn(prntCmtSn)
+                    .cmtCntnt(params.get("cmtCntnt").toString())
+                    .creatrSn(userSn)
+                    .build();
+            tblCommPostCmtRepository.save(cmt);
+
+            // 댓글수 +1
+            JPAQueryFactory q = new JPAQueryFactory(em);
+            QTblCommPost qCommPost = QTblCommPost.tblCommPost;
+            q.update(qCommPost)
+                    .set(qCommPost.cmtCnt, qCommPost.cmtCnt.add(1))
+                    .where(qCommPost.commPostSn.eq(commPostSn))
+                    .execute();
+
+            resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
+        } catch (Exception e) {
+            resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
+            resultVO.setResultMessage(ResponseCode.SAVE_ERROR.getMessage());
+        }
         return resultVO;
     }
 }
