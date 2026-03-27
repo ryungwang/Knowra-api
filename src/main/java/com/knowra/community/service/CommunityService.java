@@ -152,7 +152,37 @@ public class CommunityService {
         try {
             long userSn = jwtProvider.extractUserSn(token.replace("Bearer ", ""));
 
-            List<TblComm> communities = tblCommRepository.findAllByMemberUserSn(userSn);
+            QTblComm    qComm = QTblComm.tblComm;
+            QTblCommMbr qMbr  = QTblCommMbr.tblCommMbr;
+
+            List<com.querydsl.core.Tuple> tuples = new JPAQueryFactory(em)
+                    .select(qComm, qMbr.role)
+                    .from(qMbr)
+                    .join(qComm).on(qMbr.commSn.eq(qComm.commSn))
+                    .where(qMbr.userSn.eq(userSn)
+                            .and(qMbr.stat.eq("ACTIVE"))
+                            .and(qComm.actvtnYn.eq("Y")))
+                    .orderBy(qMbr.frstCrtDt.asc())
+                    .fetch();
+
+            List<Map<String, Object>> communities = tuples.stream()
+                    .map(t -> {
+                        TblComm c = t.get(qComm);
+                        Map<String, Object> map = new java.util.LinkedHashMap<>();
+                        map.put("commSn",     c.getCommSn());
+                        map.put("commNm",     c.getCommNm());
+                        map.put("commDsplNm", c.getCommDsplNm());
+                        map.put("commDesc",   c.getCommDesc());
+                        map.put("ctgrSn",     c.getCtgrSn());
+                        map.put("prvcyStng",  c.getPrvcyStng());
+                        map.put("logoFileSn", c.getLogoFileSn());
+                        map.put("bnrFileSn",  c.getBnrFileSn());
+                        map.put("memberCnt",  c.getMemberCnt());
+                        map.put("frstCrtDt",  c.getFrstCrtDt());
+                        map.put("myRole",     t.get(qMbr.role));
+                        return map;
+                    })
+                    .toList();
 
             resultVO.putResult("communities", communities);
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());

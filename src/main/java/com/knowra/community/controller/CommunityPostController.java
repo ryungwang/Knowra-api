@@ -50,5 +50,21 @@ public class CommunityPostController {
         return communityPostService.setCommPostLike(params, token);
     }
 
+    @PostMapping("/api/community/setCommPostCmt")
+    public ResultVO setCommPostCmt(@RequestBody Map<String, Object> params, HttpServletRequest request) {
+        String token = request.getHeader("Authorization");
+        return communityPostService.setCommPostCmt(params, token);
+    }
 
+    @PostMapping("/api/community/getCommPostCmtList")
+    public ResultVO getCommPostCmtList(@RequestBody Map<String, Object> params, HttpServletRequest request) {
+        String token = request.getHeader("Authorization");
+        return communityPostService.getCommPostCmtList(params, token);
+    }
+
+    @PostMapping("/api/community/setCommPostCmtReact")
+    public ResultVO setCommPostCmtReact(@RequestBody Map<String, Object> params, HttpServletRequest request) {
+        String token = request.getHeader("Authorization");
+        return communityPostService.setCommPostCmtReact(params, token);
+    }
 }

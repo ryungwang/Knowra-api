@@ -47,6 +47,18 @@ public class RedisApiService {
         return redisTemplate.keys("post:viewcnt:*");
     }
 
+    // 로그아웃 토큰 블랙리스트 등록 (TTL = 토큰 남은 유효시간)
+    public void addToBlocklist(int templateIndex, String token, long ttlSeconds) {
+        RedisTemplate<String, Object> redisTemplate = getRedisTemplate(templateIndex);
+        redisTemplate.opsForValue().set("auth:blocklist:" + token, "1", ttlSeconds, TimeUnit.SECONDS);
+    }
+
+    // 블랙리스트 여부 확인
+    public boolean isBlocklisted(int templateIndex, String token) {
+        RedisTemplate<String, Object> redisTemplate = getRedisTemplate(templateIndex);
+        return Boolean.TRUE.equals(redisTemplate.hasKey("auth:blocklist:" + token));
+    }
+
     // 값 가져오고 삭제 (동기화 후 리셋)
     public long getAndDeleteViewCount(int templateIndex, String key) {
         RedisTemplate<String, Object> redisTemplate = getRedisTemplate(templateIndex);
