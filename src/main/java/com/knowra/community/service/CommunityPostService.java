@@ -542,4 +542,73 @@ public class CommunityPostService {
         }
         return resultVO;
     }
+
+    /**
+     * UserService 재사용 — userSn 기준 커뮤니티 게시글 목록 (날짜 커서 기반, 최신순)
+     * 반환 필드: getCommPostList 기준(CommunityPostDTO) + commDsplNm
+     */
+    public List<Map<String, Object>> fetchCommPostListByUser(long userSn, Long viewerUserSn, java.time.LocalDateTime cursor, int size) {
+        JPAQueryFactory  q     = new JPAQueryFactory(em);
+        QTblCommPost     qPost = QTblCommPost.tblCommPost;
+        QTblComm         qComm = QTblComm.tblComm;
+        QTblUser         qUser = QTblUser.tblUser;
+        QTblCommPostTag  qTag  = QTblCommPostTag.tblCommPostTag;
+        QTblTag          qTbl  = QTblTag.tblTag;
+
+        var condition = qPost.userSn.eq(userSn)
+                .and(qPost.stat.eq("ACTIVE"))
+                .and(qPost.actvtnYn.eq("Y"));
+        if (cursor != null) condition = condition.and(qPost.frstCrtDt.lt(cursor));
+
+        List<com.querydsl.core.Tuple> tuples = q
+                .select(qPost, qUser.name, qComm.commNm, qComm.commDsplNm)
+                .from(qPost)
+                .join(qUser).on(qPost.userSn.eq(qUser.userSn))
+                .join(qComm).on(qPost.commSn.eq(qComm.commSn))
+                .where(condition)
+                .orderBy(qPost.frstCrtDt.desc())
+                .limit(size)
+                .fetch();
+
+        if (tuples.isEmpty()) return List.of();
+
+        List<Long> postSns = tuples.stream().map(t -> t.get(qPost).getCommPostSn()).toList();
+
+        // 태그 배치 조회
+        Map<Long, List<String>> tagMap = new java.util.HashMap<>();
+        q.select(qTag.commPostSn, qTbl.tagNm)
+                .from(qTag).join(qTbl).on(qTag.tagSn.eq(qTbl.tagSn))
+                .where(qTag.commPostSn.in(postSns))
+                .fetch()
+                .forEach(t -> tagMap.computeIfAbsent(t.get(qTag.commPostSn), k -> new ArrayList<>())
+                        .add(t.get(qTbl.tagNm)));
+
+        // 내 좋아요 배치 조회 (getCommPost 방식과 동일)
+        Map<Long, String> likeMap = new java.util.HashMap<>();
+        if (viewerUserSn != null) {
+            tblCommPostLikeRepository.findByCommPostSnInAndUserSn(postSns, viewerUserSn)
+                    .forEach(l -> likeMap.put(l.getCommPostSn(), l.getLikeTyp()));
+        }
+
+        return tuples.stream().map(t -> {
+            TblCommPost p = t.get(qPost);
+            Map<String, Object> map = new java.util.LinkedHashMap<>();
+            map.put("postType",   "COMM");
+            map.put("commPostSn", p.getCommPostSn());
+            map.put("commSn",     p.getCommSn());
+            map.put("commNm",     t.get(qComm.commNm));
+            map.put("commDsplNm", t.get(qComm.commDsplNm));
+            map.put("userSn",     p.getUserSn());
+            map.put("authorNm",   t.get(qUser.name));
+            map.put("postTyp",    p.getPostTyp());
+            map.put("postTtl",    p.getPostTtl());
+            map.put("frstCrtDt",  p.getFrstCrtDt());
+            map.put("viewCnt",    p.getViewCnt());
+            map.put("likeCnt",    p.getLikeCnt());
+            map.put("cmtCnt",     p.getCmtCnt());
+            map.put("tagNms",     tagMap.getOrDefault(p.getCommPostSn(), List.of()));
+            map.put("myLikeTyp",  likeMap.get(p.getCommPostSn()));
+            return (Map<String, Object>) map;
+        }).toList();
+    }
 }

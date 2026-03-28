@@ -7,10 +7,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
 
 import java.util.Map;
 
@@ -23,15 +21,30 @@ public class UserController {
 
     private final CommunityService communityService;
 
-//    @PostMapping("/api/user/getUserProfile")
-//    public ResultVO getUserProfile(@RequestBody Map<String, Object> params) {
-//        return userService.getUserProfile(params);
-//    }
-//
-//    @PostMapping("/api/user/setUserProfile")
-//    public ResultVO setUserProfile(@RequestBody TblUser tblUser) {
-//        return userService.setUserProfile(tblUser);
-//    }
+    @PostMapping("/api/user/getUserProfile")
+    public ResultVO getUserProfile(@RequestBody Map<String, Object> params) {
+        return userService.getUserProfile(params);
+    }
+
+    @PostMapping("/api/user/getUserPostList")
+    public ResultVO getUserPostList(@RequestBody Map<String, Object> params, HttpServletRequest request) {
+        return userService.getUserPostList(params, request.getHeader("Authorization"));
+    }
+
+    @PostMapping("/api/user/getUserFollowerList")
+    public ResultVO getUserFollowerList(@RequestBody Map<String, Object> params, HttpServletRequest request) {
+        return userService.getUserFollowerList(params, request.getHeader("Authorization"));
+    }
+
+    @PostMapping("/api/user/getUserFollowingList")
+    public ResultVO getUserFollowingList(@RequestBody Map<String, Object> params, HttpServletRequest request) {
+        return userService.getUserFollowingList(params, request.getHeader("Authorization"));
+    }
+
+    @PostMapping("/api/user/setFollow")
+    public ResultVO setFollow(@RequestBody Map<String, Object> params, HttpServletRequest request) {
+        return userService.setFollow(params, request.getHeader("Authorization"));
+    }
 //
 //    @PostMapping("/api/user/setWalletAddress")
 //    public ResultVO setWalletAddress(@RequestBody Map<String, Object> params) {

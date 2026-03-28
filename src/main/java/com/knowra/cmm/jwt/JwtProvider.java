@@ -27,19 +27,19 @@ public class JwtProvider {
         this.refreshTokenExpiration = refreshTokenExpiration;
     }
 
-    public String generateAccessToken(long userSn, String email) {
-        return buildToken(userSn, email, accessTokenExpiration);
+    public String generateAccessToken(long userSn, String loginId) {
+        return buildToken(userSn, loginId, accessTokenExpiration);
     }
 
-    public String generateRefreshToken(long userSn, String email) {
-        return buildToken(userSn, email, refreshTokenExpiration);
+    public String generateRefreshToken(long userSn, String loginId) {
+        return buildToken(userSn, loginId, refreshTokenExpiration);
     }
 
-    private String buildToken(long userSn, String email, long expiration) {
+    private String buildToken(long userSn, String loginId, long expiration) {
         Date now = new Date();
         return Jwts.builder()
                 .subject(String.valueOf(userSn))  // subject에 userSn
-                .claim("email", email)             // claim에 email 추가
+                .claim("loginId", loginId)             // claim에 loginId 추가
                 .issuedAt(now)
                 .expiration(new Date(now.getTime() + expiration))
                 .signWith(secretKey)
@@ -50,8 +50,8 @@ public class JwtProvider {
         return Long.parseLong(parseClaims(token).getSubject());
     }
 
-    public String extractEmail(String token) {
-        return parseClaims(token).get("email", String.class);
+    public String extractLoginId(String token) {
+        return parseClaims(token).get("loginId", String.class);
     }
 
     public boolean isValid(String token) {
