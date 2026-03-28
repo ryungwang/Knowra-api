@@ -1,6 +1,6 @@
 package com.knowra.community.entity;
 
-import com.knowra.common.entity.BaseCmtEntity;
+import com.knowra.post.entity.BaseCmtEntity;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;

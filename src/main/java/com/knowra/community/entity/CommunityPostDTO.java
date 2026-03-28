@@ -15,6 +15,7 @@ public class CommunityPostDTO {
     private long commPostSn;
     private long commSn;
     private long userSn;
+    private String userId;
     private String authorNm;
     private String postTyp;
     private String postTtl;
@@ -25,4 +26,5 @@ public class CommunityPostDTO {
     private int cmtCnt;
     private List<String> tagNms;
     private String myLikeTyp; // UP / DOWN / null(안누름)
+    private boolean mySaved; // 저장 여부
 }

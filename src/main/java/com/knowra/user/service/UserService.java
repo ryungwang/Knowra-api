@@ -4,7 +4,7 @@ import com.knowra.cmm.jwt.JwtProvider;
 import com.knowra.cmm.model.ResponseCode;
 import com.knowra.cmm.model.ResultVO;
 import com.knowra.cmm.service.RedisApiService;
-import com.knowra.common.service.PostService;
+import com.knowra.post.service.PostService;
 import com.knowra.community.service.CommunityPostService;
 import com.knowra.user.entity.QTblUser;
 import com.knowra.user.entity.QTblUsrFlwr;
@@ -55,12 +55,23 @@ public class UserService {
                 .orElseThrow(() -> new IllegalStateException("User not found: " + loginId));
     }
 
-    public ResultVO getUserProfile(Map<String, Object> params) {
+    public ResultVO getUserProfile(Map<String, Object> params, String token) {
         ResultVO resultVO = new ResultVO();
 
         try {
+            JPAQueryFactory q = new JPAQueryFactory(em);
+            long userSn = jwtProvider.extractUserSn(token.replace("Bearer ", ""));
             String loginId = params.get("loginId").toString();
+
+            TblUser tblUser = tblUserRepository.findByLoginId(loginId).orElseThrow();
+            QTblUsrFlwr qFlwr = QTblUsrFlwr.tblUsrFlwr;
+
+            TblUsrFlwr usrFlwr = q.selectFrom(qFlwr)
+                    .where(qFlwr.flwrUserSn.eq(userSn).and(qFlwr.flwngUserSn.eq(tblUser.getUserSn()))
+                            .and(qFlwr.actvtnYn.eq("Y"))).fetchOne();
+
             resultVO.putResult("userProfile", tblUserRepository.findByLoginId(loginId));
+            resultVO.putResult("isFollowing", usrFlwr != null);
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
             resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
         }catch (Exception e) {

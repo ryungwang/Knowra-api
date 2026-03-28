@@ -22,8 +22,8 @@ public class UserController {
     private final CommunityService communityService;
 
     @PostMapping("/api/user/getUserProfile")
-    public ResultVO getUserProfile(@RequestBody Map<String, Object> params) {
-        return userService.getUserProfile(params);
+    public ResultVO getUserProfile(@RequestBody Map<String, Object> params, HttpServletRequest request) {
+        return userService.getUserProfile(params, request.getHeader("Authorization"));
     }
 
     @PostMapping("/api/user/getUserPostList")

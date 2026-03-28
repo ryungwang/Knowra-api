@@ -1,4 +1,4 @@
-package com.knowra.common.entity;
+package com.knowra.post.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.MappedSuperclass;

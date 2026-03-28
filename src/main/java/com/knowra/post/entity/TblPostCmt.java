@@ -1,6 +1,5 @@
-package com.knowra.common.entity;
+package com.knowra.post.entity;
 
-import com.knowra.common.entity.BaseCmtEntity;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -12,7 +11,7 @@ import org.hibernate.annotations.Comment;
 @Entity
 @Table(
         name = "TBL_POST_CMT",
-        catalog = "KNOWRA_COM",
+        catalog = "KNOWRA_POST",
         indexes = {
                 @Index(name = "IDX_POST_CMT_POST", columnList = "POST_SN"),
                 @Index(name = "IDX_POST_CMT_PRNT", columnList = "PRNT_CMT_SN")

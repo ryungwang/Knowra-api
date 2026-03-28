@@ -1,21 +1,18 @@
 package com.knowra.community.service;
 
 import com.knowra.cmm.jwt.JwtProvider;
-import com.knowra.cmm.model.PaginationInfo;
 import com.knowra.cmm.model.ResponseCode;
 import com.knowra.cmm.model.ResultVO;
 import com.knowra.cmm.service.RedisApiService;
-import com.knowra.cmm.util.FileUtil;
-import com.knowra.common.entity.TblComFile;
 import com.knowra.common.entity.QTblTag;
 import com.knowra.common.entity.TblTag;
-import com.knowra.common.repository.TblComFileRepository;
 import com.knowra.common.repository.TblTagRepository;
-import com.knowra.common.entity.CmtDTO;
+import com.knowra.post.entity.CmtDTO;
+import com.knowra.post.entity.QTblPostSave;
+import com.knowra.post.repository.TblPostSaveRepository;
 import com.knowra.community.entity.*;
 import com.knowra.community.repository.*;
 import com.knowra.user.entity.QTblUser;
-import com.querydsl.core.types.dsl.CaseBuilder;
 import org.modelmapper.ModelMapper;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
@@ -24,12 +21,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartHttpServletRequest;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 
 @Service
@@ -43,6 +38,7 @@ public class CommunityPostService {
     private final TblCommPostTagRepository tblCommPostTagRepository;
     private final TblCommPostLikeRepository tblCommPostLikeRepository;
     private final TblTagRepository tblTagRepository;
+    private final TblPostSaveRepository tblPostSaveRepository;
     private final RedisApiService redisApiService;
     private final JwtProvider jwtProvider;
 
@@ -145,7 +141,7 @@ public class CommunityPostService {
 
             if ("POPULAR".equals(listTyp)) {
                 // 인기: likeCnt 내림차순, offset 페이징
-                tuples = q.select(post, user.name)
+                tuples = q.select(post, user.name, user.loginId)
                         .from(post)
                         .join(user).on(post.userSn.eq(user.userSn))
                         .where(condition)
@@ -157,7 +153,7 @@ public class CommunityPostService {
                 // 공지: postTyp = NOTICE, 커서 페이징
                 condition = condition.and(post.postTyp.eq("NOTICE"));
                 if (cursor != null) condition = condition.and(post.commPostSn.lt(cursor));
-                tuples = q.select(post, user.name)
+                tuples = q.select(post, user.name, user.loginId)
                         .from(post)
                         .join(user).on(post.userSn.eq(user.userSn))
                         .where(condition)
@@ -168,7 +164,7 @@ public class CommunityPostService {
                 // ALL / LATEST: 공지 항상 상단 고정 + 일반 게시글 커서 페이징
                 if (cursor == null) {
                     // 첫 페이지: 공지 전체 먼저 조회
-                    List<com.querydsl.core.Tuple> notices = q.select(post, user.name)
+                    List<com.querydsl.core.Tuple> notices = q.select(post, user.name, user.loginId)
                             .from(post)
                             .join(user).on(post.userSn.eq(user.userSn))
                             .where(condition.and(post.postTyp.eq("NOTICE")))
@@ -176,7 +172,7 @@ public class CommunityPostService {
                             .fetch();
                     // 일반 게시글: 50 - 공지수 만큼
                     int normalLimit = Math.max(50 - notices.size(), 0);
-                    List<com.querydsl.core.Tuple> normals = q.select(post, user.name)
+                    List<com.querydsl.core.Tuple> normals = q.select(post, user.name, user.loginId)
                             .from(post)
                             .join(user).on(post.userSn.eq(user.userSn))
                             .where(condition.and(post.postTyp.eq("NORMAL")))
@@ -187,7 +183,7 @@ public class CommunityPostService {
                     tuples.addAll(normals);
                 } else {
                     // 이후 페이지: 일반 게시글만 커서 페이징 (공지는 첫 페이지에 고정)
-                    tuples = q.select(post, user.name)
+                    tuples = q.select(post, user.name, user.loginId)
                             .from(post)
                             .join(user).on(post.userSn.eq(user.userSn))
                             .where(condition.and(post.postTyp.eq("NORMAL"))
@@ -222,16 +218,32 @@ public class CommunityPostService {
                         .forEach(like -> likeMap.put(like.getCommPostSn(), like.getLikeTyp()));
             }
 
+            // 내 저장 여부 일괄 조회
+            java.util.Set<Long> mySavedSet = new java.util.HashSet<>();
+            if (!postSns.isEmpty() && userSn != null) {
+                QTblPostSave qSave = QTblPostSave.tblPostSave;
+                new JPAQueryFactory(em)
+                        .select(qSave.postSn)
+                        .from(qSave)
+                        .where(qSave.userSn.eq(userSn)
+                                .and(qSave.postTyp.eq("COMM"))
+                                .and(qSave.postSn.in(postSns))
+                                .and(qSave.actvtnYn.eq("Y")))
+                        .fetch()
+                        .forEach(mySavedSet::add);
+            }
+
             // DTO 조립
             List<CommunityPostDTO> list = new ArrayList<>();
             for (com.querydsl.core.Tuple t : tuples) {
                 TblCommPost p = t.get(post);
                 list.add(new CommunityPostDTO(
                         p.getCommPostSn(), p.getCommSn(), p.getUserSn(),
-                        t.get(user.name), p.getPostTyp(), p.getPostTtl(), null, p.getFrstCrtDt(),
+                        t.get(user.loginId), t.get(user.name), p.getPostTyp(), p.getPostTtl(), null, p.getFrstCrtDt(),
                         p.getViewCnt(), p.getLikeCnt(), p.getCmtCnt(),
                         tagMap.getOrDefault(p.getCommPostSn(), List.of()),
-                        likeMap.get(p.getCommPostSn())
+                        likeMap.get(p.getCommPostSn()),
+                        mySavedSet.contains(p.getCommPostSn())
                 ));
             }
 
@@ -267,7 +279,7 @@ public class CommunityPostService {
             QTblComm comm = QTblComm.tblComm;
 
             // 게시글 + 작성자
-            com.querydsl.core.Tuple postTuple = q.select(post, user.name)
+            com.querydsl.core.Tuple postTuple = q.select(post, user.name, user.loginId)
                     .from(post)
                     .join(user).on(post.userSn.eq(user.userSn))
                     .where(post.commPostSn.eq(commPostSn), post.stat.eq("ACTIVE"))
@@ -300,11 +312,14 @@ public class CommunityPostService {
                     : null;
             String myLikeTyp = myLike != null ? myLike.getLikeTyp() : null;
 
+            boolean mySaved = userSn != null &&
+                    tblPostSaveRepository.findByUserSnAndPostSnAndPostTyp(userSn, commPostSn, "COMM") != null;
+
             resultVO.putResult("comm", community);
             resultVO.putResult("post", new CommunityPostDTO(
                     p.getCommPostSn(), p.getCommSn(), p.getUserSn(),
-                    postTuple.get(user.name), p.getPostTyp(), p.getPostTtl(), p.getPostCntnt(), p.getFrstCrtDt(),
-                    p.getViewCnt(), p.getLikeCnt(), p.getCmtCnt(), tagNms, myLikeTyp
+                    postTuple.get(user.loginId), postTuple.get(user.name), p.getPostTyp(), p.getPostTtl(), p.getPostCntnt(), p.getFrstCrtDt(),
+                    p.getViewCnt(), p.getLikeCnt(), p.getCmtCnt(), tagNms, myLikeTyp, mySaved
             ));
             resultVO.putResult("myLikeTyp", myLikeTyp);
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
@@ -583,11 +598,26 @@ public class CommunityPostService {
                 .forEach(t -> tagMap.computeIfAbsent(t.get(qTag.commPostSn), k -> new ArrayList<>())
                         .add(t.get(qTbl.tagNm)));
 
-        // 내 좋아요 배치 조회 (getCommPost 방식과 동일)
+        // 내 좋아요 배치 조회
         Map<Long, String> likeMap = new java.util.HashMap<>();
         if (viewerUserSn != null) {
             tblCommPostLikeRepository.findByCommPostSnInAndUserSn(postSns, viewerUserSn)
                     .forEach(l -> likeMap.put(l.getCommPostSn(), l.getLikeTyp()));
+        }
+
+        // 내 저장 여부 배치 조회
+        java.util.Set<Long> mySavedSet = new java.util.HashSet<>();
+        if (viewerUserSn != null) {
+            QTblPostSave qSave = QTblPostSave.tblPostSave;
+            new JPAQueryFactory(em)
+                    .select(qSave.postSn)
+                    .from(qSave)
+                    .where(qSave.userSn.eq(viewerUserSn)
+                            .and(qSave.postTyp.eq("COMM"))
+                            .and(qSave.postSn.in(postSns))
+                            .and(qSave.actvtnYn.eq("Y")))
+                    .fetch()
+                    .forEach(mySavedSet::add);
         }
 
         return tuples.stream().map(t -> {
@@ -608,6 +638,7 @@ public class CommunityPostService {
             map.put("cmtCnt",     p.getCmtCnt());
             map.put("tagNms",     tagMap.getOrDefault(p.getCommPostSn(), List.of()));
             map.put("myLikeTyp",  likeMap.get(p.getCommPostSn()));
+            map.put("mySaved",   mySavedSet.contains(p.getCommPostSn()));
             return (Map<String, Object>) map;
         }).toList();
     }
