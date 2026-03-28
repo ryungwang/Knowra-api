@@ -1,4 +1,4 @@
-package com.knowra.common.entity;
+package com.knowra.post.entity;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -11,32 +11,32 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(
-        name = "TBL_POST_LIKE",
-        catalog = "KNOWRA_COM",
+        name = "TBL_POST_TAG",
+        catalog = "KNOWRA_POST",
         uniqueConstraints = @UniqueConstraint(
-                name = "UK_POST_LIKE_USR",
-                columnNames = {"POST_SN", "USER_SN"}
+                name = "UK_POST_TAG",
+                columnNames = {"POST_SN", "TAG_SN"}
         )
 )
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class TblPostLike {
+public class TblPostTag {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "POST_LIKE_SN")
-    @Comment("좋아요 SN (PK)")
-    private Long postLikeSn;
+    @Column(name = "POST_TAG_SN")
+    @Comment("게시글-태그 SN (PK)")
+    private Long postTagSn;
 
     @Column(name = "POST_SN", nullable = false)
     @Comment("게시글 SN (tbl_post FK)")
     private long postSn;
 
-    @Column(name = "USER_SN", nullable = false)
-    @Comment("사용자 SN (TBL_USER FK)")
-    private long userSn;
+    @Column(name = "TAG_SN", nullable = false)
+    @Comment("태그 SN (tbl_tag FK)")
+    private long tagSn;
 
     @Column(name = "ACTVTN_YN", length = 1, nullable = false)
     @Comment("활성화 여부")

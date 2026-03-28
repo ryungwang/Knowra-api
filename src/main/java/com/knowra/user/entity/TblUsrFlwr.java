@@ -1,6 +1,6 @@
 package com.knowra.user.entity;
 
-import com.knowra.common.entity.BaseAuditEntity;
+import com.knowra.post.entity.BaseAuditEntity;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;

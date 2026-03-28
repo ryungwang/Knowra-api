@@ -1,6 +1,6 @@
-package com.knowra.common.repository;
+package com.knowra.post.repository;
 
-import com.knowra.common.entity.TblPostLike;
+import com.knowra.post.entity.TblPostLike;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;

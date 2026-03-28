@@ -1,4 +1,4 @@
-package com.knowra.common.entity;
+package com.knowra.post.entity;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
