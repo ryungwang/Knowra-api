@@ -92,7 +92,7 @@ public class AuthService {
                 return resultVO;
             }
 
-            String loginId = jwtProvider.extractEmail(refreshToken);
+            String loginId = jwtProvider.extractLoginId(refreshToken);
             long userSn = jwtProvider.extractUserSn(refreshToken);
             String newAccessToken = jwtProvider.generateAccessToken(userSn, loginId);
 

@@ -52,8 +52,13 @@ public class ContentGenerationService {
     @Value("${gemini.api.key}")
     private String geminiApiKey;
 
-    private static final String GEMINI_URL =
-            "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=";
+    @Value("${gemini.model:gemini-2.0-flash-lite}")
+    private String geminiModel;
+
+    private String geminiUrl() {
+        return "https://generativelanguage.googleapis.com/v1beta/models/"
+                + geminiModel + ":generateContent?key=";
+    }
 
     private static final String LOG_FILE_PATH = "src/docs/content_generation_log.md";
     private static final DateTimeFormatter LOG_DT_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
@@ -599,7 +604,7 @@ public class ContentGenerationService {
                         .and(qPost.stat.eq("ACTIVE"))
                         .and(qPost.actvtnYn.eq("Y")))
                 .orderBy(qPost.likeCnt.desc())
-                .limit(10)
+                .limit(3)
                 .fetch();
 
         if (examples.isEmpty()) return "";
@@ -607,8 +612,8 @@ public class ContentGenerationService {
         StringBuilder sb = new StringBuilder("\n\n[이 커뮤니티 인기 게시글 — 스타일 참고]\n");
         for (TblCommPost p : examples) {
             sb.append("제목: ").append(p.getPostTtl()).append("\n");
-            String preview = p.getPostCntnt().length() > 150
-                    ? p.getPostCntnt().substring(0, 150) + "..." : p.getPostCntnt();
+            String preview = p.getPostCntnt().length() > 100
+                    ? p.getPostCntnt().substring(0, 100) + "..." : p.getPostCntnt();
             sb.append("내용: ").append(preview).append("\n\n");
         }
         return sb.toString();
@@ -808,14 +813,21 @@ public class ContentGenerationService {
     }
 
     // ── Gemini API 호출 ────────────────────────────────────────────────────
-    private static final long GEMINI_THROTTLE_MS  = 4500L; // 호출 전 고정 딜레이 (분당 ~13회)
-    private static final int  GEMINI_MAX_RETRY    = 4;     // 최대 재시도 횟수
-    private static final long GEMINI_BACKOFF_BASE = 2_000L; // 지수 백오프 기준 (2초)
-    private static final long GEMINI_BACKOFF_MAX  = 64_000L; // 최대 대기 64초
+    private static final long GEMINI_MIN_INTERVAL_MS = 6_000L;  // 최소 호출 간격 6초 → 분당 최대 10회 (한도 15회 대비 안전마진)
+    private static final int  GEMINI_MAX_RETRY       = 4;
+    private static final long GEMINI_BACKOFF_BASE    = 4_000L;  // 지수 백오프 기준 4초
+    private static final long GEMINI_BACKOFF_MAX     = 64_000L; // 최대 대기 64초
+
+    // 마지막 실제 호출 시각 추적 (고정 sleep 대신 경과 시간 기반 조절)
+    private final java.util.concurrent.atomic.AtomicLong lastGeminiCallAt = new java.util.concurrent.atomic.AtomicLong(0);
 
     private String callGemini(String prompt) {
-        // 요청 전 고정 쓰로틀링 (Rate Limit 예방)
-        sleep(GEMINI_THROTTLE_MS);
+        // 마지막 호출로부터 최소 간격이 지나지 않았으면 남은 시간만 대기
+        long elapsed = System.currentTimeMillis() - lastGeminiCallAt.get();
+        if (elapsed < GEMINI_MIN_INTERVAL_MS) {
+            sleep(GEMINI_MIN_INTERVAL_MS - elapsed);
+        }
+        lastGeminiCallAt.set(System.currentTimeMillis());
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -828,24 +840,44 @@ public class ContentGenerationService {
         for (int attempt = 1; attempt <= GEMINI_MAX_RETRY; attempt++) {
             try {
                 ResponseEntity<String> response = restTemplate.exchange(
-                        GEMINI_URL + geminiApiKey,
+                        geminiUrl() + geminiApiKey,
                         HttpMethod.POST,
                         new HttpEntity<>(body, headers),
                         String.class
                 );
+                log.info("[ContentGen] Gemini 호출 성공 ({}회차)", attempt);
                 return response.getBody();
-            } catch (Exception e) {
+
+            } catch (org.springframework.web.client.HttpClientErrorException e) {
                 lastException = e;
-                boolean is429 = e.getMessage() != null && e.getMessage().contains("429");
+                int    status   = e.getStatusCode().value();
+                String respBody = e.getResponseBodyAsString();
+                log.error("[ContentGen] Gemini HTTP {} ({}회차/{}) — body: {}",
+                        status, attempt, GEMINI_MAX_RETRY, respBody);
 
-                if (attempt == GEMINI_MAX_RETRY) break;
+                if (status == 429 && attempt < GEMINI_MAX_RETRY) {
+                    // Gemini가 retryDelay 힌트를 주면 그 시간 우선 사용, 없으면 지수 백오프
+                    long retryDelay = parseRetryDelay(respBody);
+                    long backoff    = retryDelay > 0
+                            ? retryDelay
+                            : Math.min(GEMINI_BACKOFF_BASE * (1L << (attempt - 1)), GEMINI_BACKOFF_MAX);
+                    log.warn("[ContentGen] Rate Limit → {}초 후 재시도 ({})",
+                            backoff / 1000, retryDelay > 0 ? "서버 힌트" : "지수 백오프");
+                    sleep(backoff);
+                } else {
+                    break; // 429 외 4xx는 재시도해도 의미 없음
+                }
 
-                // 지수 백오프: 2^(attempt-1) * BASE  → 2s, 4s, 8s, 16s ...
-                long backoff = Math.min(GEMINI_BACKOFF_BASE * (1L << (attempt - 1)), GEMINI_BACKOFF_MAX);
-                log.warn("[ContentGen] Gemini {} ({}회차/{}) — {}초 후 재시도",
-                        is429 ? "429 Rate Limit" : "호출 실패",
-                        attempt, GEMINI_MAX_RETRY, backoff / 1000);
-                sleep(backoff);
+            } catch (Exception e) {
+                // 네트워크 오류, 타임아웃 등
+                lastException = e;
+                log.error("[ContentGen] Gemini 네트워크 오류 ({}회차/{}) — {}: {}",
+                        attempt, GEMINI_MAX_RETRY, e.getClass().getSimpleName(), e.getMessage());
+
+                if (attempt < GEMINI_MAX_RETRY) {
+                    long backoff = Math.min(GEMINI_BACKOFF_BASE * (1L << (attempt - 1)), GEMINI_BACKOFF_MAX);
+                    sleep(backoff);
+                }
             }
         }
         throw new RuntimeException("Gemini API 호출 실패 (재시도 소진): " + lastException.getMessage());
@@ -853,6 +885,26 @@ public class ContentGenerationService {
 
     private static void sleep(long ms) {
         try { Thread.sleep(ms); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+    }
+
+    /**
+     * Gemini 429 응답 바디에서 retryDelay 값을 파싱해 밀리초로 반환한다.
+     * 예: {"@type":"...RetryInfo","retryDelay":"43s"} → 43000ms (+ 1000ms 버퍼)
+     * 파싱 실패 시 0 반환 → 호출부에서 지수 백오프로 폴백.
+     */
+    private long parseRetryDelay(String responseBody) {
+        if (responseBody == null || responseBody.isBlank()) return 0;
+        // "retryDelay": "43s" 형태를 정규식으로 추출
+        java.util.regex.Matcher m = java.util.regex.Pattern
+                .compile("\"retryDelay\"\\s*:\\s*\"(\\d+)s\"")
+                .matcher(responseBody);
+        if (m.find()) {
+            try {
+                long seconds = Long.parseLong(m.group(1));
+                return (seconds + 1) * 1_000L; // 1초 버퍼 추가
+            } catch (NumberFormatException ignored) {}
+        }
+        return 0;
     }
 
     // ── JSON 파싱 헬퍼 ─────────────────────────────────────────────────────

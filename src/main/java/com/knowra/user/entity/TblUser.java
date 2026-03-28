@@ -38,6 +38,10 @@ public class TblUser {
   @Comment("이름")
   private String name;
 
+  @Column(name = "BIO", length = 800)
+  @Comment("자기소개")
+  private String bio;
+
   @Column(name = "JOIN_YMD", nullable = false, updatable = false)
   @Comment("가입일시")
   private LocalDateTime joinYmd = LocalDateTime.now();
