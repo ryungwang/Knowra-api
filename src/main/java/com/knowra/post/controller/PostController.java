@@ -24,4 +24,10 @@ public class PostController {
         String token = request.getHeader("Authorization");
         return postService.setPostSave(params, token);
     }
+
+    @PostMapping("/getPostSaveList")
+    public ResultVO getPostSaveList(@RequestBody Map<String, Object> params, HttpServletRequest request) {
+        return postService.getPostSaveList(params, request.getHeader("Authorization"));
+    }
+
 }

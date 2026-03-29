@@ -7,5 +7,5 @@ import java.util.Optional;
 
 public interface TblPostSaveRepository extends JpaRepository<TblPostSave, Long> {
 
-    TblPostSave findByUserSnAndPostSnAndPostTyp(long userSn, long postSn, String postTyp);
+    TblPostSave findByUserSnAndPostSnAndPostKind(long userSn, long postSn, String postKind);
 }

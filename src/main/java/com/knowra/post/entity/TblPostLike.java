@@ -38,6 +38,11 @@ public class TblPostLike {
     @Comment("사용자 SN (TBL_USER FK)")
     private long userSn;
 
+    @Column(name = "LIKE_TYP", length = 4, nullable = false)
+    @Comment("UP / DOWN")
+    @Builder.Default
+    private String likeTyp = "UP";
+
     @Column(name = "ACTVTN_YN", length = 1, nullable = false)
     @Comment("활성화 여부")
     @Builder.Default
