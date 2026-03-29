@@ -45,9 +45,4 @@ public class UserController {
     public ResultVO setFollow(@RequestBody Map<String, Object> params, HttpServletRequest request) {
         return userService.setFollow(params, request.getHeader("Authorization"));
     }
-//
-//    @PostMapping("/api/user/setWalletAddress")
-//    public ResultVO setWalletAddress(@RequestBody Map<String, Object> params) {
-//        return userService.setWalletAddress(params);
-//    }
 }

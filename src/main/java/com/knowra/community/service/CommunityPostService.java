@@ -226,7 +226,7 @@ public class CommunityPostService {
                         .select(qSave.postSn)
                         .from(qSave)
                         .where(qSave.userSn.eq(userSn)
-                                .and(qSave.postTyp.eq("COMM"))
+                                .and(qSave.postKind.eq("COMM"))
                                 .and(qSave.postSn.in(postSns))
                                 .and(qSave.actvtnYn.eq("Y")))
                         .fetch()
@@ -313,7 +313,7 @@ public class CommunityPostService {
             String myLikeTyp = myLike != null ? myLike.getLikeTyp() : null;
 
             boolean mySaved = userSn != null &&
-                    tblPostSaveRepository.findByUserSnAndPostSnAndPostTyp(userSn, commPostSn, "COMM") != null;
+                    tblPostSaveRepository.findByUserSnAndPostSnAndPostKind(userSn, commPostSn, "COMM") != null;
 
             resultVO.putResult("comm", community);
             resultVO.putResult("post", new CommunityPostDTO(
@@ -613,7 +613,7 @@ public class CommunityPostService {
                     .select(qSave.postSn)
                     .from(qSave)
                     .where(qSave.userSn.eq(viewerUserSn)
-                            .and(qSave.postTyp.eq("COMM"))
+                            .and(qSave.postKind.eq("COMM"))
                             .and(qSave.postSn.in(postSns))
                             .and(qSave.actvtnYn.eq("Y")))
                     .fetch()

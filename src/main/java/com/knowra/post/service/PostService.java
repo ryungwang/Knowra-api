@@ -4,11 +4,19 @@ import com.knowra.cmm.jwt.JwtProvider;
 import com.knowra.cmm.model.ResponseCode;
 import com.knowra.cmm.model.ResultVO;
 import com.knowra.common.entity.*;
+import com.knowra.community.entity.*;
 import com.knowra.post.entity.*;
 import com.knowra.post.repository.TblPostLikeRepository;
 import com.knowra.post.repository.TblPostSaveRepository;
 import com.knowra.post.entity.QTblPostSave;
 import com.knowra.user.entity.QTblUser;
+import com.querydsl.core.Tuple;
+import com.querydsl.core.types.Expression;
+import com.querydsl.core.types.Projections;
+import com.querydsl.core.types.dsl.CaseBuilder;
+import com.querydsl.core.types.dsl.Expressions;
+import com.querydsl.jpa.JPAExpressions;
+import com.querydsl.jpa.JPQLQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -25,7 +33,7 @@ import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
+@Transactional
 public class PostService {
 
     @PersistenceContext
@@ -98,7 +106,7 @@ public class PostService {
                         .select(qSave.postSn)
                         .from(qSave)
                         .where(qSave.userSn.eq(viewerUserSn)
-                                .and(qSave.postTyp.eq("POST"))
+                                .and(qSave.postKind.eq("POST"))
                                 .and(qSave.postSn.in(postSns))
                                 .and(qSave.actvtnYn.eq("Y")))
                         .fetch()
@@ -108,7 +116,7 @@ public class PostService {
             List<Map<String, Object>> list = tuples.stream().map(t -> {
                 TblPost p = t.get(qPost);
                 Map<String, Object> map = new LinkedHashMap<>();
-                map.put("postType",  "POST");
+                map.put("postTyp",  "POST");
                 map.put("postSn",    p.getPostSn());
                 map.put("userSn",    p.getUserSn());
                 map.put("authorNm",  t.get(qUser.name));
@@ -141,21 +149,145 @@ public class PostService {
         try {
             long userSn = jwtProvider.extractUserSn(token.replace("Bearer ", ""));
             long postSn = Long.parseLong(params.get("postSn").toString());
-            String postTyp = params.get("postTyp").toString();
+            String postTyp = params.get("postKind").toString();
             boolean isSave = (boolean) params.get("isSave");
             if (isSave) {
                 TblPostSave tblPostSave = new TblPostSave();
                 tblPostSave.setUserSn(userSn);
-                tblPostSave.setPostSn(Long.parseLong(params.get("postSn").toString()));
-                tblPostSave.setPostTyp(params.get("postTyp").toString());
+                tblPostSave.setPostSn(postSn);
+                tblPostSave.setPostKind(postTyp);
                 tblPostSaveRepository.save(tblPostSave);
             }else{
-                TblPostSave tblPostSave = tblPostSaveRepository.findByUserSnAndPostSnAndPostTyp(userSn, postSn, postTyp);
+                TblPostSave tblPostSave = tblPostSaveRepository.findByUserSnAndPostSnAndPostKind(userSn, postSn, postTyp);
                 if (tblPostSave != null) {
                     tblPostSaveRepository.delete(tblPostSave);
                 }
             }
 
+            resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
+            resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
+        }catch (Exception e){
+            e.printStackTrace();
+            resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
+            resultVO.setResultMessage(ResponseCode.SAVE_ERROR.getMessage());
+        }
+
+        return resultVO;
+    }
+
+    public ResultVO getPostSaveList(Map<String, Object> params, String token) {
+        ResultVO resultVO = new ResultVO();
+
+        try {
+            long userSn = jwtProvider.extractUserSn(token.replace("Bearer ", ""));
+
+            JPAQueryFactory  q     = new JPAQueryFactory(em);
+            QTblUser         qUser = QTblUser.tblUser;
+            QTblPostSave qTblPostSave = QTblPostSave.tblPostSave;
+            QTblPost qPost = QTblPost.tblPost;
+            QTblPostLike qTblPostLike = QTblPostLike.tblPostLike;
+            QTblPostTag qPostTag = QTblPostTag.tblPostTag;
+
+            QTblComm qComm = QTblComm.tblComm;
+            QTblCommPost qCommPost = QTblCommPost.tblCommPost;
+            QTblCommPostLike qCommPostLike = QTblCommPostLike.tblCommPostLike;
+            QTblCommPostTag qCommTag  = QTblCommPostTag.tblCommPostTag;
+
+            QTblTag          qTblTag  = QTblTag.tblTag;
+
+            List<PostSaveDTO> post =  q.select(
+                        Projections.constructor(
+                                PostSaveDTO.class,
+                                qTblPostSave, qUser.userSn, qUser.loginId, qUser.name,
+                                Expressions.constant(""), Expressions.constant(""), qPost.postTtl, qPost.postCntnt,
+                                qPost.frstCrtDt, qPost.viewCnt, qPost.likeCnt, qPost.cmtCnt,
+                                new CaseBuilder().when(qTblPostLike.isNotNull()).then(qTblPostLike.likeTyp)
+                                        .otherwise(Expressions.nullExpression()),
+                                Expressions.constant(true)
+                        )
+                    )
+                    .from(qTblPostSave)
+                    .join(qPost)
+                    .on(qTblPostSave.postSn.eq(qPost.postSn))
+                    .join(qUser)
+                    .on(qPost.userSn.eq(qUser.userSn))
+                    .leftJoin(qTblPostLike)
+                    .on(qTblPostLike.postSn.eq(qPost.postSn).and(qTblPostLike.userSn.eq(userSn)))
+                    .where(qTblPostSave.userSn.eq(userSn)
+                            .and(qTblPostSave.actvtnYn.eq("Y"))
+                            .and(qTblPostSave.postKind.eq("POST"))
+                            .and(qPost.actvtnYn.eq("Y")))
+                    .fetch();
+
+            List<Long> postSns = post.stream().map(t -> t.getTblPostSave().getPostSn()).toList();
+            Map<Long, List<String>> postTagMap = new java.util.HashMap<>();
+            if (!postSns.isEmpty()) {
+                q.select(qPostTag.postSn, qTblTag.tagNm)
+                        .from(qPostTag).join(qTblTag).on(qPostTag.tagSn.eq(qTblTag.tagSn))
+                        .where(qPostTag.postSn.in(postSns))
+                        .fetch()
+                        .forEach(t -> postTagMap.computeIfAbsent(t.get(qPostTag.postSn), k -> new ArrayList<>())
+                                .add(t.get(qTblTag.tagNm)));
+            }
+            post.forEach(d -> d.setTagNms(postTagMap.getOrDefault(d.getTblPostSave().getPostSn(), List.of())));
+
+            List<PostSaveDTO> commPost =  q.select(
+                        Projections.constructor(
+                                PostSaveDTO.class,
+                                qTblPostSave,
+                                qUser.userSn,
+                                qUser.loginId,
+                                qUser.name,
+                                qComm.commNm,
+                                qComm.commDsplNm,
+                                qCommPost.postTtl,
+                                qCommPost.postCntnt,
+                                qCommPost.frstCrtDt,
+                                qCommPost.viewCnt,
+                                qCommPost.likeCnt,
+                                qCommPost.cmtCnt,
+                                new CaseBuilder().when(qCommPostLike.isNotNull()).then(qCommPostLike.likeTyp)
+                                                .otherwise(Expressions.nullExpression()),
+                                Expressions.constant(true)
+                        )
+                    )
+                    .from(qTblPostSave)
+                    .join(qCommPost)
+                    .on(qTblPostSave.postSn.eq(qCommPost.commPostSn))
+                    .join(qComm)
+                    .on(qCommPost.commSn.eq(qComm.commSn))
+                    .join(qUser)
+                    .on(qCommPost.userSn.eq(qUser.userSn))
+                    .leftJoin(qCommPostLike)
+                    .on(qCommPostLike.commPostSn.eq(qCommPost.commPostSn).and(qCommPostLike.userSn.eq(userSn)))
+                    .where(qTblPostSave.userSn.eq(userSn)
+                            .and(qTblPostSave.actvtnYn.eq("Y"))
+                            .and(qTblPostSave.postKind.eq("COMM"))
+                            .and(qCommPost.actvtnYn.eq("Y")))
+                    .fetch();
+
+            List<Long> commPostSns = commPost.stream().map(t -> t.getTblPostSave().getPostSn()).toList();
+            Map<Long, List<String>> commPostTagMap = new java.util.HashMap<>();
+            if (!commPostSns.isEmpty()) {
+                q.select(qCommTag.commPostSn, qTblTag.tagNm)
+                        .from(qCommTag).join(qTblTag).on(qCommTag.tagSn.eq(qTblTag.tagSn))
+                        .where(qCommTag.commPostSn.in(commPostSns))
+                        .fetch()
+                        .forEach(t -> commPostTagMap.computeIfAbsent(t.get(qCommTag.commPostSn), k -> new ArrayList<>())
+                                .add(t.get(qTblTag.tagNm)));
+            }
+            commPost.forEach(d -> d.setTagNms(commPostTagMap.getOrDefault(d.getTblPostSave().getPostSn(), List.of())));
+
+            List<PostSaveDTO> list = new ArrayList<>();
+            list.addAll(post);
+            list.addAll(commPost);
+
+            Long nextCursor = list.size() == 50
+                    ? list.get(list.size() - 1).getTblPostSave().getPostSn()
+                    : null;
+
+            resultVO.putResult("list", list);
+            resultVO.putResult("nextCursor", nextCursor);
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
             resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
         }catch (Exception e){

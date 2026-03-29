@@ -39,9 +39,9 @@ public class TblPostSave extends BaseAuditEntity {
     @Comment("게시글 SN (POST_TYP에 따라 tbl_post 또는 tbl_comm_post 논리 참조)")
     private long postSn;
 
-    @Column(name = "POST_TYP", length = 10, nullable = false)
+    @Column(name = "POST_KIND", length = 10, nullable = false)
     @Comment("게시글 유형: POST / COMM")
-    private String postTyp;
+    private String postKind;
 
     @Column(name = "ACTVTN_YN", length = 1, nullable = false)
     @Comment("활성화 여부")
