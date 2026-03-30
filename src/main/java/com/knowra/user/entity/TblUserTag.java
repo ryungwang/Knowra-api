@@ -38,14 +38,17 @@ public class TblUserTag {
 
     @Column(name = "ACTVTN_YN", columnDefinition = "CHAR(1) DEFAULT 'Y'")
     @Comment("활성여부")
+    @Builder.Default
     private String actvtnYn = "Y";
 
     @Column(name = "CREATR_SN", columnDefinition = "INT(10)", updatable=false, nullable = false)
     @Comment("생성자일련번호")
+    @Builder.Default
     private long creatrSn = 1;
 
     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
     @Column(name = "FRST_CRT_DT", columnDefinition = "DATETIME DEFAULT CURRENT_TIMESTAMP", updatable = false)
     @Comment("최초생성일시")
+    @Builder.Default
     private LocalDateTime frstCrtDt = LocalDateTime.now();
 }
