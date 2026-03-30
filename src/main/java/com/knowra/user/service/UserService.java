@@ -18,6 +18,8 @@ import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -60,21 +62,27 @@ public class UserService {
 
         try {
             JPAQueryFactory q = new JPAQueryFactory(em);
-            long userSn = jwtProvider.extractUserSn(token.replace("Bearer ", ""));
+            Long userSn = token != null ? jwtProvider.extractUserSn(token.replace("Bearer ", "")) : null;
             String loginId = params.get("loginId").toString();
 
             TblUser tblUser = tblUserRepository.findByLoginId(loginId).orElseThrow();
             QTblUsrFlwr qFlwr = QTblUsrFlwr.tblUsrFlwr;
 
-            TblUsrFlwr usrFlwr = q.selectFrom(qFlwr)
-                    .where(qFlwr.flwrUserSn.eq(userSn).and(qFlwr.flwngUserSn.eq(tblUser.getUserSn()))
-                            .and(qFlwr.actvtnYn.eq("Y"))).fetchOne();
+            if(userSn == null){
+                resultVO.putResult("isFollowing", false);
+            }else{
+                TblUsrFlwr usrFlwr = q.selectFrom(qFlwr)
+                        .where(qFlwr.flwrUserSn.eq(userSn).and(qFlwr.flwngUserSn.eq(tblUser.getUserSn()))
+                                .and(qFlwr.actvtnYn.eq("Y"))).fetchOne();
+                resultVO.putResult("isFollowing", usrFlwr != null);
+            }
 
             resultVO.putResult("userProfile", tblUserRepository.findByLoginId(loginId));
-            resultVO.putResult("isFollowing", usrFlwr != null);
+
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
             resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
         }catch (Exception e) {
+            e.printStackTrace();
             resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
             resultVO.setResultMessage(ResponseCode.SELECT_ERROR.getMessage());
         }
@@ -263,5 +271,46 @@ public class UserService {
                 .from(qFlwr)
                 .where(qFlwr.flwrUserSn.eq(myUserSn).and(qFlwr.actvtnYn.eq("Y")))
                 .fetch());
+    }
+
+    public ResultVO changePassword(Map<String, Object> params, String authorization) {
+        ResultVO resultVO = new ResultVO();
+
+        try {
+            long userSn = jwtProvider.extractUserSn(authorization.replace("Bearer ", ""));
+            TblUser tblUser = tblUserRepository.findById(userSn).orElseThrow();
+
+            String currentPw = params.get("currentPw").toString();
+            String newPw = params.get("newPw").toString();
+
+            PasswordEncoder encoder = new BCryptPasswordEncoder();
+            if(!encoder.matches(currentPw, tblUser.getPassword())){
+                // 입력한 현재 비밀번호가 일치 하지 않을때
+                resultVO.setResultCode(ResponseCode.CURRENT_PW_NOT_EQ.getCode());
+                resultVO.setResultMessage(ResponseCode.CURRENT_PW_NOT_EQ.getMessage());
+                return resultVO;
+            }
+
+
+            boolean ispw = encoder.matches(newPw, tblUser.getPassword());
+            if(ispw){
+                // 변경할 비밀번호가 현재 비밀번호와 일치할때
+                resultVO.setResultCode(ResponseCode.NEW_PW_EQ.getCode());
+                resultVO.setResultMessage(ResponseCode.NEW_PW_EQ.getMessage());
+                return resultVO;
+            }
+
+            tblUser.setPassword(encoder.encode(newPw));
+            tblUserRepository.save(tblUser);
+
+            resultVO.setResultCode(ResponseCode.CHANGE_PW_SUCCESS.getCode());
+            resultVO.setResultMessage(ResponseCode.CHANGE_PW_SUCCESS.getMessage());
+        }catch (Exception e) {
+            e.printStackTrace();
+            resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
+            resultVO.setResultMessage(ResponseCode.SAVE_ERROR.getMessage());
+        }
+
+        return resultVO;
     }
 }

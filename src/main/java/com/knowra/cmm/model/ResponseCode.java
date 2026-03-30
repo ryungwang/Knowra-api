@@ -26,6 +26,11 @@ public enum ResponseCode {
 	/** 사용자 관련 오류 */
 	USER_SELECT_ERROR(500, "조회 중 오류가 발생했습니다."),
 
+	/** 비밀번호 변경 */
+	CHANGE_PW_SUCCESS(200, "비밀번호가 변경되었습니다.\n다시 로그인 해주세요."),
+	CURRENT_PW_NOT_EQ(500, "현재 비밀번호가 일치하지 않습니다."),
+	NEW_PW_EQ(500, "변경할 비밀번호가 현재 비밀번호와 일치합니다."),
+
 	/** 첨부파일 관련 오류 */
 	FILE_INFO_NOT_FOUND(500, "첨부파일 정보가 존재하지 않습니다."),
 	FILE_NOT_FOUND(500, "첨부파일을 찾을 수 없습니다."),
