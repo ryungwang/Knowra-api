@@ -7,12 +7,14 @@ import com.knowra.cmm.service.RedisApiService;
 import com.knowra.common.entity.QTblTag;
 import com.knowra.common.entity.TblTag;
 import com.knowra.common.repository.TblTagRepository;
+import com.knowra.common.service.TagService;
 import com.knowra.post.entity.CmtDTO;
 import com.knowra.post.entity.QTblPostSave;
 import com.knowra.post.repository.TblPostSaveRepository;
 import com.knowra.community.entity.*;
 import com.knowra.community.repository.*;
 import com.knowra.user.entity.QTblUser;
+import com.knowra.user.entity.TblUserTag;
 import org.modelmapper.ModelMapper;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
@@ -40,6 +42,7 @@ public class CommunityPostService {
     private final TblTagRepository tblTagRepository;
     private final TblPostSaveRepository tblPostSaveRepository;
     private final RedisApiService redisApiService;
+    private final TagService tagService;
     private final JwtProvider jwtProvider;
 
     private static final int REDIS_DB = 15;
@@ -66,27 +69,22 @@ public class CommunityPostService {
             tblCommPostRepository.save(tblCommPost);
 
             List<String> tagNms = (List<String>) params.get("tagNms");
+            tagService.setTag(tagNms, userSn, "commPost", tblCommPost.getCommPostSn());
             for (String tagNm : tagNms) {
                 TblTag tblTag = tblTagRepository.findByTagNm(tagNm);
                 if(tblTag != null){
                     tblTag.setUseCount(tblTag.getUseCount() + 1);
                     tblTagRepository.save(tblTag);
-                    TblCommPostTag tblCommPostTag = TblCommPostTag.builder()
-                            .commPostSn(tblCommPost.getCommPostSn())
-                            .tagSn(tblTag.getTagSn())
-                            .build();
-                    tblCommPostTagRepository.save(tblCommPostTag);
                 }else{
                     tblTag = tblTagRepository.save(TblTag.builder().tagNm(tagNm).useCount(1).build());
                     tblTag.setCreatrSn(userSn);
-                    TblCommPostTag tblCommPostTag = TblCommPostTag.builder()
-                            .commPostSn(tblCommPost.getCommPostSn())
-                            .tagSn(tblTag.getTagSn())
-                            .build();
-                    tblCommPostTagRepository.save(tblCommPostTag);
                 }
 
-
+                TblCommPostTag tblCommPostTag = TblCommPostTag.builder()
+                        .commPostSn(tblCommPost.getCommPostSn())
+                        .tagSn(tblTag.getTagSn())
+                        .build();
+                tblCommPostTagRepository.save(tblCommPostTag);
             }
 
             resultVO.putResult("commPostSn", tblCommPost.getCommPostSn());
@@ -127,8 +125,6 @@ public class CommunityPostService {
             long commSn = Long.parseLong(params.get("commSn").toString());
 
             QTblCommPost post = QTblCommPost.tblCommPost;
-            QTblCommPostTag postTag = QTblCommPostTag.tblCommPostTag;
-            QTblTag tag = QTblTag.tblTag;
 
             String listTyp = params.get("listTyp") != null ? params.get("listTyp").toString() : "LATEST";
             Long cursor = params.get("cursor") != null ? Long.parseLong(params.get("cursor").toString()) : null;
@@ -201,17 +197,7 @@ public class CommunityPostService {
                     .collect(java.util.stream.Collectors.toList());
 
             // 태그 일괄 조회
-            Map<Long, List<String>> tagMap = new java.util.HashMap<>();
-            if (!postSns.isEmpty()) {
-                q.select(postTag.commPostSn, tag.tagNm)
-                 .from(postTag)
-                 .join(tag).on(postTag.tagSn.eq(tag.tagSn))
-                 .where(postTag.commPostSn.in(postSns))
-                 .fetch()
-                 .forEach(t -> tagMap
-                     .computeIfAbsent(t.get(postTag.commPostSn), k -> new ArrayList<>())
-                     .add(t.get(tag.tagNm)));
-            }
+            Map<Long, List<String>> tagMap = tagService.fetchTagMap(postSns, "commPost");
 
             // 내 좋아요 일괄 조회 (postSn → likeTyp 맵)
             Map<Long, String> likeMap = new java.util.HashMap<>();
@@ -302,11 +288,7 @@ public class CommunityPostService {
 
 
             // 태그
-            List<String> tagNms = q.select(tag.tagNm)
-                    .from(postTag)
-                    .join(tag).on(postTag.tagSn.eq(tag.tagSn))
-                    .where(postTag.commPostSn.eq(commPostSn))
-                    .fetch();
+            List<String> tagNms = tagService.fetchTagMap(List.of(commPostSn), "commPost").getOrDefault(commPostSn, List.of());
 
             // 내 좋아요 여부 (UP / DOWN / null)
             TblCommPostLike myLike = userSn != null
@@ -612,13 +594,7 @@ public class CommunityPostService {
         List<Long> postSns = tuples.stream().map(t -> t.get(qPost).getCommPostSn()).toList();
 
         // 태그 배치 조회
-        Map<Long, List<String>> tagMap = new java.util.HashMap<>();
-        q.select(qTag.commPostSn, qTbl.tagNm)
-                .from(qTag).join(qTbl).on(qTag.tagSn.eq(qTbl.tagSn))
-                .where(qTag.commPostSn.in(postSns))
-                .fetch()
-                .forEach(t -> tagMap.computeIfAbsent(t.get(qTag.commPostSn), k -> new ArrayList<>())
-                        .add(t.get(qTbl.tagNm)));
+        Map<Long, List<String>> tagMap = tagService.fetchTagMap(postSns, "commPost");
 
         // 내 좋아요 배치 조회
         Map<Long, String> likeMap = new java.util.HashMap<>();

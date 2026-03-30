@@ -2,6 +2,7 @@ package com.knowra.user.entity;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.Comment;
@@ -10,15 +11,16 @@ import org.springframework.format.annotation.DateTimeFormat;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "TBL_USER_LGN_HSTRY", catalog = "KNOWRA_USER")
+@Table(name = "TBL_USER_TAG", catalog = "KNOWRA_USER")
 @Data
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class TblUserTag {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "USR_TAG_SN" , length = 22)
+    @Column(name = "USER_TAG_SN" , length = 22)
     @Comment("사용자 태그 SN (PK)")
     private Long userTagSn;
 
@@ -26,14 +28,13 @@ public class TblUserTag {
     @Comment("사용자일련번호")
     private long userSn;
 
-    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-    @Column(name = "LGN_DT", columnDefinition = "DATETIME DEFAULT CURRENT_TIMESTAMP", updatable = false)
-    @Comment("로그인일시")
-    private LocalDateTime lgnDt = LocalDateTime.now();
+    @Column(name = "TAG_SN", nullable = false)
+    @Comment("태그 SN (tbl_tag FK)")
+    private long tagSn;
 
-    @Column(name = "LGN_IP", nullable = false, updatable = false)
-    @Comment("활성여부")
-    private String lgnIp;
+    @Column(name = "USE_COUNT", nullable = false)
+    @Comment("사용횟수")
+    private long useCount;
 
     @Column(name = "ACTVTN_YN", columnDefinition = "CHAR(1) DEFAULT 'Y'")
     @Comment("활성여부")
