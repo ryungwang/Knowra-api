@@ -46,9 +46,19 @@ public class UserController {
         return userService.setFollow(params, request.getHeader("Authorization"));
     }
 
-
     @PostMapping("/api/user/changePassword")
     public ResultVO changePassword(@RequestBody Map<String, Object> params, HttpServletRequest request) {
         return userService.changePassword(params, request.getHeader("Authorization"));
+    }
+
+    @PostMapping("/api/user/deleteAccount")
+    public ResultVO deleteAccount(@RequestBody Map<String, Object> params, HttpServletRequest request) {
+        return userService.deleteAccount(params, request.getHeader("Authorization"));
+    }
+
+
+    @PostMapping("/api/user/getMyTagList")
+    public ResultVO getMyTagList(@RequestBody Map<String, Object> params, HttpServletRequest request) {
+        return userService.getMyTagList(params, request.getHeader("Authorization"));
     }
 }
