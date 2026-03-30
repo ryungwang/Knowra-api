@@ -45,4 +45,10 @@ public class UserController {
     public ResultVO setFollow(@RequestBody Map<String, Object> params, HttpServletRequest request) {
         return userService.setFollow(params, request.getHeader("Authorization"));
     }
+
+
+    @PostMapping("/api/user/changePassword")
+    public ResultVO changePassword(@RequestBody Map<String, Object> params, HttpServletRequest request) {
+        return userService.changePassword(params, request.getHeader("Authorization"));
+    }
 }

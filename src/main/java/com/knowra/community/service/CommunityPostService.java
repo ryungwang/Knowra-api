@@ -484,6 +484,7 @@ public class CommunityPostService {
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
             resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
         }catch (Exception e) {
+            e.printStackTrace();
             resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
             resultVO.setResultMessage(ResponseCode.SAVE_ERROR.getMessage());
         }
@@ -519,6 +520,7 @@ public class CommunityPostService {
 
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
         } catch (Exception e) {
+            e.printStackTrace();
             resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
             resultVO.setResultMessage(ResponseCode.SAVE_ERROR.getMessage());
         }
@@ -552,6 +554,7 @@ public class CommunityPostService {
 
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
         } catch (Exception e) {
+            e.printStackTrace();
             resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
             resultVO.setResultMessage(ResponseCode.SAVE_ERROR.getMessage());
         }
@@ -570,9 +573,26 @@ public class CommunityPostService {
         QTblCommPostTag  qTag  = QTblCommPostTag.tblCommPostTag;
         QTblTag          qTbl  = QTblTag.tblTag;
 
+        QTblCommMbr qMbr = QTblCommMbr.tblCommMbr;
+
+        // 비공개 커뮤니티 필터: public 이거나 viewer가 해당 커뮤니티 멤버인 경우만 노출
+        com.querydsl.core.types.dsl.BooleanExpression visibilityCondition = qComm.prvcyStng.eq("public");
+        if (viewerUserSn != null) {
+            visibilityCondition = visibilityCondition.or(
+                com.querydsl.jpa.JPAExpressions.selectOne()
+                    .from(qMbr)
+                    .where(qMbr.commSn.eq(qComm.commSn)
+                        .and(qMbr.userSn.eq(viewerUserSn))
+                        .and(qMbr.stat.eq("ACTIVE"))
+                        .and(qMbr.actvtnYn.eq("Y")))
+                    .exists()
+            );
+        }
+
         var condition = qPost.userSn.eq(userSn)
                 .and(qPost.stat.eq("ACTIVE"))
-                .and(qPost.actvtnYn.eq("Y"));
+                .and(qPost.actvtnYn.eq("Y"))
+                .and(visibilityCondition);
         if (cursor != null) condition = condition.and(qPost.frstCrtDt.lt(cursor));
 
         List<com.querydsl.core.Tuple> tuples = q
