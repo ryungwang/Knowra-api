@@ -4,6 +4,7 @@ import com.knowra.cmm.jwt.JwtProvider;
 import com.knowra.cmm.model.ResponseCode;
 import com.knowra.cmm.model.ResultVO;
 import com.knowra.common.entity.*;
+import com.knowra.common.service.TagService;
 import com.knowra.community.entity.*;
 import com.knowra.post.entity.*;
 import com.knowra.post.repository.TblPostLikeRepository;
@@ -42,6 +43,7 @@ public class PostService {
     private final JwtProvider jwtProvider;
     private final TblPostLikeRepository tblPostLikeRepository;
     private final TblPostSaveRepository tblPostSaveRepository;
+    private final TagService tagService;
 
     public ResultVO getPostList(Map<String, Object> params, String token) {
         ResultVO resultVO = new ResultVO();
@@ -80,14 +82,7 @@ public class PostService {
             List<Long> postSns = tuples.stream().map(t -> t.get(qPost).getPostSn()).toList();
 
             // 태그 배치 조회
-            Map<Long, List<String>> tagMap = new HashMap<>();
-            new JPAQueryFactory(em)
-                    .select(qTag.postSn, qTbl.tagNm)
-                    .from(qTag).join(qTbl).on(qTag.tagSn.eq(qTbl.tagSn))
-                    .where(qTag.postSn.in(postSns))
-                    .fetch()
-                    .forEach(t -> tagMap.computeIfAbsent(t.get(qTag.postSn), k -> new ArrayList<>())
-                            .add(t.get(qTbl.tagNm)));
+            Map<Long, List<String>> tagMap = tagService.fetchTagMap(postSns, "post");
 
             // 내 좋아요 배치 조회 (TblPostLike는 likeTyp 없음 → actvtnYn "Y" 로 반환)
             java.util.Set<Long> likedSet = new java.util.HashSet<>();
@@ -221,16 +216,8 @@ public class PostService {
                     .fetch();
 
             List<Long> postSns = post.stream().map(t -> t.getTblPostSave().getPostSn()).toList();
-            Map<Long, List<String>> postTagMap = new java.util.HashMap<>();
-            if (!postSns.isEmpty()) {
-                q.select(qPostTag.postSn, qTblTag.tagNm)
-                        .from(qPostTag).join(qTblTag).on(qPostTag.tagSn.eq(qTblTag.tagSn))
-                        .where(qPostTag.postSn.in(postSns))
-                        .fetch()
-                        .forEach(t -> postTagMap.computeIfAbsent(t.get(qPostTag.postSn), k -> new ArrayList<>())
-                                .add(t.get(qTblTag.tagNm)));
-            }
-            post.forEach(d -> d.setTagNms(postTagMap.getOrDefault(d.getTblPostSave().getPostSn(), List.of())));
+            Map<Long, List<String>> tagMap = tagService.fetchTagMap(postSns, "commPost");
+            post.forEach(d -> d.setTagNms(tagMap.getOrDefault(d.getTblPostSave().getPostSn(), List.of())));
 
             List<PostSaveDTO> commPost =  q.select(
                         Projections.constructor(
@@ -268,15 +255,7 @@ public class PostService {
                     .fetch();
 
             List<Long> commPostSns = commPost.stream().map(t -> t.getTblPostSave().getPostSn()).toList();
-            Map<Long, List<String>> commPostTagMap = new java.util.HashMap<>();
-            if (!commPostSns.isEmpty()) {
-                q.select(qCommTag.commPostSn, qTblTag.tagNm)
-                        .from(qCommTag).join(qTblTag).on(qCommTag.tagSn.eq(qTblTag.tagSn))
-                        .where(qCommTag.commPostSn.in(commPostSns))
-                        .fetch()
-                        .forEach(t -> commPostTagMap.computeIfAbsent(t.get(qCommTag.commPostSn), k -> new ArrayList<>())
-                                .add(t.get(qTblTag.tagNm)));
-            }
+            Map<Long, List<String>> commPostTagMap = tagService.fetchTagMap(commPostSns, "commPost");
             commPost.forEach(d -> d.setTagNms(commPostTagMap.getOrDefault(d.getTblPostSave().getPostSn(), List.of())));
 
             List<PostSaveDTO> list = new ArrayList<>();

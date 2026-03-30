@@ -56,9 +56,15 @@ public class UserController {
         return userService.deleteAccount(params, request.getHeader("Authorization"));
     }
 
-
     @PostMapping("/api/user/getMyTagList")
-    public ResultVO getMyTagList(@RequestBody Map<String, Object> params, HttpServletRequest request) {
-        return userService.getMyTagList(params, request.getHeader("Authorization"));
+    public ResultVO getMyTagList(HttpServletRequest request) {
+        return userService.getMyTagList(request.getHeader("Authorization"));
     }
+
+    @PostMapping("/api/user/getMyTagPostList")
+    public ResultVO getMyTagPostList(@RequestBody Map<String, Object> params, HttpServletRequest request) {
+        return userService.getMyTagPostList(params, request.getHeader("Authorization"));
+    }
+
+
 }

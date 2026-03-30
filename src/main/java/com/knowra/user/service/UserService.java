@@ -4,11 +4,23 @@ import com.knowra.cmm.jwt.JwtProvider;
 import com.knowra.cmm.model.ResponseCode;
 import com.knowra.cmm.model.ResultVO;
 import com.knowra.cmm.service.RedisApiService;
+import com.knowra.common.entity.QTblTag;
+import com.knowra.common.entity.TblTag;
+import com.knowra.common.service.TagService;
+import com.knowra.community.entity.QTblComm;
+import com.knowra.community.entity.QTblCommPost;
+import com.knowra.community.entity.QTblCommPostLike;
+import com.knowra.community.entity.QTblCommPostTag;
+import com.knowra.post.entity.*;
 import com.knowra.post.service.PostService;
 import com.knowra.community.service.CommunityPostService;
 import com.knowra.user.entity.*;
 import com.knowra.user.repository.TblUserFlwrRepository;
 import com.knowra.user.repository.TblUserRepository;
+import com.querydsl.core.Tuple;
+import com.querydsl.core.types.Projections;
+import com.querydsl.core.types.dsl.CaseBuilder;
+import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -37,6 +49,7 @@ public class UserService {
     private final JwtProvider jwtProvider;
     private final PostService postService;
     private final CommunityPostService communityPostService;
+    private final TagService tagService;
 
     @PersistenceContext
     private EntityManager em;
@@ -340,13 +353,150 @@ public class UserService {
         return resultVO;
     }
 
-    public ResultVO getMyTagList(Map<String, Object> params, String token) {
+    public ResultVO getMyTagList(String token) {
         ResultVO resultVO = new ResultVO();
 
         try {
             long userSn = jwtProvider.extractUserSn(token.replace("Bearer ", ""));
 
+            QTblUserTag qUserTag = QTblUserTag.tblUserTag;
+            QTblTag qTag = QTblTag.tblTag;
+            List<TblUserTagDTO> userTags = new JPAQueryFactory(em)
+                    .select(
+                        Projections.constructor(
+                            TblUserTagDTO.class,
+                            qTag.tagSn,
+                            qTag.tagNm,
+                            qUserTag.userTagSn,
+                            qUserTag.useCount
+                        )
+                    ).from(qTag)
+                    .join(qUserTag)
+                    .on(qTag.tagSn.eq(qUserTag.tagSn))
+                    .where(qUserTag.userSn.eq(userSn))
+                    .fetch();
 
+            resultVO.putResult("tags", userTags);
+            resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
+            resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
+        }catch (Exception e) {
+            e.printStackTrace();
+            resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
+            resultVO.setResultMessage(ResponseCode.SELECT_ERROR.getMessage());
+        }
+
+        return resultVO;
+    }
+
+    public ResultVO getMyTagPostList(Map<String, Object> params, String token) {
+        ResultVO resultVO = new ResultVO();
+
+        try {
+            long userSn           = jwtProvider.extractUserSn(token.replace("Bearer ", ""));
+            long tagSn            = Long.parseLong(params.get("tagSn").toString());
+            LocalDateTime cursor  = params.get("cursor") != null ? LocalDateTime.parse(params.get("cursor").toString()) : null;
+            int size              = params.get("size") != null ? Integer.parseInt(params.get("size").toString()) : 50;
+
+            JPAQueryFactory q = new JPAQueryFactory(em);
+
+            QTblUser qUser = QTblUser.tblUser;
+            QTblTag qTag = QTblTag.tblTag;
+            QTblPost qPost = QTblPost.tblPost;
+            QTblPostTag qPostTag = QTblPostTag.tblPostTag;
+            QTblPostLike qTblPostLike = QTblPostLike.tblPostLike;
+
+            QTblPostSave qTblPostSave = QTblPostSave.tblPostSave;
+
+            QTblCommPost qCommPost = QTblCommPost.tblCommPost;
+            QTblComm qComm = QTblComm.tblComm;
+            QTblCommPostTag qCommPostTag = QTblCommPostTag.tblCommPostTag;
+            QTblCommPostLike qCommPostLike = QTblCommPostLike.tblCommPostLike;
+
+            List<PostDTO> posts = q.select(
+                Projections.constructor(
+                    PostDTO.class,
+                    Expressions.constant("POST"),
+                    qPost.postTyp, qPost.postSn, qUser.userSn,
+                    qUser.loginId, qUser.name, qPost.postTtl,
+                    qPost.postCntnt, qPost.frstCrtDt,
+                    qPost.viewCnt, qPost.likeCnt, qPost.cmtCnt,
+                    new CaseBuilder().when(qTblPostLike.isNotNull()).then(qTblPostLike.likeTyp)
+                        .otherwise(Expressions.nullExpression()),
+                    new CaseBuilder().when(qTblPostSave.isNotNull()).then(true)
+                        .otherwise(Expressions.nullExpression())
+                )
+            ).from(qPost)
+            .join(qUser)
+            .on(qPost.userSn.eq(qUser.userSn))
+            .leftJoin(qTblPostLike)
+            .on(qTblPostLike.postSn.eq(qPost.postSn).and(qTblPostLike.userSn.eq(userSn)))
+            .leftJoin(qTblPostSave)
+            .on(qPost.postSn.eq(qTblPostSave.postSn).and(qTblPostSave.userSn.eq(userSn)))
+            .join(qPostTag)
+            .on(qPost.postSn.eq(qPostTag.postSn))
+            .join(qTag)
+            .on(qPostTag.tagSn.eq(qTag.tagSn))
+            .where(qTag.tagSn.eq(tagSn)
+                .and(cursor != null ? qPost.frstCrtDt.lt(cursor) : null))
+            .orderBy(qPost.frstCrtDt.desc())
+            .limit(size)
+            .groupBy(qPost.postSn).fetch();
+
+            List<Long> postSns = posts.stream().map(PostDTO::getPostSn).toList();
+            Map<Long, List<String>> tagMap = tagService.fetchTagMap(postSns, "post");
+            posts.forEach(p -> p.setTagNms(tagMap.getOrDefault(p.getPostSn(), List.of())));
+
+            List<PostDTO> commPosts = q.select(
+                    Projections.constructor(
+                            PostDTO.class,
+                            Expressions.constant("COMM"),
+                            qCommPost.postTyp, qComm.commSn, qComm.commNm,
+                            qComm.commDsplNm, qCommPost.commPostSn, qUser.userSn,
+                            qUser.loginId, qUser.name, qCommPost.postTtl, qCommPost.postCntnt,
+                            qCommPost.frstCrtDt, qCommPost.viewCnt, qCommPost.likeCnt,
+                            qCommPost.cmtCnt,
+                            new CaseBuilder().when(qCommPostLike.isNotNull()).then(qCommPostLike.likeTyp)
+                                    .otherwise(Expressions.nullExpression()),
+                            new CaseBuilder().when(qTblPostSave.isNotNull()).then(true)
+                                    .otherwise(Expressions.nullExpression())
+
+                    )
+            ).from(qCommPost)
+            .join(qComm)
+            .on(qCommPost.commSn.eq(qComm.commSn))
+            .join(qUser)
+            .on(qCommPost.userSn.eq(qUser.userSn))
+            .leftJoin(qCommPostLike)
+            .on(qCommPostLike.commPostSn.eq(qCommPost.commPostSn).and(qCommPostLike.userSn.eq(userSn)))
+            .leftJoin(qTblPostSave)
+            .on(qCommPost.commPostSn.eq(qTblPostSave.postSn).and(qTblPostSave.userSn.eq(userSn)))
+            .join(qCommPostTag)
+            .on(qCommPost.commPostSn.eq(qCommPostTag.commPostSn))
+            .join(qTag)
+            .on(qCommPostTag.tagSn.eq(qTag.tagSn))
+            .where(qTag.tagSn.eq(tagSn)
+                .and(cursor != null ? qCommPost.frstCrtDt.lt(cursor) : null))
+            .orderBy(qCommPost.frstCrtDt.desc())
+            .limit(size)
+            .groupBy(qCommPost.commPostSn).fetch();
+
+            List<Long> commPostSns = commPosts.stream().map(PostDTO::getPostSn).toList();
+            Map<Long, List<String>> commTagMap = tagService.fetchTagMap(commPostSns, "commPost");
+            commPosts.forEach(p -> p.setTagNms(commTagMap.getOrDefault(p.getPostSn(), List.of())));
+
+            // 합산 → frstCrtDt 내림차순 → 상위 size개
+            List<PostDTO> merged = new ArrayList<>();
+            merged.addAll(posts);
+            merged.addAll(commPosts);
+            merged.sort((a, b) -> b.getFrstCrtDt().compareTo(a.getFrstCrtDt()));
+            List<PostDTO> list = merged.size() > size ? merged.subList(0, size) : merged;
+
+            LocalDateTime nextCursor = list.size() == size ? list.get(list.size() - 1).getFrstCrtDt() : null;
+
+            resultVO.putResult("list", list);
+            resultVO.putResult("nextCursor", nextCursor != null ? nextCursor.toString() : null);
+            resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
+            resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
         }catch (Exception e) {
             e.printStackTrace();
             resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());

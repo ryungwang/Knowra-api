@@ -1,10 +1,7 @@
 package com.knowra.post.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.Comment;
 
@@ -29,4 +26,9 @@ public class TblPost extends BasePostEntity {
     @Column(name = "POST_SN")
     @Comment("게시글 SN (PK)")
     private Long postSn;
+
+    @Column(name = "POST_TYP", length = 10, nullable = false)
+    @Comment("NORMAL / NOTICE")
+    @Builder.Default
+    private String postTyp = "NORMAL";
 }
