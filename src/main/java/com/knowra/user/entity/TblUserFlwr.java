@@ -11,7 +11,7 @@ import org.hibernate.annotations.Comment;
 
 @Entity
 @Table(
-        name = "TBL_USR_FLWR",
+        name = "TBL_USER_FLWR",
         catalog = "KNOWRA_USER",
         uniqueConstraints = @UniqueConstraint(name = "UK_USR_FLWR_REL", columnNames = {"FLWR_USER_SN", "FLWNG_USER_SN"})
 )
@@ -20,7 +20,7 @@ import org.hibernate.annotations.Comment;
 @SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
-public class TblUsrFlwr extends BaseAuditEntity {
+public class TblUserFlwr extends BaseAuditEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

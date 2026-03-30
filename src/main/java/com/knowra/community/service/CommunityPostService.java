@@ -85,6 +85,8 @@ public class CommunityPostService {
                             .build();
                     tblCommPostTagRepository.save(tblCommPostTag);
                 }
+
+
             }
 
             resultVO.putResult("commPostSn", tblCommPost.getCommPostSn());

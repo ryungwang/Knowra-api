@@ -5,6 +5,8 @@ import com.knowra.cmm.model.ResponseCode;
 import com.knowra.cmm.model.ResultVO;
 import com.knowra.cmm.service.RedisApiService;
 import com.knowra.user.entity.TblUser;
+import com.knowra.user.entity.TblUserLgnHstry;
+import com.knowra.user.repository.TblUserLgnHstryRepository;
 import com.knowra.user.repository.TblUserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -26,15 +28,16 @@ public class AuthService {
     private final TblUserRepository tblUserRepository;
     private final PasswordEncoder passwordEncoder;
     private final RedisApiService redisApiService;
+    private final TblUserLgnHstryRepository tblUserLgnHstryRepository;
 
     private static final int REDIS_DB = 15;
 
-    public ResultVO login(Map<String, String> request) {
+    public ResultVO login(Map<String, String> params, String clientIp) {
         ResultVO resultVO = new ResultVO();
         try {
-            String loginId = request.get("loginId");
+            String loginId = params.get("loginId");
             authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(loginId, request.get("password"))
+                    new UsernamePasswordAuthenticationToken(loginId, params.get("password"))
             );
 
             long userSn = userService.getUserSn(loginId);
@@ -43,11 +46,19 @@ public class AuthService {
 
             resultVO.putResult("accessToken", accessToken);
             resultVO.putResult("refreshToken", refreshToken);
+
+            TblUserLgnHstry tblUserLgnHstry = new TblUserLgnHstry();
+            tblUserLgnHstry.setUserSn(userSn);
+            tblUserLgnHstry.setLgnIp(clientIp);
+            tblUserLgnHstryRepository.save(tblUserLgnHstry);
+
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
         } catch (BadCredentialsException e) {
+            e.printStackTrace();
             resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
             resultVO.setResultMessage("이메일 또는 비밀번호가 올바르지 않습니다.");
         } catch (Exception e) {
+            e.printStackTrace();
             resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
             resultVO.setResultMessage(ResponseCode.SELECT_ERROR.getMessage());
         }
@@ -105,7 +116,7 @@ public class AuthService {
         return resultVO;
     }
 
-    public ResultVO join(Map<String, Object> params) {
+    public ResultVO join(Map<String, Object> params, String clientIp) {
         ResultVO resultVO = new ResultVO();
 
         try {
@@ -119,7 +130,7 @@ public class AuthService {
             tblUser.setName(params.get("name").toString());
             tblUserRepository.save(tblUser);
 
-            resultVO = login(Map.of("loginId", loginId, "password", rawPassword));
+            resultVO = login(Map.of("loginId", loginId, "password", rawPassword), clientIp);
         } catch (Exception e) {
             resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
             resultVO.setResultMessage(ResponseCode.SELECT_ERROR.getMessage());

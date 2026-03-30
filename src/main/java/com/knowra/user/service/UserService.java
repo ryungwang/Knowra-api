@@ -6,11 +6,8 @@ import com.knowra.cmm.model.ResultVO;
 import com.knowra.cmm.service.RedisApiService;
 import com.knowra.post.service.PostService;
 import com.knowra.community.service.CommunityPostService;
-import com.knowra.user.entity.QTblUser;
-import com.knowra.user.entity.QTblUsrFlwr;
-import com.knowra.user.entity.TblUser;
-import com.knowra.user.entity.TblUsrFlwr;
-import com.knowra.user.repository.TblUsrFlwrRepository;
+import com.knowra.user.entity.*;
+import com.knowra.user.repository.TblUserFlwrRepository;
 import com.knowra.user.repository.TblUserRepository;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
@@ -36,7 +33,7 @@ public class UserService {
 
     private static final Logger logger = LoggerFactory.getLogger(UserService.class);
     private final TblUserRepository tblUserRepository;
-    private final TblUsrFlwrRepository tblUsrFlwrRepository;
+    private final TblUserFlwrRepository tblUserFlwrRepository;
     private final JwtProvider jwtProvider;
     private final PostService postService;
     private final CommunityPostService communityPostService;
@@ -66,12 +63,12 @@ public class UserService {
             String loginId = params.get("loginId").toString();
 
             TblUser tblUser = tblUserRepository.findByLoginId(loginId).orElseThrow();
-            QTblUsrFlwr qFlwr = QTblUsrFlwr.tblUsrFlwr;
+            QTblUserFlwr qFlwr = QTblUserFlwr.tblUserFlwr;
 
             if(userSn == null){
                 resultVO.putResult("isFollowing", false);
             }else{
-                TblUsrFlwr usrFlwr = q.selectFrom(qFlwr)
+                TblUserFlwr usrFlwr = q.selectFrom(qFlwr)
                         .where(qFlwr.flwrUserSn.eq(userSn).and(qFlwr.flwngUserSn.eq(tblUser.getUserSn()))
                                 .and(qFlwr.actvtnYn.eq("Y"))).fetchOne();
                 resultVO.putResult("isFollowing", usrFlwr != null);
@@ -146,7 +143,7 @@ public class UserService {
             Long myUserSn     = token != null ? jwtProvider.extractUserSn(token.replace("Bearer ", "")) : null;
             long targetUserSn = getUserSn(params.get("loginId").toString());
 
-            QTblUsrFlwr qFlwr     = QTblUsrFlwr.tblUsrFlwr;
+            QTblUserFlwr qFlwr     = QTblUserFlwr.tblUserFlwr;
             QTblUser    qFollower = new QTblUser("follower");
 
             List<com.querydsl.core.Tuple> tuples = new JPAQueryFactory(em)
@@ -187,7 +184,7 @@ public class UserService {
             Long myUserSn     = token != null ? jwtProvider.extractUserSn(token.replace("Bearer ", "")) : null;
             long targetUserSn = getUserSn(params.get("loginId").toString());
 
-            QTblUsrFlwr qFlwr    = QTblUsrFlwr.tblUsrFlwr;
+            QTblUserFlwr qFlwr    = QTblUserFlwr.tblUserFlwr;
             QTblUser    qFollowee = new QTblUser("followee");
 
             List<com.querydsl.core.Tuple> tuples = new JPAQueryFactory(em)
@@ -233,13 +230,13 @@ public class UserService {
                 return resultVO;
             }
 
-            TblUsrFlwr existing = tblUsrFlwrRepository
+            TblUserFlwr existing = tblUserFlwrRepository
                     .findByFlwrUserSnAndFlwngUserSn(myUserSn, targetUserSn)
                     .orElse(null);
 
             String newState;
             if (existing == null) {
-                tblUsrFlwrRepository.save(TblUsrFlwr.builder()
+                tblUserFlwrRepository.save(TblUserFlwr.builder()
                         .flwrUserSn(myUserSn)
                         .flwngUserSn(targetUserSn)
                         .actvtnYn("Y")
@@ -265,7 +262,7 @@ public class UserService {
     // 내가 팔로우 중인 userSn 집합 (isFollowing 일괄 체크용)
     private java.util.Set<Long> getMyFollowingSnSet(Long myUserSn) {
         if (myUserSn == null) return java.util.Set.of();
-        QTblUsrFlwr qFlwr = QTblUsrFlwr.tblUsrFlwr;
+        QTblUserFlwr qFlwr = QTblUserFlwr.tblUserFlwr;
         return new java.util.HashSet<>(new JPAQueryFactory(em)
                 .select(qFlwr.flwngUserSn)
                 .from(qFlwr)
@@ -309,6 +306,51 @@ public class UserService {
             e.printStackTrace();
             resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
             resultVO.setResultMessage(ResponseCode.SAVE_ERROR.getMessage());
+        }
+
+        return resultVO;
+    }
+
+    public ResultVO deleteAccount(Map<String, Object> params, String authorization) {
+        ResultVO resultVO = new ResultVO();
+
+        try {
+            long userSn = jwtProvider.extractUserSn(authorization.replace("Bearer ", ""));
+            TblUser tblUser = tblUserRepository.findById(userSn).orElseThrow();
+
+            String password = params.get("password").toString();
+
+            PasswordEncoder encoder = new BCryptPasswordEncoder();
+            if(!encoder.matches(password, tblUser.getPassword())){
+                resultVO.setResultCode(ResponseCode.CURRENT_PW_NOT_EQ.getCode());
+                resultVO.setResultMessage(ResponseCode.CURRENT_PW_NOT_EQ.getMessage());
+                return resultVO;
+            }
+            tblUser.setActvtnYn("N");
+            tblUserRepository.save(tblUser);
+
+            resultVO.setResultCode(ResponseCode.CHANGE_PW_SUCCESS.getCode());
+            resultVO.setResultMessage(ResponseCode.CHANGE_PW_SUCCESS.getMessage());
+        }catch (Exception e) {
+            e.printStackTrace();
+            resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
+            resultVO.setResultMessage(ResponseCode.SAVE_ERROR.getMessage());
+        }
+
+        return resultVO;
+    }
+
+    public ResultVO getMyTagList(Map<String, Object> params, String token) {
+        ResultVO resultVO = new ResultVO();
+
+        try {
+            long userSn = jwtProvider.extractUserSn(token.replace("Bearer ", ""));
+
+
+        }catch (Exception e) {
+            e.printStackTrace();
+            resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
+            resultVO.setResultMessage(ResponseCode.SELECT_ERROR.getMessage());
         }
 
         return resultVO;

@@ -156,6 +156,7 @@ public class PostService {
                 tblPostSave.setUserSn(userSn);
                 tblPostSave.setPostSn(postSn);
                 tblPostSave.setPostKind(postTyp);
+                tblPostSave.setCreatrSn(userSn);
                 tblPostSaveRepository.save(tblPostSave);
             }else{
                 TblPostSave tblPostSave = tblPostSaveRepository.findByUserSnAndPostSnAndPostKind(userSn, postSn, postTyp);
