@@ -83,6 +83,37 @@ public class TagService {
         return tagMap;
     }
 
+    /**
+     * 태그 수정 — 기존 태그 매핑 삭제(useCount 차감) 후 새 태그 등록
+     *
+     * @param tagNms 새 태그명 목록
+     * @param userSn 수정자 SN
+     * @param target "commPost" | "post"
+     * @param postSn 게시글 SN
+     */
+    public void updateTag(List<String> tagNms, long userSn, String target, long postSn) {
+        // 기존 태그 매핑 조회 후 useCount 차감
+        if ("commPost".equals(target)) {
+            tblCommPostTagRepository.findByCommPostSn(postSn).forEach(mapping -> {
+                tblTagRepository.findById(mapping.getTagSn()).ifPresent(tag -> {
+                    if (tag.getUseCount() > 0) tag.setUseCount(tag.getUseCount() - 1);
+                    tblTagRepository.save(tag);
+                });
+            });
+            tblCommPostTagRepository.deleteByCommPostSn(postSn);
+        } else {
+            tblPostTagRepository.findByPostSn(postSn).forEach(mapping -> {
+                tblTagRepository.findById(mapping.getTagSn()).ifPresent(tag -> {
+                    if (tag.getUseCount() > 0) tag.setUseCount(tag.getUseCount() - 1);
+                    tblTagRepository.save(tag);
+                });
+            });
+            tblPostTagRepository.deleteByPostSn(postSn);
+        }
+        // 새 태그 등록
+        setTag(tagNms, userSn, target, postSn);
+    }
+
     public void setTag(List<String> tagNms, long userSn, String target, long postSn) {
         try {
             for (String tagNm : tagNms) {

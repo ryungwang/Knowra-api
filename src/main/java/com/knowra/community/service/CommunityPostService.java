@@ -27,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 
 @Service
@@ -63,28 +64,27 @@ public class CommunityPostService {
         try {
             long userSn = jwtProvider.extractUserSn(token.replace("Bearer ", ""));
 
-            TblCommPost tblCommPost = modelMapper.map(params, TblCommPost.class);
-            tblCommPost.setUserSn(userSn);
-            tblCommPost.setCreatrSn(userSn);
-            tblCommPostRepository.save(tblCommPost);
+            TblCommPost tblCommPost;
+            if(params.get("commPostSn") != null){
+                // 수정 — updatable=false 컬럼(creatrSn, frstCrtDt, userSn)은 건드리지 않음
+                tblCommPost = tblCommPostRepository.findById(Long.parseLong(params.get("commPostSn").toString()))
+                        .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
+                tblCommPost.setPostTtl(params.get("postTtl").toString());
+                tblCommPost.setPostCntnt(params.get("postCntnt").toString());
+                tblCommPost.setMdfrSn(userSn);
+            }else{
+                tblCommPost = modelMapper.map(params, TblCommPost.class);
+                tblCommPost.setUserSn(userSn);
+                tblCommPost.setCreatrSn(userSn);
+                tblCommPostRepository.save(tblCommPost);
+            }
 
+            @SuppressWarnings("unchecked")
             List<String> tagNms = (List<String>) params.get("tagNms");
-            tagService.setTag(tagNms, userSn, "commPost", tblCommPost.getCommPostSn());
-            for (String tagNm : tagNms) {
-                TblTag tblTag = tblTagRepository.findByTagNm(tagNm);
-                if(tblTag != null){
-                    tblTag.setUseCount(tblTag.getUseCount() + 1);
-                    tblTagRepository.save(tblTag);
-                }else{
-                    tblTag = tblTagRepository.save(TblTag.builder().tagNm(tagNm).useCount(1).build());
-                    tblTag.setCreatrSn(userSn);
-                }
-
-                TblCommPostTag tblCommPostTag = TblCommPostTag.builder()
-                        .commPostSn(tblCommPost.getCommPostSn())
-                        .tagSn(tblTag.getTagSn())
-                        .build();
-                tblCommPostTagRepository.save(tblCommPostTag);
+            if(params.get("commPostSn") != null){
+                tagService.updateTag(tagNms, userSn, "commPost", tblCommPost.getCommPostSn());
+            }else{
+                tagService.setTag(tagNms, userSn, "commPost", tblCommPost.getCommPostSn());
             }
 
             resultVO.putResult("commPostSn", tblCommPost.getCommPostSn());
@@ -286,7 +286,12 @@ public class CommunityPostService {
                     .where(comm.commSn.eq(p.getCommSn()))
                     .fetchOne();
 
-
+            String myRole = userSn != null
+                    ? community.getMembers().stream()
+                        .filter(m -> m.getUserSn() == userSn && "ACTIVE".equals(m.getStat()) && "Y".equals(m.getActvtnYn()))
+                        .map(TblCommMbr::getRole)
+                        .findFirst().orElse(null)
+                    : null;
             // 태그
             List<String> tagNms = tagService.fetchTagMap(List.of(commPostSn), "commPost").getOrDefault(commPostSn, List.of());
 
@@ -306,6 +311,7 @@ public class CommunityPostService {
                     p.getViewCnt(), p.getLikeCnt(), p.getCmtCnt(), tagNms, myLikeTyp, mySaved
             ));
             resultVO.putResult("myLikeTyp", myLikeTyp);
+            resultVO.putResult("myRole", myRole);
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
             resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
 

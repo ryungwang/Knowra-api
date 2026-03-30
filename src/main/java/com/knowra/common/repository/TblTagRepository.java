@@ -9,6 +9,6 @@ import java.util.List;
 
 
 @Repository
-public interface TblTagRepository extends JpaRepository<TblTag, String> {
+public interface TblTagRepository extends JpaRepository<TblTag, Long> {
     TblTag findByTagNm(String tagNm);
 }
