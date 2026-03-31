@@ -9,9 +9,9 @@ import java.util.List;
 /**
  * CommPost / Post 통합 응답 DTO
  * <p>
- * postTyp: "COMMPOST" | "POST" 로 출처를 구분한다.<br>
- * COMMPOST: commPostSn, commSn, postKind 사용 / commNm·commDsplNm·tblPostSave = null<br>
- * POST:     postSn 사용, commNm·commDsplNm 사용 / commSn·postKind = null
+ * postKind: "COMM" | "POST" 로 출처를 구분한다.<br>
+ * COMM: commSn, commNm, commDsplNm 사용<br>
+ * POST: commSn·commNm·commDsplNm = null
  * </p>
  */
 @Getter
@@ -35,31 +35,31 @@ public class PostDTO {
     private String myLikeTyp;        // "UP" | "DOWN" | null
     private boolean mySaved;
 
-    // ── COMM(커뮤니티게시글) 전용 ──────────────────────────────────────
+    // ── COMM 전용 ──────────────────────────────────────────────
     private Long commSn;
-    private String commNm;           // 출처 커뮤니티 이름
-    private String commDsplNm;       // 출처 커뮤니티 표시명
+    private String commNm;
+    private String commDsplNm;
 
-    // ── QueryDSL Projections.constructor — POST(저장글)용 ──────
+    // ── QueryDSL Projections.constructor — POST용 ──────────────
     public PostDTO(String postKind, String postTyp, long postSn, long userSn, String userId, String authorNm,
                    String postTtl, String postCntnt,
                    LocalDateTime frstCrtDt, int viewCnt, int likeCnt, int cmtCnt,
                    String myLikeTyp, boolean mySaved) {
-        this.postKind      = postKind;
-        this.postTyp      = postTyp;
-        this.postSn       = postSn;
-        this.userSn       = userSn;
-        this.userId       = userId;
-        this.authorNm     = authorNm;
-        this.postTtl      = postTtl;
-        this.postCntnt    = postCntnt;
-        this.frstCrtDt    = frstCrtDt;
-        this.viewCnt      = viewCnt;
-        this.likeCnt      = likeCnt;
-        this.cmtCnt       = cmtCnt;
-        this.myLikeTyp    = myLikeTyp;
-        this.mySaved      = mySaved;
-        this.tagNms       = List.of();
+        this.postKind  = postKind;
+        this.postTyp   = postTyp;
+        this.postSn    = postSn;
+        this.userSn    = userSn;
+        this.userId    = userId;
+        this.authorNm  = authorNm;
+        this.postTtl   = postTtl;
+        this.postCntnt = postCntnt;
+        this.frstCrtDt = frstCrtDt;
+        this.viewCnt   = viewCnt;
+        this.likeCnt   = likeCnt;
+        this.cmtCnt    = cmtCnt;
+        this.myLikeTyp = myLikeTyp;
+        this.mySaved   = mySaved;
+        this.tagNms    = List.of();
     }
 
     // ── QueryDSL Projections.constructor — COMMPOST용 ──────────
@@ -67,12 +67,12 @@ public class PostDTO {
                    long userSn, String userId, String authorNm,
                    String postTtl, String postCntnt, LocalDateTime frstCrtDt,
                    int viewCnt, int likeCnt, int cmtCnt, String myLikeTyp, boolean mySaved) {
-        this.postKind      = postKind;
+        this.postKind   = postKind;
         this.postTyp    = postTyp;
-        this.postSn     = postSn;
         this.commSn     = commSn;
         this.commNm     = commNm;
         this.commDsplNm = commDsplNm;
+        this.postSn     = postSn;
         this.userSn     = userSn;
         this.userId     = userId;
         this.authorNm   = authorNm;
@@ -82,8 +82,8 @@ public class PostDTO {
         this.viewCnt    = viewCnt;
         this.likeCnt    = likeCnt;
         this.cmtCnt     = cmtCnt;
-        this.myLikeTyp    = myLikeTyp;
-        this.mySaved      = mySaved;
+        this.myLikeTyp  = myLikeTyp;
+        this.mySaved    = mySaved;
         this.tagNms     = List.of();
     }
 }

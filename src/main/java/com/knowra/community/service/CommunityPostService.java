@@ -9,6 +9,7 @@ import com.knowra.common.entity.TblTag;
 import com.knowra.common.repository.TblTagRepository;
 import com.knowra.common.service.TagService;
 import com.knowra.post.entity.CmtDTO;
+import com.knowra.post.entity.PostDTO;
 import com.knowra.post.entity.QTblPostSave;
 import com.knowra.post.repository.TblPostSaveRepository;
 import com.knowra.community.entity.*;
@@ -96,46 +97,6 @@ public class CommunityPostService {
             resultVO.setResultMessage(ResponseCode.SAVE_ERROR.getMessage());
         }
 
-        return resultVO;
-    }
-
-
-    public ResultVO setCommPostDel(Map<String, Object> params, String token) {
-        ResultVO resultVO = new ResultVO();
-
-        try {
-            long userSn = jwtProvider.extractUserSn(token.replace("Bearer ", ""));
-            long commPostSn = Long.parseLong(params.get("commPostSn").toString());
-            TblCommPost tblCommPost = tblCommPostRepository.findByCommPostSn(commPostSn);
-            tblCommPost.setActvtnYn("N");
-            tblCommPost.setMdfrSn(userSn);
-            tblCommPostRepository.save(tblCommPost);
-
-            resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
-            resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            resultVO.setResultCode(ResponseCode.DELETE_ERROR.getCode());
-            resultVO.setResultMessage(ResponseCode.DELETE_ERROR.getMessage());
-        }
-
-        return resultVO;
-    }
-
-    public ResultVO viewCommPost(Map<String, Object> params, String token) {
-        ResultVO resultVO = new ResultVO();
-        try {
-            long userSn = jwtProvider.extractUserSn(token.replace("Bearer ", ""));
-            long commPostSn = Long.parseLong(params.get("commPostSn").toString());
-            redisApiService.incrementViewCount(REDIS_DB, commPostSn);
-            resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
-            resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
-        } catch (Exception e) {
-            e.printStackTrace();
-            resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
-            resultVO.setResultMessage(ResponseCode.SELECT_ERROR.getMessage());
-        }
         return resultVO;
     }
 
@@ -246,21 +207,24 @@ public class CommunityPostService {
             }
 
             // DTO 조립
-            List<CommunityPostDTO> list = new ArrayList<>();
+            List<PostDTO> list = new ArrayList<>();
             for (com.querydsl.core.Tuple t : tuples) {
                 TblCommPost p = t.get(post);
-                list.add(new CommunityPostDTO(
-                        p.getCommPostSn(), p.getCommSn(), p.getUserSn(),
-                        t.get(user.loginId), t.get(user.name), p.getPostTyp(), p.getPostTtl(), null, p.getFrstCrtDt(),
+                PostDTO dto = new PostDTO(
+                        "COMM", p.getPostTyp(),
+                        p.getCommSn(), null, null, p.getCommPostSn(),
+                        p.getUserSn(), t.get(user.loginId), t.get(user.name),
+                        p.getPostTtl(), null, p.getFrstCrtDt(),
                         p.getViewCnt(), p.getLikeCnt(), p.getCmtCnt(),
-                        tagMap.getOrDefault(p.getCommPostSn(), List.of()),
                         likeMap.get(p.getCommPostSn()),
                         mySavedSet.contains(p.getCommPostSn())
-                ));
+                );
+                dto.setTagNms(tagMap.getOrDefault(p.getCommPostSn(), List.of()));
+                list.add(dto);
             }
 
             Long nextCursor = list.size() == 50
-                    ? list.get(list.size() - 1).getCommPostSn()
+                    ? list.get(list.size() - 1).getPostSn()
                     : null;
 
             resultVO.putResult("list", list);
@@ -329,11 +293,16 @@ public class CommunityPostService {
                     tblPostSaveRepository.findByUserSnAndPostSnAndPostKind(userSn, commPostSn, "COMM") != null;
 
             resultVO.putResult("comm", community);
-            resultVO.putResult("post", new CommunityPostDTO(
-                    p.getCommPostSn(), p.getCommSn(), p.getUserSn(),
-                    postTuple.get(user.loginId), postTuple.get(user.name), p.getPostTyp(), p.getPostTtl(), p.getPostCntnt(), p.getFrstCrtDt(),
-                    p.getViewCnt(), p.getLikeCnt(), p.getCmtCnt(), tagNms, myLikeTyp, mySaved
-            ));
+            PostDTO postDTO = new PostDTO(
+                    "COMM", p.getPostTyp(),
+                    p.getCommSn(), community.getCommNm(), community.getCommDsplNm(), p.getCommPostSn(),
+                    p.getUserSn(), postTuple.get(user.loginId), postTuple.get(user.name),
+                    p.getPostTtl(), p.getPostCntnt(), p.getFrstCrtDt(),
+                    p.getViewCnt(), p.getLikeCnt(), p.getCmtCnt(),
+                    myLikeTyp, mySaved
+            );
+            postDTO.setTagNms(tagNms);
+            resultVO.putResult("post", postDTO);
             resultVO.putResult("myLikeTyp", myLikeTyp);
             resultVO.putResult("myRole", myRole);
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
