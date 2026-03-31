@@ -8,6 +8,7 @@ import com.knowra.common.entity.QTblTag;
 import com.knowra.common.entity.TblTag;
 import com.knowra.common.service.TagService;
 import com.knowra.community.entity.QTblComm;
+import com.knowra.community.entity.QTblCommMbr;
 import com.knowra.community.entity.QTblCommPost;
 import com.knowra.community.entity.QTblCommPostLike;
 import com.knowra.community.entity.QTblCommPostTag;
@@ -411,6 +412,17 @@ public class UserService {
             QTblComm qComm = QTblComm.tblComm;
             QTblCommPostTag qCommPostTag = QTblCommPostTag.tblCommPostTag;
             QTblCommPostLike qCommPostLike = QTblCommPostLike.tblCommPostLike;
+            QTblCommMbr qMbr = QTblCommMbr.tblCommMbr;
+
+            // 비공개 커뮤니티 필터: public이거나 내가 멤버인 경우만 노출
+            com.querydsl.core.types.dsl.BooleanExpression visibilityCondition = qComm.prvcyStng.eq("public")
+                .or(com.querydsl.jpa.JPAExpressions.selectOne()
+                    .from(qMbr)
+                    .where(qMbr.commSn.eq(qComm.commSn)
+                        .and(qMbr.userSn.eq(userSn))
+                        .and(qMbr.stat.eq("ACTIVE"))
+                        .and(qMbr.actvtnYn.eq("Y")))
+                    .exists());
 
             List<PostDTO> posts = q.select(
                 Projections.constructor(
@@ -475,6 +487,7 @@ public class UserService {
             .join(qTag)
             .on(qCommPostTag.tagSn.eq(qTag.tagSn))
             .where(qTag.tagSn.eq(tagSn)
+                .and(visibilityCondition)
                 .and(cursor != null ? qCommPost.frstCrtDt.lt(cursor) : null))
             .orderBy(qCommPost.frstCrtDt.desc())
             .limit(size)
