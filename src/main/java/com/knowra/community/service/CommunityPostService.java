@@ -99,6 +99,30 @@ public class CommunityPostService {
         return resultVO;
     }
 
+
+    public ResultVO setCommPostDel(Map<String, Object> params, String token) {
+        ResultVO resultVO = new ResultVO();
+
+        try {
+            long userSn = jwtProvider.extractUserSn(token.replace("Bearer ", ""));
+            long commPostSn = Long.parseLong(params.get("commPostSn").toString());
+            TblCommPost tblCommPost = tblCommPostRepository.findByCommPostSn(commPostSn);
+            tblCommPost.setActvtnYn("N");
+            tblCommPost.setMdfrSn(userSn);
+            tblCommPostRepository.save(tblCommPost);
+
+            resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
+            resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            resultVO.setResultCode(ResponseCode.DELETE_ERROR.getCode());
+            resultVO.setResultMessage(ResponseCode.DELETE_ERROR.getMessage());
+        }
+
+        return resultVO;
+    }
+
     public ResultVO viewCommPost(Map<String, Object> params, String token) {
         ResultVO resultVO = new ResultVO();
         try {
@@ -646,4 +670,5 @@ public class CommunityPostService {
             return (Map<String, Object>) map;
         }).toList();
     }
+
 }

@@ -26,6 +26,12 @@ public class CommunityPostController {
         return communityPostService.setCommPost(params, token);
     }
 
+    @PostMapping("/api/community/setCommPostDel")
+    public ResultVO setCommPostDel(@RequestBody Map<String, Object> params, HttpServletRequest request) {
+        String token = request.getHeader("Authorization");
+        return communityPostService.setCommPostDel(params, token);
+    }
+
     @PostMapping("/api/community/viewCommPost")
     public ResultVO viewCommPost(@RequestBody Map<String, Object> params, HttpServletRequest request) {
         String token = request.getHeader("Authorization");
