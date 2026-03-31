@@ -42,6 +42,10 @@ public class TblUser {
   @Comment("자기소개")
   private String bio;
 
+  @Column(name = "INTEREST", length = 100, nullable = false)
+  @Comment("관심사( CATEGORY - CATEGORY_SN )")
+  private String interest;
+
   @Column(name = "JOIN_YMD", nullable = false, updatable = false)
   @Comment("가입일시")
   private LocalDateTime joinYmd = LocalDateTime.now();
