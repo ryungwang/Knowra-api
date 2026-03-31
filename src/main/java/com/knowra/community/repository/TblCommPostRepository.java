@@ -10,4 +10,5 @@ import java.util.Optional;
 @Repository
 public interface TblCommPostRepository extends JpaRepository<TblCommPost, Long> {
 
+    TblCommPost findByCommPostSn(Long commPostSn);
 }
