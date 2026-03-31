@@ -46,6 +46,10 @@ public class TblUser {
   @Comment("관심사( CATEGORY - CATEGORY_SN )")
   private String interest;
 
+  @Column(name = "ATCH_FILE_SN")
+  @Comment("프로필 사진 SN")
+  private Long atchFileSn;
+
   @Column(name = "JOIN_YMD", nullable = false, updatable = false)
   @Comment("가입일시")
   private LocalDateTime joinYmd = LocalDateTime.now();
