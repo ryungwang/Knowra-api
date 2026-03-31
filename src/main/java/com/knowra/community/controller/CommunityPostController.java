@@ -14,61 +14,52 @@ import org.springframework.web.multipart.MultipartHttpServletRequest;
 import java.util.Map;
 
 @RestController
+@RequestMapping("/api/community")
 @CrossOrigin("*")
 @RequiredArgsConstructor
 public class CommunityPostController {
 
     private final CommunityPostService communityPostService;
 
-    @PostMapping("/api/community/setCommPost")
+    @PostMapping("/setCommPost")
     public ResultVO setCommPost(@RequestBody Map<String, Object> params, HttpServletRequest request) {
         String token = request.getHeader("Authorization");
         return communityPostService.setCommPost(params, token);
     }
 
-    @PostMapping("/api/community/setCommPostDel")
-    public ResultVO setCommPostDel(@RequestBody Map<String, Object> params, HttpServletRequest request) {
-        String token = request.getHeader("Authorization");
-        return communityPostService.setCommPostDel(params, token);
-    }
 
-    @PostMapping("/api/community/viewCommPost")
-    public ResultVO viewCommPost(@RequestBody Map<String, Object> params, HttpServletRequest request) {
-        String token = request.getHeader("Authorization");
-        return communityPostService.viewCommPost(params, token);
-    }
 
-    @PostMapping("/api/community/getCommPostList")
+    @PostMapping("/getCommPostList")
     public ResultVO getCommPostList(@RequestBody Map<String, Object> params, HttpServletRequest request) {
         String token = request.getHeader("Authorization");
         return communityPostService.getCommPostList(params, token);
     }
 
-    @GetMapping("/api/community/getCommPost")
+    @GetMapping("/getCommPost")
     public ResultVO getCommPost(@ModelAttribute TblCommPost tblCommPost, HttpServletRequest request) {
         String token = request.getHeader("Authorization");
         return communityPostService.getCommPost(tblCommPost, token);
     }
 
-    @PostMapping("/api/community/setCommPostLike")
+    @PostMapping("/setCommPostLike")
     public ResultVO setCommPostLike(@RequestBody Map<String, Object> params, HttpServletRequest request) {
         String token = request.getHeader("Authorization");
         return communityPostService.setCommPostLike(params, token);
     }
 
-    @PostMapping("/api/community/setCommPostCmt")
+    @PostMapping("/setCommPostCmt")
     public ResultVO setCommPostCmt(@RequestBody Map<String, Object> params, HttpServletRequest request) {
         String token = request.getHeader("Authorization");
         return communityPostService.setCommPostCmt(params, token);
     }
 
-    @PostMapping("/api/community/getCommPostCmtList")
+    @PostMapping("/getCommPostCmtList")
     public ResultVO getCommPostCmtList(@RequestBody Map<String, Object> params, HttpServletRequest request) {
         String token = request.getHeader("Authorization");
         return communityPostService.getCommPostCmtList(params, token);
     }
 
-    @PostMapping("/api/community/setCommPostCmtReact")
+    @PostMapping("/setCommPostCmtReact")
     public ResultVO setCommPostCmtReact(@RequestBody Map<String, Object> params, HttpServletRequest request) {
         String token = request.getHeader("Authorization");
         return communityPostService.setCommPostCmtReact(params, token);

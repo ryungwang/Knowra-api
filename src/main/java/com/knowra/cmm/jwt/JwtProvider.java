@@ -38,8 +38,9 @@ public class JwtProvider {
     private String buildToken(long userSn, String loginId, long expiration) {
         Date now = new Date();
         return Jwts.builder()
-                .subject(String.valueOf(userSn))  // subject에 userSn
-                .claim("loginId", loginId)             // claim에 loginId 추가
+                .claim("loginId", loginId)
+                .claim("userSn", userSn)
+                .claim("role", userSn == 1 ? "ADMIN" : "USER")
                 .issuedAt(now)
                 .expiration(new Date(now.getTime() + expiration))
                 .signWith(secretKey)
@@ -47,7 +48,7 @@ public class JwtProvider {
     }
 
     public long extractUserSn(String token) {
-        return Long.parseLong(parseClaims(token).getSubject());
+        return parseClaims(token).get("userSn", Long.class);
     }
 
     public String extractLoginId(String token) {

@@ -36,15 +36,15 @@ public class RedisApiService {
     }
 
     // 게시글 조회수 +1 (delta 누적)
-    public void incrementViewCount(int templateIndex, long postSn) {
+    public void incrementViewCount(int templateIndex, String type, long postSn) {
         RedisTemplate<String, Object> redisTemplate = getRedisTemplate(templateIndex);
-        redisTemplate.opsForValue().increment("post:viewcnt:" + postSn);
+        redisTemplate.opsForValue().increment(type + ":viewcnt:" + postSn);
     }
 
     // 동기화 대상 키 전체 조회
     public Set<String> getViewCountKeys(int templateIndex) {
         RedisTemplate<String, Object> redisTemplate = getRedisTemplate(templateIndex);
-        return redisTemplate.keys("post:viewcnt:*");
+        return redisTemplate.keys("*:viewcnt:*");
     }
 
     // 로그아웃 토큰 블랙리스트 등록 (TTL = 토큰 남은 유효시간)

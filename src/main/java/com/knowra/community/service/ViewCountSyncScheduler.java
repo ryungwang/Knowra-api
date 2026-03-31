@@ -2,6 +2,7 @@ package com.knowra.community.service;
 
 import com.knowra.cmm.service.RedisApiService;
 import com.knowra.community.repository.TblCommPostRepository;
+import com.knowra.post.repository.TblPostRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -15,6 +16,7 @@ public class ViewCountSyncScheduler {
 
     private final RedisApiService redisApiService;
     private final TblCommPostRepository tblCommPostRepository;
+    private final TblPostRepository tblPostRepository;
 
     private static final int REDIS_DB = 15;
 
@@ -28,16 +30,23 @@ public class ViewCountSyncScheduler {
             long delta = redisApiService.getAndDeleteViewCount(REDIS_DB, key);
             if (delta == 0) continue;
 
-            // key = "post:viewcnt:{commPostSn}" — 커뮤니티 게시글 조회수 동기화
-            long commPostSn = Long.parseLong(key.replace("post:viewcnt:", ""));
-            tblCommPostRepository.findById(commPostSn).ifPresent(post -> {
-                post.setViewCnt(post.getViewCnt() + (int) delta);
-                tblCommPostRepository.save(post);
-            });
-        }
+            // key = "{type}:viewcnt:{postSn}"
+            String[] parts = key.split(":viewcnt:");
+            if (parts.length != 2) continue;
+            String type = parts[0];
+            long postSn = Long.parseLong(parts[1]);
 
-        // TODO: 일반 게시글 조회수 동기화
-        //       일반 게시글은 별도 프리픽스 "gen:post:viewcnt:{postSn}" 를 사용하도록 RedisApiService에 메서드 추가 후
-        //       TblPostRepository를 주입받아 동일한 방식으로 처리 예정
+            if ("comm".equals(type)) {
+                tblCommPostRepository.findById(postSn).ifPresent(post -> {
+                    post.setViewCnt(post.getViewCnt() + (int) delta);
+                    tblCommPostRepository.save(post);
+                });
+            } else if ("post".equals(type)) {
+                tblPostRepository.findById(postSn).ifPresent(post -> {
+                    post.setViewCnt(post.getViewCnt() + (int) delta);
+                    tblPostRepository.save(post);
+                });
+            }
+        }
     }
 }
