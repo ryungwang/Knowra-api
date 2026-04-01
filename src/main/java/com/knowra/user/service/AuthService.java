@@ -6,8 +6,10 @@ import com.knowra.cmm.model.ResultVO;
 import com.knowra.cmm.service.RedisApiService;
 import com.knowra.user.entity.TblUser;
 import com.knowra.user.entity.TblUserLgnHstry;
+import com.knowra.user.entity.TblUserStng;
 import com.knowra.user.repository.TblUserLgnHstryRepository;
 import com.knowra.user.repository.TblUserRepository;
+import com.knowra.user.repository.TblUserStngRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -26,6 +28,7 @@ public class AuthService {
     private final JwtProvider jwtProvider;
     private final UserService userService;
     private final TblUserRepository tblUserRepository;
+    private final TblUserStngRepository tblUserStngRepository;
     private final PasswordEncoder passwordEncoder;
     private final RedisApiService redisApiService;
     private final TblUserLgnHstryRepository tblUserLgnHstryRepository;
@@ -130,6 +133,11 @@ public class AuthService {
             tblUser.setName(params.get("name").toString());
             tblUserRepository.save(tblUser);
 
+            TblUserStng tblUserStng = new TblUserStng();
+            tblUserStng.setUserSn(tblUser.getUserSn());
+            tblUserStng.setCreatrSn(tblUser.getUserSn());
+            tblUserStngRepository.save(tblUserStng);
+
             resultVO = login(Map.of("loginId", loginId, "password", rawPassword), clientIp);
         } catch (Exception e) {
             resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
@@ -137,6 +145,4 @@ public class AuthService {
         }
         return resultVO;
     }
-
-
 }
