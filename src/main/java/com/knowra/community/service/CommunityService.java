@@ -6,6 +6,7 @@ import com.knowra.cmm.model.ResponseCode;
 import com.knowra.cmm.model.ResultVO;
 import com.knowra.cmm.service.RedisApiService;
 import com.knowra.cmm.util.FileUtil;
+import com.knowra.common.entity.QTblComFile;
 import com.knowra.common.entity.TblComFile;
 import com.knowra.common.repository.TblComFileRepository;
 import com.knowra.community.entity.*;
@@ -13,6 +14,7 @@ import com.knowra.community.repository.TblCommRepository;
 import com.knowra.community.repository.TblCommMbrRepository;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.Projections;
+import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
@@ -121,6 +123,9 @@ public class CommunityService {
         try {
             long userSn = jwtProvider.extractUserSn(token.replace("Bearer ", ""));
 
+            QTblComFile qLogoFile = new QTblComFile("logoFile");
+            QTblComFile qBannerFile = new QTblComFile("bannerFile");
+
             TblComm tblComm = tblCommRepository.findByCommNm(commNm);
             if (tblComm == null) {
                 resultVO.setResultCode(ResponseCode.COMMUNITY_NOT_FOUND.getCode());
@@ -128,11 +133,29 @@ public class CommunityService {
                 return resultVO;
             }
 
+            TblComFile logoFile = new JPAQueryFactory(em)
+                .selectFrom(qLogoFile)
+                .where(
+                    qLogoFile.psnTblSn.eq(
+                       Expressions.stringTemplate("CONCAT('community_', {0})", tblComm.getCommSn())
+                    ).and(qLogoFile.atchFilePathNm.contains("logo")))
+                .fetchOne();
+
+            TblComFile bannerFile = new JPAQueryFactory(em)
+                .selectFrom(qBannerFile)
+                .where(
+                    qBannerFile.psnTblSn.eq(
+                        Expressions.stringTemplate("CONCAT('community_', {0})", tblComm.getCommSn())
+                    ).and(qBannerFile.atchFilePathNm.contains("banner")))
+                .fetchOne();
+
             TblCommMbr myMember = tblComm.getMembers().stream()
                     .filter(m -> m.getUserSn() == userSn)
                     .findFirst().orElse(null);
 
             resultVO.putResult("community", tblComm);
+            resultVO.putResult("logoFile", logoFile);
+            resultVO.putResult("bannerFile", bannerFile);
             resultVO.putResult("isMember", myMember != null);
             resultVO.putResult("memberStatus", myMember != null ? myMember.getStat() : null);
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());

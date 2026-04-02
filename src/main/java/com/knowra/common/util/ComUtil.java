@@ -3,6 +3,8 @@ package com.knowra.common.util;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.stereotype.Component;
 
+import java.util.Map;
+
 @Component
 public class ComUtil {
 
@@ -20,5 +22,18 @@ public class ComUtil {
         // X-Forwarded-For는 "클라이언트, 프록시1, 프록시2" 형태이므로 첫 번째 값만 사용
         if (ip != null && ip.contains(",")) ip = ip.split(",")[0].trim();
         return ip;
+    }
+
+    public static String getStrValue(Object param) {
+        String rtn ="";
+        if (param != null) {
+            rtn = param.toString();
+        }
+        return rtn;
+    }
+
+    public static String getStrValue(Map<String, Object> params, String key) {
+        String rtn = params.get(key) == null ? "" : params.get(key).toString();
+        return rtn;
     }
 }

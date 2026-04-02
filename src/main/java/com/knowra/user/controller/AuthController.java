@@ -9,6 +9,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.multipart.MultipartHttpServletRequest;
 
 import java.util.Map;
 
@@ -78,8 +80,8 @@ public class AuthController {
      * @return 처리 결과
      */
     @PostMapping("/join")
-    public ResultVO join(@RequestBody Map<String, Object> params, HttpServletRequest request) {
-        return authService.join(params, ComUtil.extractClientIp(request));
+    public ResultVO join(@RequestParam Map<String, Object> params, @RequestParam(required = false) MultipartFile profileImage, HttpServletRequest request) {
+        return authService.join(params, ComUtil.extractClientIp(request), profileImage);
     }
 
     //    @PostMapping("/api/auth/setRedisSession")

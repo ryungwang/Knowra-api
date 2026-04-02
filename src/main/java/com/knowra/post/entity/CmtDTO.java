@@ -25,4 +25,5 @@ public class CmtDTO {
     private Map<String, Long> reactions;
     // 내 반응 타입 (LIKE / LOVE / HAHA / WOW / SAD / ANGRY / null)
     private String myReactTyp;
+    private String pfpUrl;
 }

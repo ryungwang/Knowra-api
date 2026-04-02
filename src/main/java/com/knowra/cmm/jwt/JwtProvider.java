@@ -1,9 +1,16 @@
 package com.knowra.cmm.jwt;
 
+import com.knowra.common.entity.QTblComFile;
+import com.knowra.common.entity.TblComFile;
+import com.querydsl.core.types.dsl.Expressions;
+import com.querydsl.jpa.impl.JPAQueryFactory;
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtBuilder;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -16,6 +23,9 @@ public class JwtProvider {
     private final SecretKey secretKey;
     private final long accessTokenExpiration;
     private final long refreshTokenExpiration;
+
+    @PersistenceContext
+    private EntityManager em;
 
     public JwtProvider(
             @Value("${jwt.secret}") String secret,
@@ -37,14 +47,28 @@ public class JwtProvider {
 
     private String buildToken(long userSn, String loginId, long expiration) {
         Date now = new Date();
-        return Jwts.builder()
+
+        QTblComFile qProFile = QTblComFile.tblComFile;
+        TblComFile proFile = new JPAQueryFactory(em)
+            .selectFrom(qProFile)
+            .where(
+                qProFile.psnTblSn.eq(
+                    Expressions.stringTemplate("CONCAT('user_', {0})", userSn)
+                ))
+            .fetchOne();
+
+        JwtBuilder buildJwt = Jwts.builder()
                 .claim("loginId", loginId)
                 .claim("userSn", userSn)
                 .claim("role", userSn == 1 ? "ADMIN" : "USER")
                 .issuedAt(now)
                 .expiration(new Date(now.getTime() + expiration))
-                .signWith(secretKey)
-                .compact();
+                .signWith(secretKey);
+        if(proFile != null) {
+            buildJwt.claim("proFile", "http://127.0.0.1:8080" + proFile.getAtchFilePathNm() + "/" + proFile.getStrgFileNm() + "." + proFile.getAtchFileExtnNm());
+        }
+
+        return buildJwt.compact();
     }
 
     public long extractUserSn(String token) {

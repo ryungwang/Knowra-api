@@ -4,6 +4,7 @@ import com.knowra.cmm.jwt.JwtProvider;
 import com.knowra.cmm.model.ResponseCode;
 import com.knowra.cmm.model.ResultVO;
 import com.knowra.cmm.service.RedisApiService;
+import com.knowra.common.entity.QTblComFile;
 import com.knowra.common.entity.*;
 import com.knowra.common.service.TagService;
 import com.knowra.community.entity.*;
@@ -99,13 +100,15 @@ public class PostService {
             JPAQueryFactory q = new JPAQueryFactory(em);
             long postSn = tblPost.getPostSn();
 
-            QTblPost post = QTblPost.tblPost;
-            QTblUser user = QTblUser.tblUser;
+            QTblPost    post    = QTblPost.tblPost;
+            QTblUser    user    = QTblUser.tblUser;
+            QTblComFile pfpFile = new QTblComFile("pfpFile");
 
             // 게시글 + 작성자
-            com.querydsl.core.Tuple postTuple = q.select(post, user.name, user.loginId)
+            com.querydsl.core.Tuple postTuple = q.select(post, user.name, user.loginId, pfpFile.atchFilePathNm, pfpFile.strgFileNm, pfpFile.atchFileExtnNm)
                     .from(post)
                     .join(user).on(post.userSn.eq(user.userSn))
+                    .leftJoin(user.pfp, pfpFile)
                     .where(post.postSn.eq(postSn), post.stat.eq("ACTIVE"))
                     .fetchOne();
 
@@ -136,6 +139,10 @@ public class PostService {
                     p.getViewCnt(), p.getLikeCnt(), p.getCmtCnt(), myLikeTyp, mySaved
             );
             postDTO.setTagNms(tagNms);
+            String pathNm = postTuple.get(pfpFile.atchFilePathNm);
+            if (pathNm != null) {
+                postDTO.setPfpUrl(pathNm + "/" + postTuple.get(pfpFile.strgFileNm) + "." + postTuple.get(pfpFile.atchFileExtnNm));
+            }
             resultVO.putResult("post", postDTO);
             resultVO.putResult("myLikeTyp", myLikeTyp);
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
@@ -328,8 +335,9 @@ public class PostService {
             int  size       = params.get("size")   != null ? Integer.parseInt(params.get("size").toString()) : 10;
             Long cursor     = params.get("cursor") != null ? Long.parseLong(params.get("cursor").toString()) : null;
 
-            QTblPostCmt cmt     = QTblPostCmt.tblPostCmt;
-            QTblUser        cmtUser = new QTblUser("cmtUser");
+            QTblPostCmt cmt        = QTblPostCmt.tblPostCmt;
+            QTblUser    cmtUser    = new QTblUser("cmtUser");
+            QTblComFile cmtPfpFile = new QTblComFile("cmtPfpFile");
 
             // ── 1. 루트 댓글만 커서 페이지네이션 (commPostCmtSn ASC) ──────────
             var rootCondition = cmt.postSn.eq(postSn)
@@ -338,9 +346,10 @@ public class PostService {
                     .and(cmt.prntCmtSn.isNull());
             if (cursor != null) rootCondition = rootCondition.and(cmt.postCmtSn.gt(cursor));
 
-            List<com.querydsl.core.Tuple> rootTuples = q.select(cmt, cmtUser.name)
+            List<com.querydsl.core.Tuple> rootTuples = q.select(cmt, cmtUser.name, cmtPfpFile.atchFilePathNm, cmtPfpFile.strgFileNm, cmtPfpFile.atchFileExtnNm)
                     .from(cmt)
                     .join(cmtUser).on(cmt.userSn.eq(cmtUser.userSn))
+                    .leftJoin(cmtUser.pfp, cmtPfpFile)
                     .where(rootCondition)
                     .orderBy(cmt.postCmtSn.asc())
                     .limit(size)
@@ -359,9 +368,10 @@ public class PostService {
                     .toList();
 
             // ── 2. 대댓글 배치 로드 ────────────────────────────────────────────
-            List<com.querydsl.core.Tuple> replyTuples = q.select(cmt, cmtUser.name)
+            List<com.querydsl.core.Tuple> replyTuples = q.select(cmt, cmtUser.name, cmtPfpFile.atchFilePathNm, cmtPfpFile.strgFileNm, cmtPfpFile.atchFileExtnNm)
                     .from(cmt)
                     .join(cmtUser).on(cmt.userSn.eq(cmtUser.userSn))
+                    .leftJoin(cmtUser.pfp, cmtPfpFile)
                     .where(cmt.prntCmtSn.in(rootSns)
                             .and(cmt.stat.eq("ACTIVE"))
                             .and(cmt.actvtnYn.eq("Y")))
@@ -388,13 +398,15 @@ public class PostService {
 
             // ── 4. 트리 조립 ──────────────────────────────────────────────────
             java.util.function.Function<com.querydsl.core.Tuple, CmtDTO> toDto = t -> {
-                TblPostCmt c   = t.get(cmt);
-                long           sn  = c.getPostCmtSn();
+                TblPostCmt c      = t.get(cmt);
+                long       sn     = c.getPostCmtSn();
+                String     pathNm = t.get(cmtPfpFile.atchFilePathNm);
+                String     pfpUrl = pathNm != null ? pathNm + "/" + t.get(cmtPfpFile.strgFileNm) + "." + t.get(cmtPfpFile.atchFileExtnNm) : null;
                 return new CmtDTO(
                         sn, c.getUserSn(), t.get(cmtUser.name),
                         c.getCmtCntnt(), c.getLikeCnt(), c.getFrstCrtDt(), new ArrayList<>(),
                         reactionsMap.getOrDefault(sn, new java.util.HashMap<>()),
-                        myReactMap.get(sn)
+                        myReactMap.get(sn), pfpUrl
                 );
             };
 
@@ -434,19 +446,21 @@ public class PostService {
             LocalDateTime cursor       = params.get("cursor") != null ? LocalDateTime.parse(params.get("cursor").toString()) : null;
             int           size         = params.get("size")   != null ? Integer.parseInt(params.get("size").toString()) : 50;
 
-            QTblPost qPost = QTblPost.tblPost;
-            QTblUser    qUser = QTblUser.tblUser;
-            QTblPostTag qTag  = QTblPostTag.tblPostTag;
-            QTblTag     qTbl  = QTblTag.tblTag;
+            QTblPost    qPost   = QTblPost.tblPost;
+            QTblUser    qUser   = QTblUser.tblUser;
+            QTblPostTag qTag    = QTblPostTag.tblPostTag;
+            QTblTag     qTbl    = QTblTag.tblTag;
+            QTblComFile pfpFile = new QTblComFile("pfpFile");
 
             var condition = qPost.stat.eq("ACTIVE").and(qPost.actvtnYn.eq("Y"));
             if (userSn != null) condition = condition.and(qPost.userSn.eq(userSn));
             if (cursor  != null) condition = condition.and(qPost.frstCrtDt.lt(cursor));
 
             List<com.querydsl.core.Tuple> tuples = new JPAQueryFactory(em)
-                    .select(qPost, qUser.name)
+                    .select(qPost, qUser.name, pfpFile.atchFilePathNm, pfpFile.strgFileNm, pfpFile.atchFileExtnNm)
                     .from(qPost)
                     .join(qUser).on(qPost.userSn.eq(qUser.userSn))
+                    .leftJoin(qUser.pfp, pfpFile)
                     .where(condition)
                     .orderBy(qPost.frstCrtDt.desc())
                     .limit(size)
@@ -503,7 +517,9 @@ public class PostService {
                 map.put("cmtCnt",    p.getCmtCnt());
                 map.put("tagNms",    tagMap.getOrDefault(p.getPostSn(), List.of()));
                 map.put("myLikeTyp", likedSet.contains(p.getPostSn()) ? "Y" : null);
-                map.put("mySaved",  mySavedSet.contains(p.getPostSn()));
+                map.put("mySaved",   mySavedSet.contains(p.getPostSn()));
+                String pathNm = t.get(pfpFile.atchFilePathNm);
+                map.put("pfpUrl", pathNm != null ? pathNm + "/" + t.get(pfpFile.strgFileNm) + "." + t.get(pfpFile.atchFileExtnNm) : null);
                 return map;
             }).toList();
 
@@ -558,18 +574,23 @@ public class PostService {
         try {
             long userSn = jwtProvider.extractUserSn(token.replace("Bearer ", ""));
 
-            JPAQueryFactory  q     = new JPAQueryFactory(em);
-            QTblUser         qUser = QTblUser.tblUser;
-            QTblPostSave qTblPostSave = QTblPostSave.tblPostSave;
-            QTblPost qPost = QTblPost.tblPost;
-            QTblPostLike qTblPostLike = QTblPostLike.tblPostLike;
-            QTblPostTag qPostTag = QTblPostTag.tblPostTag;
-
-            QTblComm qComm = QTblComm.tblComm;
-            QTblCommPost qCommPost = QTblCommPost.tblCommPost;
+            JPAQueryFactory  q        = new JPAQueryFactory(em);
+            QTblUser         qUser    = QTblUser.tblUser;
+            QTblPostSave     qTblPostSave  = QTblPostSave.tblPostSave;
+            QTblPost         qPost    = QTblPost.tblPost;
+            QTblPostLike     qTblPostLike  = QTblPostLike.tblPostLike;
+            QTblPostTag      qPostTag = QTblPostTag.tblPostTag;
+            QTblComm         qComm    = QTblComm.tblComm;
+            QTblCommPost     qCommPost     = QTblCommPost.tblCommPost;
             QTblCommPostLike qCommPostLike = QTblCommPostLike.tblCommPostLike;
+            QTblComFile      pfpFile  = new QTblComFile("pfpFile");
 
-            List<PostSaveDTO> post =  q.select(
+            var pfpUrlExpr = new CaseBuilder()
+                    .when(pfpFile.atchFilePathNm.isNotNull())
+                    .then(pfpFile.atchFilePathNm.concat("/").concat(pfpFile.strgFileNm).concat(".").concat(pfpFile.atchFileExtnNm))
+                    .otherwise(Expressions.nullExpression(String.class));
+
+            List<PostSaveDTO> post = q.select(
                         Projections.constructor(
                                 PostSaveDTO.class,
                                 qTblPostSave, qUser.userSn, qUser.loginId, qUser.name,
@@ -577,16 +598,16 @@ public class PostService {
                                 qPost.frstCrtDt, qPost.viewCnt, qPost.likeCnt, qPost.cmtCnt,
                                 new CaseBuilder().when(qTblPostLike.isNotNull()).then(qTblPostLike.likeTyp)
                                         .otherwise(Expressions.nullExpression()),
-                                Expressions.constant(true)
+                                Expressions.constant(true),
+                                pfpUrlExpr
                         )
                     )
                     .from(qTblPostSave)
-                    .join(qPost)
-                    .on(qTblPostSave.postSn.eq(qPost.postSn))
-                    .join(qUser)
-                    .on(qPost.userSn.eq(qUser.userSn))
-                    .leftJoin(qTblPostLike)
-                    .on(qTblPostLike.postSn.eq(qPost.postSn).and(qTblPostLike.userSn.eq(userSn)))
+                    .join(qPost).on(qTblPostSave.postSn.eq(qPost.postSn))
+                    .join(qUser).on(qPost.userSn.eq(qUser.userSn))
+                    .leftJoin(qUser.pfp, pfpFile)
+
+                    .leftJoin(qTblPostLike).on(qTblPostLike.postSn.eq(qPost.postSn).and(qTblPostLike.userSn.eq(userSn)))
                     .where(qTblPostSave.userSn.eq(userSn)
                             .and(qTblPostSave.actvtnYn.eq("Y"))
                             .and(qTblPostSave.postKind.eq("POST"))
@@ -597,35 +618,24 @@ public class PostService {
             Map<Long, List<String>> tagMap = tagService.fetchTagMap(postSns, "commPost");
             post.forEach(d -> d.setTagNms(tagMap.getOrDefault(d.getTblPostSave().getPostSn(), List.of())));
 
-            List<PostSaveDTO> commPost =  q.select(
+            List<PostSaveDTO> commPost = q.select(
                         Projections.constructor(
                                 PostSaveDTO.class,
-                                qTblPostSave,
-                                qUser.userSn,
-                                qUser.loginId,
-                                qUser.name,
-                                qComm.commNm,
-                                qComm.commDsplNm,
-                                qCommPost.postTtl,
-                                qCommPost.postCntnt,
-                                qCommPost.frstCrtDt,
-                                qCommPost.viewCnt,
-                                qCommPost.likeCnt,
-                                qCommPost.cmtCnt,
+                                qTblPostSave, qUser.userSn, qUser.loginId, qUser.name,
+                                qComm.commNm, qComm.commDsplNm, qCommPost.postTtl, qCommPost.postCntnt,
+                                qCommPost.frstCrtDt, qCommPost.viewCnt, qCommPost.likeCnt, qCommPost.cmtCnt,
                                 new CaseBuilder().when(qCommPostLike.isNotNull()).then(qCommPostLike.likeTyp)
                                                 .otherwise(Expressions.nullExpression()),
-                                Expressions.constant(true)
+                                Expressions.constant(true),
+                                pfpUrlExpr
                         )
                     )
                     .from(qTblPostSave)
-                    .join(qCommPost)
-                    .on(qTblPostSave.postSn.eq(qCommPost.commPostSn))
-                    .join(qComm)
-                    .on(qCommPost.commSn.eq(qComm.commSn))
-                    .join(qUser)
-                    .on(qCommPost.userSn.eq(qUser.userSn))
-                    .leftJoin(qCommPostLike)
-                    .on(qCommPostLike.commPostSn.eq(qCommPost.commPostSn).and(qCommPostLike.userSn.eq(userSn)))
+                    .join(qCommPost).on(qTblPostSave.postSn.eq(qCommPost.commPostSn))
+                    .join(qComm).on(qCommPost.commSn.eq(qComm.commSn))
+                    .join(qUser).on(qCommPost.userSn.eq(qUser.userSn))
+                    .leftJoin(qUser.pfp, pfpFile)
+                    .leftJoin(qCommPostLike).on(qCommPostLike.commPostSn.eq(qCommPost.commPostSn).and(qCommPostLike.userSn.eq(userSn)))
                     .where(qTblPostSave.userSn.eq(userSn)
                             .and(qTblPostSave.actvtnYn.eq("Y"))
                             .and(qTblPostSave.postKind.eq("COMM"))

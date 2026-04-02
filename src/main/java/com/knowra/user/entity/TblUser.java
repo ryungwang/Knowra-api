@@ -1,5 +1,6 @@
 package com.knowra.user.entity;
 
+import com.knowra.common.entity.TblComFile;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -22,9 +23,13 @@ public class TblUser {
   @Comment("사용자일련번호")
   private Long userSn;
 
-  @Column(name = "EMAIL", length = 320, nullable = false)
+  @Column(name = "EMAIL", length = 50)
   @Comment("사용자이메일")
   private String email;
+
+  @Column(name = "PHONE", length = 20)
+  @Comment("사용자휴대폰")
+  private String phone;
 
   @Column(name = "LOGIN_ID", length = 100, nullable = false)
   @Comment("로그인아이디")
@@ -46,9 +51,10 @@ public class TblUser {
   @Comment("관심사( CATEGORY - CATEGORY_SN )")
   private String interest;
 
-  @Column(name = "ATCH_FILE_SN")
-  @Comment("프로필 사진 SN")
-  private Long atchFileSn;
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "ATCH_FILE_SN")
+  @Comment("프로필 사진")
+  private TblComFile pfp;
 
   @Column(name = "JOIN_YMD", nullable = false, updatable = false)
   @Comment("가입일시")

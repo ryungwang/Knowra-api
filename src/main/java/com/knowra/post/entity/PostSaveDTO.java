@@ -19,7 +19,7 @@ public class PostSaveDTO {
     public PostSaveDTO(TblPostSave tblPostSave, long userSn, String userId, String authorNm,
                        String commNm, String commDsplNm, String postTtl, String postCntnt, LocalDateTime frstCrtDt,
                        int viewCnt, int likeCnt, int cmtCnt,
-                       String myLikeTyp, boolean mySaved) {
+                       String myLikeTyp, boolean mySaved, String pfpUrl) {
         this.tblPostSave = tblPostSave;
         this.userSn      = userSn;
         this.userId      = userId;
@@ -34,7 +34,8 @@ public class PostSaveDTO {
         this.cmtCnt      = cmtCnt;
         this.myLikeTyp   = myLikeTyp;
         this.mySaved     = mySaved;
-        this.tagNms      = List.of();  // 나중에 별도 세팅
+        this.pfpUrl      = pfpUrl;
+        this.tagNms      = List.of();
     }
 
 
@@ -53,5 +54,6 @@ public class PostSaveDTO {
     private List<String> tagNms;
     private String myLikeTyp; // UP / DOWN / null(안누름)
     private boolean mySaved; // 저장 여부
+    private String pfpUrl;
 }
 
