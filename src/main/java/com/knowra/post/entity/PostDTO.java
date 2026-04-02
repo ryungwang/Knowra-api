@@ -34,6 +34,7 @@ public class PostDTO {
     private List<String> tagNms;
     private String myLikeTyp;        // "UP" | "DOWN" | null
     private boolean mySaved;
+    private String pfpUrl;           // atchFilePathNm/strgFileNm.atchFileExtnNm
 
     // ── COMM 전용 ──────────────────────────────────────────────
     private Long commSn;

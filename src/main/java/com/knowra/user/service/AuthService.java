@@ -4,6 +4,10 @@ import com.knowra.cmm.jwt.JwtProvider;
 import com.knowra.cmm.model.ResponseCode;
 import com.knowra.cmm.model.ResultVO;
 import com.knowra.cmm.service.RedisApiService;
+import com.knowra.cmm.util.FileUtil;
+import com.knowra.common.entity.TblComFile;
+import com.knowra.common.repository.TblComFileRepository;
+import com.knowra.common.util.ComUtil;
 import com.knowra.user.entity.TblUser;
 import com.knowra.user.entity.TblUserLgnHstry;
 import com.knowra.user.entity.TblUserStng;
@@ -17,6 +21,8 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.multipart.MultipartHttpServletRequest;
 
 import java.util.Map;
 
@@ -32,6 +38,8 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final RedisApiService redisApiService;
     private final TblUserLgnHstryRepository tblUserLgnHstryRepository;
+    private final TblComFileRepository tblComFileRepository;
+    private final FileUtil fileUtil;
 
     private static final int REDIS_DB = 15;
 
@@ -119,7 +127,7 @@ public class AuthService {
         return resultVO;
     }
 
-    public ResultVO join(Map<String, Object> params, String clientIp) {
+    public ResultVO join(Map<String, Object> params, String clientIp, MultipartFile profileImage) {
         ResultVO resultVO = new ResultVO();
 
         try {
@@ -127,11 +135,27 @@ public class AuthService {
             String rawPassword = params.get("password").toString();
 
             TblUser tblUser = new TblUser();
-            tblUser.setEmail(params.get("email").toString());
+            tblUser.setEmail(ComUtil.getStrValue(params.get("email")));
+            tblUser.setPhone(ComUtil.getStrValue(params.get("phone")));
             tblUser.setLoginId(loginId);
             tblUser.setPassword(passwordEncoder.encode(rawPassword));
             tblUser.setName(params.get("name").toString());
+            tblUser.setBio(ComUtil.getStrValue(params.get("bio")));
+            tblUser.setInterest(params.get("interest").toString());
             tblUserRepository.save(tblUser);
+
+            if (profileImage != null) {
+                TblComFile proFile = fileUtil.devFileInf(
+                        profileImage,
+                        "/user/" + tblUser.getUserSn() + "/profile",
+                        "user_" + tblUser.getUserSn()
+                );
+                proFile.setCreatrSn(tblUser.getUserSn());
+                TblComFile pfp = tblComFileRepository.save(proFile);
+                tblUser.setPfp(pfp);
+                tblUserRepository.save(tblUser);
+            }
+
 
             TblUserStng tblUserStng = new TblUserStng();
             tblUserStng.setUserSn(tblUser.getUserSn());
@@ -140,6 +164,7 @@ public class AuthService {
 
             resultVO = login(Map.of("loginId", loginId, "password", rawPassword), clientIp);
         } catch (Exception e) {
+            e.printStackTrace();
             resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
             resultVO.setResultMessage(ResponseCode.SELECT_ERROR.getMessage());
         }

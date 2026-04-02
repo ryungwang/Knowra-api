@@ -4,6 +4,7 @@ import com.knowra.cmm.jwt.JwtProvider;
 import com.knowra.cmm.model.ResponseCode;
 import com.knowra.cmm.model.ResultVO;
 import com.knowra.cmm.service.RedisApiService;
+import com.knowra.common.entity.QTblComFile;
 import com.knowra.common.entity.QTblTag;
 import com.knowra.common.entity.TblTag;
 import com.knowra.common.service.TagService;
@@ -158,12 +159,14 @@ public class UserService {
             long targetUserSn = getUserSn(params.get("loginId").toString());
 
             QTblUserFlwr qFlwr     = QTblUserFlwr.tblUserFlwr;
-            QTblUser    qFollower = new QTblUser("follower");
+            QTblUser     qFollower = new QTblUser("follower");
+            QTblComFile  pfpFile   = new QTblComFile("pfpFile");
 
             List<com.querydsl.core.Tuple> tuples = new JPAQueryFactory(em)
-                    .select(qFollower.userSn, qFollower.loginId, qFollower.name)
+                    .select(qFollower.userSn, qFollower.loginId, qFollower.name, pfpFile.atchFilePathNm, pfpFile.strgFileNm, pfpFile.atchFileExtnNm)
                     .from(qFlwr)
                     .join(qFollower).on(qFlwr.flwrUserSn.eq(qFollower.userSn))
+                    .leftJoin(qFollower.pfp, pfpFile)
                     .where(qFlwr.flwngUserSn.eq(targetUserSn).and(qFlwr.actvtnYn.eq("Y")))
                     .orderBy(qFlwr.frstCrtDt.desc())
                     .fetch();
@@ -177,6 +180,8 @@ public class UserService {
                 map.put("loginId",     t.get(qFollower.loginId));
                 map.put("name",        t.get(qFollower.name));
                 map.put("isFollowing", myFollowings.contains(t.get(qFollower.userSn)));
+                String pathNm = t.get(pfpFile.atchFilePathNm);
+                map.put("pfpUrl", pathNm != null ? pathNm + "/" + t.get(pfpFile.strgFileNm) + "." + t.get(pfpFile.atchFileExtnNm) : null);
                 return map;
             }).toList();
 
@@ -198,13 +203,15 @@ public class UserService {
             Long myUserSn     = token != null ? jwtProvider.extractUserSn(token.replace("Bearer ", "")) : null;
             long targetUserSn = getUserSn(params.get("loginId").toString());
 
-            QTblUserFlwr qFlwr    = QTblUserFlwr.tblUserFlwr;
-            QTblUser    qFollowee = new QTblUser("followee");
+            QTblUserFlwr qFlwr     = QTblUserFlwr.tblUserFlwr;
+            QTblUser     qFollowee = new QTblUser("followee");
+            QTblComFile  pfpFile   = new QTblComFile("pfpFile");
 
             List<com.querydsl.core.Tuple> tuples = new JPAQueryFactory(em)
-                    .select(qFollowee.userSn, qFollowee.loginId, qFollowee.name)
+                    .select(qFollowee.userSn, qFollowee.loginId, qFollowee.name, pfpFile.atchFilePathNm, pfpFile.strgFileNm, pfpFile.atchFileExtnNm)
                     .from(qFlwr)
                     .join(qFollowee).on(qFlwr.flwngUserSn.eq(qFollowee.userSn))
+                    .leftJoin(qFollowee.pfp, pfpFile)
                     .where(qFlwr.flwrUserSn.eq(targetUserSn).and(qFlwr.actvtnYn.eq("Y")))
                     .orderBy(qFlwr.frstCrtDt.desc())
                     .fetch();
@@ -217,6 +224,8 @@ public class UserService {
                 map.put("loginId",     t.get(qFollowee.loginId));
                 map.put("name",        t.get(qFollowee.name));
                 map.put("isFollowing", myFollowings.contains(t.get(qFollowee.userSn)));
+                String pathNm = t.get(pfpFile.atchFilePathNm);
+                map.put("pfpUrl", pathNm != null ? pathNm + "/" + t.get(pfpFile.strgFileNm) + "." + t.get(pfpFile.atchFileExtnNm) : null);
                 return map;
             }).toList();
 
@@ -496,6 +505,31 @@ public class UserService {
             List<Long> commPostSns = commPosts.stream().map(PostDTO::getPostSn).toList();
             Map<Long, List<String>> commTagMap = tagService.fetchTagMap(commPostSns, "commPost");
             commPosts.forEach(p -> p.setTagNms(commTagMap.getOrDefault(p.getPostSn(), List.of())));
+
+            // pfp 배치 조회
+            List<Long> allUserSns = java.util.stream.Stream.concat(
+                    posts.stream().map(PostDTO::getUserSn),
+                    commPosts.stream().map(PostDTO::getUserSn)
+            ).distinct().toList();
+            if (!allUserSns.isEmpty()) {
+                QTblUser    qU   = new QTblUser("pfpUser");
+                QTblComFile pfpF = new QTblComFile("pfpF");
+                Map<Long, String> pfpUrlMap = new JPAQueryFactory(em)
+                        .select(qU.userSn, pfpF.atchFilePathNm, pfpF.strgFileNm, pfpF.atchFileExtnNm)
+                        .from(qU)
+                        .leftJoin(qU.pfp, pfpF)
+                        .where(qU.userSn.in(allUserSns))
+                        .fetch()
+                        .stream()
+                        .filter(t -> t.get(pfpF.atchFilePathNm) != null)
+                        .collect(java.util.stream.Collectors.toMap(
+                                t -> t.get(qU.userSn),
+                                t -> t.get(pfpF.atchFilePathNm) + "/" + t.get(pfpF.strgFileNm) + "." + t.get(pfpF.atchFileExtnNm),
+                                (a, b) -> a
+                        ));
+                posts.forEach(p -> p.setPfpUrl(pfpUrlMap.get(p.getUserSn())));
+                commPosts.forEach(p -> p.setPfpUrl(pfpUrlMap.get(p.getUserSn())));
+            }
 
             // 합산 → frstCrtDt 내림차순 → 상위 size개
             List<PostDTO> merged = new ArrayList<>();

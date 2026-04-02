@@ -4,6 +4,7 @@ import com.knowra.cmm.jwt.JwtProvider;
 import com.knowra.cmm.model.ResponseCode;
 import com.knowra.cmm.model.ResultVO;
 import com.knowra.cmm.service.RedisApiService;
+import com.knowra.common.entity.QTblComFile;
 import com.knowra.common.entity.QTblTag;
 import com.knowra.common.entity.TblTag;
 import com.knowra.common.repository.TblTagRepository;
@@ -116,6 +117,7 @@ public class CommunityPostService {
             int page = params.get("page") != null ? Integer.parseInt(params.get("page").toString()) : 0;
 
             QTblUser user = QTblUser.tblUser;
+            QTblComFile pfpFile = new QTblComFile("pfpFile");
             var condition = post.commSn.eq(commSn)
                     .and(post.stat.eq("ACTIVE"))
                     .and(post.actvtnYn.eq("Y"));
@@ -124,9 +126,10 @@ public class CommunityPostService {
 
             if ("POPULAR".equals(listTyp)) {
                 // 인기: likeCnt 내림차순, offset 페이징
-                tuples = q.select(post, user.name, user.loginId)
+                tuples = q.select(post, user.name, user.loginId, pfpFile.atchFilePathNm, pfpFile.strgFileNm, pfpFile.atchFileExtnNm)
                         .from(post)
                         .join(user).on(post.userSn.eq(user.userSn))
+                        .leftJoin(user.pfp, pfpFile)
                         .where(condition)
                         .orderBy(post.likeCnt.desc(), post.commPostSn.desc())
                         .offset((long) page * 50)
@@ -136,9 +139,10 @@ public class CommunityPostService {
                 // 공지: postTyp = NOTICE, 커서 페이징
                 condition = condition.and(post.postTyp.eq("NOTICE"));
                 if (cursor != null) condition = condition.and(post.commPostSn.lt(cursor));
-                tuples = q.select(post, user.name, user.loginId)
+                tuples = q.select(post, user.name, user.loginId, pfpFile.atchFilePathNm, pfpFile.strgFileNm, pfpFile.atchFileExtnNm)
                         .from(post)
                         .join(user).on(post.userSn.eq(user.userSn))
+                        .leftJoin(user.pfp, pfpFile)
                         .where(condition)
                         .orderBy(post.commPostSn.desc())
                         .limit(50)
@@ -147,17 +151,19 @@ public class CommunityPostService {
                 // ALL / LATEST: 공지 항상 상단 고정 + 일반 게시글 커서 페이징
                 if (cursor == null) {
                     // 첫 페이지: 공지 전체 먼저 조회
-                    List<com.querydsl.core.Tuple> notices = q.select(post, user.name, user.loginId)
+                    List<com.querydsl.core.Tuple> notices = q.select(post, user.name, user.loginId, pfpFile.atchFilePathNm, pfpFile.strgFileNm, pfpFile.atchFileExtnNm)
                             .from(post)
                             .join(user).on(post.userSn.eq(user.userSn))
+                            .leftJoin(user.pfp, pfpFile)
                             .where(condition.and(post.postTyp.eq("NOTICE")))
                             .orderBy(post.commPostSn.desc())
                             .fetch();
                     // 일반 게시글: 50 - 공지수 만큼
                     int normalLimit = Math.max(50 - notices.size(), 0);
-                    List<com.querydsl.core.Tuple> normals = q.select(post, user.name, user.loginId)
+                    List<com.querydsl.core.Tuple> normals = q.select(post, user.name, user.loginId, pfpFile.atchFilePathNm, pfpFile.strgFileNm, pfpFile.atchFileExtnNm)
                             .from(post)
                             .join(user).on(post.userSn.eq(user.userSn))
+                            .leftJoin(user.pfp, pfpFile)
                             .where(condition.and(post.postTyp.eq("NORMAL")))
                             .orderBy(post.commPostSn.desc())
                             .limit(normalLimit)
@@ -166,9 +172,10 @@ public class CommunityPostService {
                     tuples.addAll(normals);
                 } else {
                     // 이후 페이지: 일반 게시글만 커서 페이징 (공지는 첫 페이지에 고정)
-                    tuples = q.select(post, user.name, user.loginId)
+                    tuples = q.select(post, user.name, user.loginId, pfpFile.atchFilePathNm, pfpFile.strgFileNm, pfpFile.atchFileExtnNm)
                             .from(post)
                             .join(user).on(post.userSn.eq(user.userSn))
+                            .leftJoin(user.pfp, pfpFile)
                             .where(condition.and(post.postTyp.eq("NORMAL"))
                                            .and(post.commPostSn.lt(cursor)))
                             .orderBy(post.commPostSn.desc())
@@ -220,6 +227,10 @@ public class CommunityPostService {
                         mySavedSet.contains(p.getCommPostSn())
                 );
                 dto.setTagNms(tagMap.getOrDefault(p.getCommPostSn(), List.of()));
+                String pathNm = t.get(pfpFile.atchFilePathNm);
+                if (pathNm != null) {
+                    dto.setPfpUrl(pathNm + "/" + t.get(pfpFile.strgFileNm) + "." + t.get(pfpFile.atchFileExtnNm));
+                }
                 list.add(dto);
             }
 
@@ -253,11 +264,13 @@ public class CommunityPostService {
             QTblTag tag = QTblTag.tblTag;
             QTblUser user = QTblUser.tblUser;
             QTblComm comm = QTblComm.tblComm;
+            QTblComFile pfpFile = new QTblComFile("pfpFile");
 
             // 게시글 + 작성자
-            com.querydsl.core.Tuple postTuple = q.select(post, user.name, user.loginId)
+            com.querydsl.core.Tuple postTuple = q.select(post, user.name, user.loginId, pfpFile.atchFilePathNm, pfpFile.strgFileNm, pfpFile.atchFileExtnNm)
                     .from(post)
                     .join(user).on(post.userSn.eq(user.userSn))
+                    .leftJoin(user.pfp, pfpFile)
                     .where(post.commPostSn.eq(commPostSn), post.stat.eq("ACTIVE"))
                     .fetchOne();
 
@@ -302,6 +315,10 @@ public class CommunityPostService {
                     myLikeTyp, mySaved
             );
             postDTO.setTagNms(tagNms);
+            String pathNm = postTuple.get(pfpFile.atchFilePathNm);
+            if (pathNm != null) {
+                postDTO.setPfpUrl(pathNm + "/" + postTuple.get(pfpFile.strgFileNm) + "." + postTuple.get(pfpFile.atchFileExtnNm));
+            }
             resultVO.putResult("post", postDTO);
             resultVO.putResult("myLikeTyp", myLikeTyp);
             resultVO.putResult("myRole", myRole);
@@ -327,8 +344,9 @@ public class CommunityPostService {
             int  size       = params.get("size")   != null ? Integer.parseInt(params.get("size").toString()) : 10;
             Long cursor     = params.get("cursor") != null ? Long.parseLong(params.get("cursor").toString()) : null;
 
-            QTblCommPostCmt cmt     = QTblCommPostCmt.tblCommPostCmt;
-            QTblUser        cmtUser = new QTblUser("cmtUser");
+            QTblCommPostCmt cmt        = QTblCommPostCmt.tblCommPostCmt;
+            QTblUser        cmtUser    = new QTblUser("cmtUser");
+            QTblComFile     cmtPfpFile = new QTblComFile("cmtPfpFile");
 
             // ── 1. 루트 댓글만 커서 페이지네이션 (commPostCmtSn ASC) ──────────
             var rootCondition = cmt.commPostSn.eq(commPostSn)
@@ -337,9 +355,10 @@ public class CommunityPostService {
                     .and(cmt.prntCmtSn.isNull());
             if (cursor != null) rootCondition = rootCondition.and(cmt.commPostCmtSn.gt(cursor));
 
-            List<com.querydsl.core.Tuple> rootTuples = q.select(cmt, cmtUser.name)
+            List<com.querydsl.core.Tuple> rootTuples = q.select(cmt, cmtUser.name, cmtPfpFile.atchFilePathNm, cmtPfpFile.strgFileNm, cmtPfpFile.atchFileExtnNm)
                     .from(cmt)
                     .join(cmtUser).on(cmt.userSn.eq(cmtUser.userSn))
+                    .leftJoin(cmtUser.pfp, cmtPfpFile)
                     .where(rootCondition)
                     .orderBy(cmt.commPostCmtSn.asc())
                     .limit(size)
@@ -358,9 +377,10 @@ public class CommunityPostService {
                     .toList();
 
             // ── 2. 대댓글 배치 로드 ────────────────────────────────────────────
-            List<com.querydsl.core.Tuple> replyTuples = q.select(cmt, cmtUser.name)
+            List<com.querydsl.core.Tuple> replyTuples = q.select(cmt, cmtUser.name, cmtPfpFile.atchFilePathNm, cmtPfpFile.strgFileNm, cmtPfpFile.atchFileExtnNm)
                     .from(cmt)
                     .join(cmtUser).on(cmt.userSn.eq(cmtUser.userSn))
+                    .leftJoin(cmtUser.pfp, cmtPfpFile)
                     .where(cmt.prntCmtSn.in(rootSns)
                             .and(cmt.stat.eq("ACTIVE"))
                             .and(cmt.actvtnYn.eq("Y")))
@@ -387,14 +407,17 @@ public class CommunityPostService {
 
             // ── 4. 트리 조립 ──────────────────────────────────────────────────
             java.util.function.Function<com.querydsl.core.Tuple, CmtDTO> toDto = t -> {
-                TblCommPostCmt c   = t.get(cmt);
-                long           sn  = c.getCommPostCmtSn();
-                return new CmtDTO(
+                TblCommPostCmt c      = t.get(cmt);
+                long           sn     = c.getCommPostCmtSn();
+                String         pathNm = t.get(cmtPfpFile.atchFilePathNm);
+                String         pfpUrl = pathNm != null ? pathNm + "/" + t.get(cmtPfpFile.strgFileNm) + "." + t.get(cmtPfpFile.atchFileExtnNm) : null;
+                CmtDTO dto = new CmtDTO(
                         sn, c.getUserSn(), t.get(cmtUser.name),
                         c.getCmtCntnt(), c.getLikeCnt(), c.getFrstCrtDt(), new ArrayList<>(),
                         reactionsMap.getOrDefault(sn, new java.util.HashMap<>()),
-                        myReactMap.get(sn)
+                        myReactMap.get(sn), pfpUrl
                 );
+                return dto;
             };
 
             Map<Long, CmtDTO> rootMap = new java.util.LinkedHashMap<>();
@@ -550,11 +573,12 @@ public class CommunityPostService {
      */
     public List<Map<String, Object>> fetchCommPostListByUser(long userSn, Long viewerUserSn, java.time.LocalDateTime cursor, int size) {
         JPAQueryFactory  q     = new JPAQueryFactory(em);
-        QTblCommPost     qPost = QTblCommPost.tblCommPost;
-        QTblComm         qComm = QTblComm.tblComm;
-        QTblUser         qUser = QTblUser.tblUser;
-        QTblCommPostTag  qTag  = QTblCommPostTag.tblCommPostTag;
-        QTblTag          qTbl  = QTblTag.tblTag;
+        QTblCommPost     qPost    = QTblCommPost.tblCommPost;
+        QTblComm         qComm    = QTblComm.tblComm;
+        QTblUser         qUser    = QTblUser.tblUser;
+        QTblCommPostTag  qTag     = QTblCommPostTag.tblCommPostTag;
+        QTblTag          qTbl     = QTblTag.tblTag;
+        QTblComFile      pfpFile  = new QTblComFile("pfpFile");
 
         QTblCommMbr qMbr = QTblCommMbr.tblCommMbr;
 
@@ -579,9 +603,10 @@ public class CommunityPostService {
         if (cursor != null) condition = condition.and(qPost.frstCrtDt.lt(cursor));
 
         List<com.querydsl.core.Tuple> tuples = q
-                .select(qPost, qUser.name, qComm.commNm, qComm.commDsplNm)
+                .select(qPost, qUser.name, qComm.commNm, qComm.commDsplNm, pfpFile.atchFilePathNm, pfpFile.strgFileNm, pfpFile.atchFileExtnNm)
                 .from(qPost)
                 .join(qUser).on(qPost.userSn.eq(qUser.userSn))
+                .leftJoin(qUser.pfp, pfpFile)
                 .join(qComm).on(qPost.commSn.eq(qComm.commSn))
                 .where(condition)
                 .orderBy(qPost.frstCrtDt.desc())
@@ -635,7 +660,9 @@ public class CommunityPostService {
             map.put("cmtCnt",     p.getCmtCnt());
             map.put("tagNms",     tagMap.getOrDefault(p.getCommPostSn(), List.of()));
             map.put("myLikeTyp",  likeMap.get(p.getCommPostSn()));
-            map.put("mySaved",   mySavedSet.contains(p.getCommPostSn()));
+            map.put("mySaved",    mySavedSet.contains(p.getCommPostSn()));
+            String pathNm = t.get(pfpFile.atchFilePathNm);
+            map.put("pfpUrl", pathNm != null ? pathNm + "/" + t.get(pfpFile.strgFileNm) + "." + t.get(pfpFile.atchFileExtnNm) : null);
             return (Map<String, Object>) map;
         }).toList();
     }
