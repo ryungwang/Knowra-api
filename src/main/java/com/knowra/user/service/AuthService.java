@@ -5,7 +5,6 @@ import com.knowra.cmm.model.ResponseCode;
 import com.knowra.cmm.model.ResultVO;
 import com.knowra.cmm.service.RedisApiService;
 import com.knowra.cmm.util.FileUtil;
-import com.knowra.common.entity.TblComFile;
 import com.knowra.common.repository.TblComFileRepository;
 import com.knowra.common.util.ComUtil;
 import com.knowra.user.entity.TblUser;
@@ -24,9 +23,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.multipart.MultipartHttpServletRequest;
 
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -53,9 +50,12 @@ public class AuthService {
         ResultVO resultVO = new ResultVO();
         try {
             String loginId = params.get("loginId");
-            authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(loginId, params.get("password"))
-            );
+
+            if(!params.get("snsYn").equals("Y")){
+                authenticationManager.authenticate(
+                        new UsernamePasswordAuthenticationToken(loginId, params.get("password"))
+                );
+            }
 
             long userSn = userService.getUserSn(loginId);
             String accessToken = jwtProvider.generateAccessToken(userSn, loginId);
@@ -118,28 +118,24 @@ public class AuthService {
                 throw new RuntimeException("검증되지 않은 이메일입니다.");
             }
 
-            TblUser tblUser = tblUserRepository.findByLoginId(email) .orElseGet(() -> {
-                TblUser newUser = new TblUser();
-                newUser.setLoginId(email);
-                newUser.setPassword("SNS 연동");
-                newUser.setName(name);
-                newUser.setEmail(email);
-                newUser.setSnsYn("Y");
-                newUser.setSnsName("GOOGLE");
-                newUser.setSnsId(googleId);
-                return tblUserRepository.save(newUser);
-            });
+            Optional<TblUser> tblUser = tblUserRepository.findByLoginId(email);
 
-            String accessToken = jwtProvider.generateAccessToken(tblUser.getUserSn(), email);
-            String refreshToken = jwtProvider.generateRefreshToken(tblUser.getUserSn(), email);
+            if(tblUser.isEmpty()){
+                resultVO.putResult("needsProfile", true);
+                resultVO.putResult("googleInfo", userInfo);
+            }else{
+                String accessToken = jwtProvider.generateAccessToken(tblUser.get().getUserSn(), email);
+                String refreshToken = jwtProvider.generateRefreshToken(tblUser.get().getUserSn(), email);
 
-            resultVO.putResult("accessToken", accessToken);
-            resultVO.putResult("refreshToken", refreshToken);
+                resultVO.putResult("accessToken", accessToken);
+                resultVO.putResult("refreshToken", refreshToken);
 
-            TblUserLgnHstry tblUserLgnHstry = new TblUserLgnHstry();
-            tblUserLgnHstry.setUserSn(tblUser.getUserSn());
-            tblUserLgnHstry.setLgnIp(clientIp);
-            tblUserLgnHstryRepository.save(tblUserLgnHstry);
+                TblUserLgnHstry tblUserLgnHstry = new TblUserLgnHstry();
+                tblUserLgnHstry.setUserSn(tblUser.get().getUserSn());
+                tblUserLgnHstry.setLgnIp(clientIp);
+                tblUserLgnHstryRepository.save(tblUserLgnHstry);
+            }
+
 
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
         } catch (BadCredentialsException e) {
@@ -209,17 +205,26 @@ public class AuthService {
         ResultVO resultVO = new ResultVO();
 
         try {
-            String loginId = params.get("loginId").toString();
-            String rawPassword = params.get("password").toString();
+            String loginId = ComUtil.getStrValue(params.get("loginId"));
+            String rawPassword = ComUtil.getStrValue(params.get("password"));
+            String snsYn = ComUtil.getStrValue(params.get("snsYn"));
 
             TblUser tblUser = new TblUser();
             tblUser.setEmail(ComUtil.getStrValue(params.get("email")));
             tblUser.setPhone(ComUtil.getStrValue(params.get("phone")));
             tblUser.setLoginId(loginId);
             tblUser.setPassword(passwordEncoder.encode(rawPassword));
-            tblUser.setName(params.get("name").toString());
+            tblUser.setName(ComUtil.getStrValue(params.get("name")));
+            tblUser.setNickName(ComUtil.getStrValue(params.get("nickName")));
             tblUser.setBio(ComUtil.getStrValue(params.get("bio")));
-            tblUser.setInterest(params.get("interest").toString());
+            tblUser.setInterest(ComUtil.getStrValue(params.get("interest")));
+
+            if(snsYn.equals("Y")){
+                tblUser.setSnsYn(ComUtil.getStrValue(params.get("snsYn")));
+                tblUser.setSnsId(ComUtil.getStrValue(params.get("snsId")));
+                tblUser.setSnsName(ComUtil.getStrValue(params.get("snsName")));
+                tblUser.setPassword("SNS 연동");
+            }
             tblUserRepository.save(tblUser);
 
             UserService.profileImageSave(profileImage, tblUser, fileUtil, tblComFileRepository, tblUserRepository);
@@ -230,7 +235,7 @@ public class AuthService {
             tblUserStng.setCreatrSn(tblUser.getUserSn());
             tblUserStngRepository.save(tblUserStng);
 
-            resultVO = login(Map.of("loginId", loginId, "password", rawPassword), clientIp);
+            resultVO = login(Map.of("loginId", loginId, "password", rawPassword, "snsYn", snsYn), clientIp);
         } catch (Exception e) {
             e.printStackTrace();
             resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());

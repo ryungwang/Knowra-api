@@ -70,9 +70,9 @@ public class UserService {
 
     private final RedisApiService redisApiService;
 
-    public Long getUserSn(String loginId) {
-        return tblUserRepository.findByLoginId(loginId)
-                .orElseThrow(() -> new IllegalStateException("User not found: " + loginId))
+    public Long getUserSn(String nickName) {
+        return tblUserRepository.findByNickName(nickName)
+                .orElseThrow(() -> new IllegalStateException("User not found: " + nickName))
                 .getUserSn();
     }
 
@@ -87,9 +87,9 @@ public class UserService {
         try {
             JPAQueryFactory q = new JPAQueryFactory(em);
             Long userSn = token != null ? jwtProvider.extractUserSn(token.replace("Bearer ", "")) : null;
-            String loginId = params.get("loginId").toString();
+            String nickName = params.get("nickName").toString();
 
-            TblUser tblUser = tblUserRepository.findByLoginId(loginId).orElseThrow();
+            TblUser tblUser = tblUserRepository.findByNickName(nickName).orElseThrow();
             QTblUserFlwr qFlwr = QTblUserFlwr.tblUserFlwr;
 
             if(userSn == null){
@@ -101,7 +101,7 @@ public class UserService {
                 resultVO.putResult("isFollowing", usrFlwr != null);
             }
 
-            resultVO.putResult("userProfile", tblUserRepository.findByLoginId(loginId));
+            resultVO.putResult("userProfile", tblUserRepository.findByNickName(nickName));
             resultVO.putResult("userSetting", tblUserStngRepository.findByUserSn(userSn));
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
             resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
@@ -198,14 +198,14 @@ public class UserService {
     public ResultVO getUserPostList(Map<String, Object> params, String token) {
         ResultVO resultVO = new ResultVO();
         try {
-            if (params.get("loginId") == null) {
+            if (params.get("nickName") == null) {
                 resultVO.putResult("list",       List.of());
                 resultVO.putResult("nextCursor", null);
                 resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
                 resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
                 return resultVO;
             }
-            long userSn          = getUserSn(params.get("loginId").toString());
+            long userSn          = getUserSn(params.get("nickName").toString());
             Long viewerUserSn    = token != null ? jwtProvider.extractUserSn(token.replace("Bearer ", "")) : null;
             LocalDateTime cursor = params.get("cursor") != null
                     ? LocalDateTime.parse(params.get("cursor").toString()) : null;
@@ -249,14 +249,14 @@ public class UserService {
         ResultVO resultVO = new ResultVO();
         try {
             Long myUserSn     = token != null ? jwtProvider.extractUserSn(token.replace("Bearer ", "")) : null;
-            long targetUserSn = getUserSn(params.get("loginId").toString());
+            long targetUserSn = getUserSn(params.get("nickName").toString());
 
             QTblUserFlwr qFlwr     = QTblUserFlwr.tblUserFlwr;
             QTblUser     qFollower = new QTblUser("follower");
             QTblComFile  pfpFile   = new QTblComFile("pfpFile");
 
             List<com.querydsl.core.Tuple> tuples = new JPAQueryFactory(em)
-                    .select(qFollower.userSn, qFollower.loginId, qFollower.name, pfpFile.atchFilePathNm, pfpFile.strgFileNm, pfpFile.atchFileExtnNm)
+                    .select(qFollower.userSn, qFollower.nickName, qFollower.name, pfpFile.atchFilePathNm, pfpFile.strgFileNm, pfpFile.atchFileExtnNm)
                     .from(qFlwr)
                     .join(qFollower).on(qFlwr.flwrUserSn.eq(qFollower.userSn))
                     .leftJoin(qFollower.pfp, pfpFile)
@@ -270,7 +270,7 @@ public class UserService {
             List<Map<String, Object>> list = tuples.stream().map(t -> {
                 Map<String, Object> map = new java.util.LinkedHashMap<>();
                 map.put("userSn",      t.get(qFollower.userSn));
-                map.put("loginId",     t.get(qFollower.loginId));
+                map.put("nickName",     t.get(qFollower.nickName));
                 map.put("name",        t.get(qFollower.name));
                 map.put("isFollowing", myFollowings.contains(t.get(qFollower.userSn)));
                 String pathNm = t.get(pfpFile.atchFilePathNm);
@@ -294,14 +294,14 @@ public class UserService {
         ResultVO resultVO = new ResultVO();
         try {
             Long myUserSn     = token != null ? jwtProvider.extractUserSn(token.replace("Bearer ", "")) : null;
-            long targetUserSn = getUserSn(params.get("loginId").toString());
+            long targetUserSn = getUserSn(params.get("nickName").toString());
 
             QTblUserFlwr qFlwr     = QTblUserFlwr.tblUserFlwr;
             QTblUser     qFollowee = new QTblUser("followee");
             QTblComFile  pfpFile   = new QTblComFile("pfpFile");
 
             List<com.querydsl.core.Tuple> tuples = new JPAQueryFactory(em)
-                    .select(qFollowee.userSn, qFollowee.loginId, qFollowee.name, pfpFile.atchFilePathNm, pfpFile.strgFileNm, pfpFile.atchFileExtnNm)
+                    .select(qFollowee.userSn, qFollowee.nickName, qFollowee.name, pfpFile.atchFilePathNm, pfpFile.strgFileNm, pfpFile.atchFileExtnNm)
                     .from(qFlwr)
                     .join(qFollowee).on(qFlwr.flwngUserSn.eq(qFollowee.userSn))
                     .leftJoin(qFollowee.pfp, pfpFile)
@@ -314,7 +314,7 @@ public class UserService {
             List<Map<String, Object>> list = tuples.stream().map(t -> {
                 Map<String, Object> map = new java.util.LinkedHashMap<>();
                 map.put("userSn",      t.get(qFollowee.userSn));
-                map.put("loginId",     t.get(qFollowee.loginId));
+                map.put("nickName",     t.get(qFollowee.nickName));
                 map.put("name",        t.get(qFollowee.name));
                 map.put("isFollowing", myFollowings.contains(t.get(qFollowee.userSn)));
                 String pathNm = t.get(pfpFile.atchFilePathNm);
@@ -338,7 +338,7 @@ public class UserService {
         ResultVO resultVO = new ResultVO();
         try {
             long myUserSn     = jwtProvider.extractUserSn(token.replace("Bearer ", ""));
-            long targetUserSn = getUserSn(params.get("loginId").toString());
+            long targetUserSn = getUserSn(params.get("nickName").toString());
 
             if (myUserSn == targetUserSn) {
                 resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
@@ -538,7 +538,7 @@ public class UserService {
                     PostDTO.class,
                     Expressions.constant("POST"),
                     qPost.postTyp, qPost.postSn, qUser.userSn,
-                    qUser.loginId, qUser.name, qPost.postTtl,
+                    qUser.nickName, qUser.name, qPost.postTtl,
                     qPost.postCntnt, qPost.frstCrtDt,
                     qPost.viewCnt, qPost.likeCnt, qPost.cmtCnt,
                     new CaseBuilder().when(qTblPostLike.isNotNull()).then(qTblPostLike.likeTyp)
@@ -573,7 +573,7 @@ public class UserService {
                             Expressions.constant("COMM"),
                             qCommPost.postTyp, qComm.commSn, qComm.commNm,
                             qComm.commDsplNm, qCommPost.commPostSn, qUser.userSn,
-                            qUser.loginId, qUser.name, qCommPost.postTtl, qCommPost.postCntnt,
+                            qUser.nickName, qUser.name, qCommPost.postTtl, qCommPost.postCntnt,
                             qCommPost.frstCrtDt, qCommPost.viewCnt, qCommPost.likeCnt,
                             qCommPost.cmtCnt,
                             new CaseBuilder().when(qCommPostLike.isNotNull()).then(qCommPostLike.likeTyp)

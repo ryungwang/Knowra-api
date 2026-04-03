@@ -19,9 +19,9 @@ public class CustomUserDetailsService implements UserDetailsService {
     private final TblUserRepository tblUserRepository;
 
     @Override
-    public UserDetails loadUserByUsername(String loginId) throws UsernameNotFoundException {
-        TblUser tblUser = tblUserRepository.findByLoginId(loginId)
-                .orElseThrow(() -> new UsernameNotFoundException("사용자를 찾을 수 없습니다: " + loginId));
+    public UserDetails loadUserByUsername(String nickName) throws UsernameNotFoundException {
+        TblUser tblUser = tblUserRepository.findByNickName(nickName)
+                .orElseThrow(() -> new UsernameNotFoundException("사용자를 찾을 수 없습니다: " + nickName));
 
         return new User(
                 tblUser.getLoginId(),
