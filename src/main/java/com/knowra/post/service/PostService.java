@@ -111,7 +111,7 @@ public class PostService {
             QTblComFile pfpFile = new QTblComFile("pfpFile");
 
             // 게시글 + 작성자
-            com.querydsl.core.Tuple postTuple = q.select(post, user.name, user.loginId, pfpFile.atchFilePathNm, pfpFile.strgFileNm, pfpFile.atchFileExtnNm)
+            com.querydsl.core.Tuple postTuple = q.select(post, user.name, user.nickName, pfpFile.atchFilePathNm, pfpFile.strgFileNm, pfpFile.atchFileExtnNm)
                     .from(post)
                     .join(user).on(post.userSn.eq(user.userSn))
                     .leftJoin(user.pfp, pfpFile)
@@ -140,7 +140,7 @@ public class PostService {
 
             PostDTO postDTO = new PostDTO(
                     "POST", p.getPostTyp(), p.getPostSn(), p.getUserSn(),
-                    postTuple.get(user.loginId), postTuple.get(user.name),
+                    postTuple.get(user.nickName), postTuple.get(user.name),
                     p.getPostTtl(), p.getPostCntnt(), p.getFrstCrtDt(),
                     p.getViewCnt(), p.getLikeCnt(), p.getCmtCnt(), myLikeTyp, mySaved
             );
@@ -365,7 +365,7 @@ public class PostService {
                     .and(cmt.prntCmtSn.isNull());
             if (cursor != null) rootCondition = rootCondition.and(cmt.postCmtSn.gt(cursor));
 
-            List<com.querydsl.core.Tuple> rootTuples = q.select(cmt, cmtUser.loginId, cmtUser.name, cmtPfpFile.atchFilePathNm, cmtPfpFile.strgFileNm, cmtPfpFile.atchFileExtnNm)
+            List<com.querydsl.core.Tuple> rootTuples = q.select(cmt, cmtUser.nickName, cmtUser.name, cmtPfpFile.atchFilePathNm, cmtPfpFile.strgFileNm, cmtPfpFile.atchFileExtnNm)
                     .from(cmt)
                     .join(cmtUser).on(cmt.userSn.eq(cmtUser.userSn))
                     .leftJoin(cmtUser.pfp, cmtPfpFile)
@@ -387,7 +387,7 @@ public class PostService {
                     .toList();
 
             // ── 2. 대댓글 배치 로드 ────────────────────────────────────────────
-            List<com.querydsl.core.Tuple> replyTuples = q.select(cmt, cmtUser.loginId, cmtUser.name, cmtPfpFile.atchFilePathNm, cmtPfpFile.strgFileNm, cmtPfpFile.atchFileExtnNm)
+            List<com.querydsl.core.Tuple> replyTuples = q.select(cmt, cmtUser.nickName, cmtUser.name, cmtPfpFile.atchFilePathNm, cmtPfpFile.strgFileNm, cmtPfpFile.atchFileExtnNm)
                     .from(cmt)
                     .join(cmtUser).on(cmt.userSn.eq(cmtUser.userSn))
                     .leftJoin(cmtUser.pfp, cmtPfpFile)
@@ -422,7 +422,7 @@ public class PostService {
                 String     pathNm = t.get(cmtPfpFile.atchFilePathNm);
                 String     pfpUrl = pathNm != null ? pathNm + "/" + t.get(cmtPfpFile.strgFileNm) + "." + t.get(cmtPfpFile.atchFileExtnNm) : null;
                 return new CmtDTO(
-                        sn, c.getUserSn(), t.get(cmtUser.loginId), t.get(cmtUser.name),
+                        sn, c.getUserSn(), t.get(cmtUser.nickName), t.get(cmtUser.name),
                         c.getCmtCntnt(), c.getLikeCnt(), c.getFrstCrtDt(), new ArrayList<>(),
                         reactionsMap.getOrDefault(sn, new java.util.HashMap<>()),
                         myReactMap.get(sn), pfpUrl
@@ -614,7 +614,7 @@ public class PostService {
             List<PostSaveDTO> post = q.select(
                         Projections.constructor(
                                 PostSaveDTO.class,
-                                qTblPostSave, qUser.userSn, qUser.loginId, qUser.name,
+                                qTblPostSave, qUser.userSn, qUser.nickName, qUser.name,
                                 Expressions.constant(""), Expressions.constant(""), qPost.postTtl, qPost.postCntnt,
                                 qPost.frstCrtDt, qPost.viewCnt, qPost.likeCnt, qPost.cmtCnt,
                                 new CaseBuilder().when(qTblPostLike.isNotNull()).then(qTblPostLike.likeTyp)
@@ -642,7 +642,7 @@ public class PostService {
             List<PostSaveDTO> commPost = q.select(
                         Projections.constructor(
                                 PostSaveDTO.class,
-                                qTblPostSave, qUser.userSn, qUser.loginId, qUser.name,
+                                qTblPostSave, qUser.userSn, qUser.nickName, qUser.name,
                                 qComm.commNm, qComm.commDsplNm, qCommPost.postTtl, qCommPost.postCntnt,
                                 qCommPost.frstCrtDt, qCommPost.viewCnt, qCommPost.likeCnt, qCommPost.cmtCnt,
                                 new CaseBuilder().when(qCommPostLike.isNotNull()).then(qCommPostLike.likeTyp)

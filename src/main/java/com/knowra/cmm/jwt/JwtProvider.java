@@ -2,6 +2,8 @@ package com.knowra.cmm.jwt;
 
 import com.knowra.common.entity.QTblComFile;
 import com.knowra.common.entity.TblComFile;
+import com.knowra.user.entity.TblUser;
+import com.knowra.user.repository.TblUserRepository;
 import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import io.jsonwebtoken.Claims;
@@ -23,6 +25,7 @@ public class JwtProvider {
     private final SecretKey secretKey;
     private final long accessTokenExpiration;
     private final long refreshTokenExpiration;
+    private final TblUserRepository tblUserRepository;
 
     @PersistenceContext
     private EntityManager em;
@@ -30,11 +33,12 @@ public class JwtProvider {
     public JwtProvider(
             @Value("${jwt.secret}") String secret,
             @Value("${jwt.access-token-expiration:3600000}") long accessTokenExpiration,
-            @Value("${jwt.refresh-token-expiration:604800000}") long refreshTokenExpiration
-    ) {
+            @Value("${jwt.refresh-token-expiration:604800000}") long refreshTokenExpiration,
+            TblUserRepository tblUserRepository) {
         this.secretKey = Keys.hmacShaKeyFor(secret.getBytes());
         this.accessTokenExpiration = accessTokenExpiration;
         this.refreshTokenExpiration = refreshTokenExpiration;
+        this.tblUserRepository = tblUserRepository;
     }
 
     public String generateAccessToken(long userSn, String loginId) {
@@ -48,6 +52,8 @@ public class JwtProvider {
     private String buildToken(long userSn, String loginId, long expiration) {
         Date now = new Date();
 
+        TblUser tblUser = tblUserRepository.findByUserSn(userSn);
+
         QTblComFile qProFile = QTblComFile.tblComFile;
         TblComFile proFile = new JPAQueryFactory(em)
             .selectFrom(qProFile)
@@ -59,6 +65,7 @@ public class JwtProvider {
 
         JwtBuilder buildJwt = Jwts.builder()
                 .claim("loginId", loginId)
+                .claim("nickName", tblUser.getNickName())
                 .claim("userSn", userSn)
                 .claim("role", userSn == 1 ? "ADMIN" : "USER")
                 .issuedAt(now)

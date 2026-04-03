@@ -108,6 +108,34 @@ CREATE TABLE IF NOT EXISTS KNOWRA_USER.TBL_USER_TAG
 ) ENGINE = InnoDB COMMENT = '사용자 태그';
 
 
+-- 1-6. TBL_USER_ACTION_LOG (행동 로그)
+CREATE TABLE IF NOT EXISTS KNOWRA_USER.TBL_USER_ACTION_LOG
+(
+    ACTION_SN   BIGINT      NOT NULL AUTO_INCREMENT            COMMENT '행동 로그 SN (PK)',
+    USER_SN     BIGINT      NOT NULL                           COMMENT '행동 주체 유저 SN',
+    TARGET_TYPE VARCHAR(20) NOT NULL                           COMMENT 'COMM | COMM_POST | POST | USER',
+    TARGET_SN   BIGINT      NOT NULL                           COMMENT '대상 SN',
+    ACTION_TYPE VARCHAR(20) NOT NULL                           COMMENT 'VIEW | LIKE | COMMENT | SCRAP | POST | JOIN | FOLLOW',
+    REG_DT      DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '행동 발생 일시',
+    PRIMARY KEY (ACTION_SN),
+    INDEX IDX_ACTION_USER_TARGET (USER_SN, TARGET_TYPE, TARGET_SN),
+    INDEX IDX_ACTION_REG_DT      (REG_DT)
+) ENGINE = InnoDB COMMENT = '유저 행동 로그';
+
+-- 1-7. TBL_USER_INTEREST_SCORE (관심도 점수)
+CREATE TABLE IF NOT EXISTS KNOWRA_USER.TBL_USER_INTEREST_SCORE
+(
+    SCORE_SN    BIGINT         NOT NULL AUTO_INCREMENT                              COMMENT '관심도 점수 SN (PK)',
+    USER_SN     BIGINT         NOT NULL                                             COMMENT '유저 SN',
+    TARGET_TYPE VARCHAR(20)    NOT NULL                                             COMMENT 'COMM | COMM_POST | POST | USER',
+    TARGET_SN   BIGINT         NOT NULL                                             COMMENT '대상 SN',
+    SCORE       DECIMAL(10, 4) NOT NULL DEFAULT 0                                  COMMENT '누적 관심도 점수 (0 이상)',
+    UPDT_DT     DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '최종 업데이트 일시',
+    PRIMARY KEY (SCORE_SN),
+    UNIQUE KEY UK_INTEREST_USER_TARGET (USER_SN, TARGET_TYPE, TARGET_SN)
+) ENGINE = InnoDB COMMENT = '유저 관심도 점수 (현재 상태 스냅샷)';
+
+
 -- ============================================================
 -- 2. KNOWRA_COM
 -- ============================================================

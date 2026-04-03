@@ -23,7 +23,7 @@ public class PostDTO {
     private String postTyp;          // "NOTICE" | "NORMAL"
     private long postSn;             // commPostSn 또는 postSn
     private long userSn;
-    private String userId;
+    private String nickName;
     private String authorNm;
     private String postTtl;
     private String postCntnt;
@@ -42,7 +42,7 @@ public class PostDTO {
     private String commDsplNm;
 
     // ── QueryDSL Projections.constructor — POST용 ──────────────
-    public PostDTO(String postKind, String postTyp, long postSn, long userSn, String userId, String authorNm,
+    public PostDTO(String postKind, String postTyp, long postSn, long userSn, String nickName, String authorNm,
                    String postTtl, String postCntnt,
                    LocalDateTime frstCrtDt, int viewCnt, int likeCnt, int cmtCnt,
                    String myLikeTyp, boolean mySaved) {
@@ -50,7 +50,7 @@ public class PostDTO {
         this.postTyp   = postTyp;
         this.postSn    = postSn;
         this.userSn    = userSn;
-        this.userId    = userId;
+        this.nickName    = nickName;
         this.authorNm  = authorNm;
         this.postTtl   = postTtl;
         this.postCntnt = postCntnt;
@@ -65,7 +65,7 @@ public class PostDTO {
 
     // ── QueryDSL Projections.constructor — COMMPOST용 ──────────
     public PostDTO(String postKind, String postTyp, long commSn, String commNm, String commDsplNm, long postSn,
-                   long userSn, String userId, String authorNm,
+                   long userSn, String nickName, String authorNm,
                    String postTtl, String postCntnt, LocalDateTime frstCrtDt,
                    int viewCnt, int likeCnt, int cmtCnt, String myLikeTyp, boolean mySaved) {
         this.postKind   = postKind;
@@ -75,7 +75,7 @@ public class PostDTO {
         this.commDsplNm = commDsplNm;
         this.postSn     = postSn;
         this.userSn     = userSn;
-        this.userId     = userId;
+        this.nickName     = nickName;
         this.authorNm   = authorNm;
         this.postTtl    = postTtl;
         this.postCntnt  = postCntnt;

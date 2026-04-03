@@ -132,7 +132,7 @@ public class CommunityPostService {
 
             if ("POPULAR".equals(listTyp)) {
                 // 인기: likeCnt 내림차순, offset 페이징
-                tuples = q.select(post, user.name, user.loginId, pfpFile.atchFilePathNm, pfpFile.strgFileNm, pfpFile.atchFileExtnNm)
+                tuples = q.select(post, user.name, user.nickName, pfpFile.atchFilePathNm, pfpFile.strgFileNm, pfpFile.atchFileExtnNm)
                         .from(post)
                         .join(user).on(post.userSn.eq(user.userSn))
                         .leftJoin(user.pfp, pfpFile)
@@ -145,7 +145,7 @@ public class CommunityPostService {
                 // 공지: postTyp = NOTICE, 커서 페이징
                 condition = condition.and(post.postTyp.eq("NOTICE"));
                 if (cursor != null) condition = condition.and(post.commPostSn.lt(cursor));
-                tuples = q.select(post, user.name, user.loginId, pfpFile.atchFilePathNm, pfpFile.strgFileNm, pfpFile.atchFileExtnNm)
+                tuples = q.select(post, user.name, user.nickName, pfpFile.atchFilePathNm, pfpFile.strgFileNm, pfpFile.atchFileExtnNm)
                         .from(post)
                         .join(user).on(post.userSn.eq(user.userSn))
                         .leftJoin(user.pfp, pfpFile)
@@ -157,7 +157,7 @@ public class CommunityPostService {
                 // ALL / LATEST: 공지 항상 상단 고정 + 일반 게시글 커서 페이징
                 if (cursor == null) {
                     // 첫 페이지: 공지 전체 먼저 조회
-                    List<com.querydsl.core.Tuple> notices = q.select(post, user.name, user.loginId, pfpFile.atchFilePathNm, pfpFile.strgFileNm, pfpFile.atchFileExtnNm)
+                    List<com.querydsl.core.Tuple> notices = q.select(post, user.name, user.nickName, pfpFile.atchFilePathNm, pfpFile.strgFileNm, pfpFile.atchFileExtnNm)
                             .from(post)
                             .join(user).on(post.userSn.eq(user.userSn))
                             .leftJoin(user.pfp, pfpFile)
@@ -166,7 +166,7 @@ public class CommunityPostService {
                             .fetch();
                     // 일반 게시글: 50 - 공지수 만큼
                     int normalLimit = Math.max(50 - notices.size(), 0);
-                    List<com.querydsl.core.Tuple> normals = q.select(post, user.name, user.loginId, pfpFile.atchFilePathNm, pfpFile.strgFileNm, pfpFile.atchFileExtnNm)
+                    List<com.querydsl.core.Tuple> normals = q.select(post, user.name, user.nickName, pfpFile.atchFilePathNm, pfpFile.strgFileNm, pfpFile.atchFileExtnNm)
                             .from(post)
                             .join(user).on(post.userSn.eq(user.userSn))
                             .leftJoin(user.pfp, pfpFile)
@@ -178,7 +178,7 @@ public class CommunityPostService {
                     tuples.addAll(normals);
                 } else {
                     // 이후 페이지: 일반 게시글만 커서 페이징 (공지는 첫 페이지에 고정)
-                    tuples = q.select(post, user.name, user.loginId, pfpFile.atchFilePathNm, pfpFile.strgFileNm, pfpFile.atchFileExtnNm)
+                    tuples = q.select(post, user.name, user.nickName, pfpFile.atchFilePathNm, pfpFile.strgFileNm, pfpFile.atchFileExtnNm)
                             .from(post)
                             .join(user).on(post.userSn.eq(user.userSn))
                             .leftJoin(user.pfp, pfpFile)
@@ -226,7 +226,7 @@ public class CommunityPostService {
                 PostDTO dto = new PostDTO(
                         "COMM", p.getPostTyp(),
                         p.getCommSn(), null, null, p.getCommPostSn(),
-                        p.getUserSn(), t.get(user.loginId), t.get(user.name),
+                        p.getUserSn(), t.get(user.nickName), t.get(user.name),
                         p.getPostTtl(), null, p.getFrstCrtDt(),
                         p.getViewCnt(), p.getLikeCnt(), p.getCmtCnt(),
                         likeMap.get(p.getCommPostSn()),
@@ -273,7 +273,7 @@ public class CommunityPostService {
             QTblComFile pfpFile = new QTblComFile("pfpFile");
 
             // 게시글 + 작성자
-            com.querydsl.core.Tuple postTuple = q.select(post, user.name, user.loginId, pfpFile.atchFilePathNm, pfpFile.strgFileNm, pfpFile.atchFileExtnNm)
+            com.querydsl.core.Tuple postTuple = q.select(post, user.name, user.nickName, pfpFile.atchFilePathNm, pfpFile.strgFileNm, pfpFile.atchFileExtnNm)
                     .from(post)
                     .join(user).on(post.userSn.eq(user.userSn))
                     .leftJoin(user.pfp, pfpFile)
@@ -315,7 +315,7 @@ public class CommunityPostService {
             PostDTO postDTO = new PostDTO(
                     "COMM", p.getPostTyp(),
                     p.getCommSn(), community.getCommNm(), community.getCommDsplNm(), p.getCommPostSn(),
-                    p.getUserSn(), postTuple.get(user.loginId), postTuple.get(user.name),
+                    p.getUserSn(), postTuple.get(user.nickName), postTuple.get(user.name),
                     p.getPostTtl(), p.getPostCntnt(), p.getFrstCrtDt(),
                     p.getViewCnt(), p.getLikeCnt(), p.getCmtCnt(),
                     myLikeTyp, mySaved
@@ -361,7 +361,7 @@ public class CommunityPostService {
                     .and(cmt.prntCmtSn.isNull());
             if (cursor != null) rootCondition = rootCondition.and(cmt.commPostCmtSn.gt(cursor));
 
-            List<com.querydsl.core.Tuple> rootTuples = q.select(cmt, cmtUser.loginId, cmtUser.name, cmtPfpFile.atchFilePathNm, cmtPfpFile.strgFileNm, cmtPfpFile.atchFileExtnNm)
+            List<com.querydsl.core.Tuple> rootTuples = q.select(cmt, cmtUser.nickName, cmtUser.name, cmtPfpFile.atchFilePathNm, cmtPfpFile.strgFileNm, cmtPfpFile.atchFileExtnNm)
                     .from(cmt)
                     .join(cmtUser).on(cmt.userSn.eq(cmtUser.userSn))
                     .leftJoin(cmtUser.pfp, cmtPfpFile)
@@ -383,7 +383,7 @@ public class CommunityPostService {
                     .toList();
 
             // ── 2. 대댓글 배치 로드 ────────────────────────────────────────────
-            List<com.querydsl.core.Tuple> replyTuples = q.select(cmt, cmtUser.loginId, cmtUser.name, cmtPfpFile.atchFilePathNm, cmtPfpFile.strgFileNm, cmtPfpFile.atchFileExtnNm)
+            List<com.querydsl.core.Tuple> replyTuples = q.select(cmt, cmtUser.nickName, cmtUser.name, cmtPfpFile.atchFilePathNm, cmtPfpFile.strgFileNm, cmtPfpFile.atchFileExtnNm)
                     .from(cmt)
                     .join(cmtUser).on(cmt.userSn.eq(cmtUser.userSn))
                     .leftJoin(cmtUser.pfp, cmtPfpFile)
@@ -418,7 +418,7 @@ public class CommunityPostService {
                 String         pathNm = t.get(cmtPfpFile.atchFilePathNm);
                 String         pfpUrl = pathNm != null ? pathNm + "/" + t.get(cmtPfpFile.strgFileNm) + "." + t.get(cmtPfpFile.atchFileExtnNm) : null;
                 CmtDTO dto = new CmtDTO(
-                        sn, c.getUserSn(), t.get(cmtUser.loginId), t.get(cmtUser.name),
+                        sn, c.getUserSn(), t.get(cmtUser.nickName), t.get(cmtUser.name),
                         c.getCmtCntnt(), c.getLikeCnt(), c.getFrstCrtDt(), new ArrayList<>(),
                         reactionsMap.getOrDefault(sn, new java.util.HashMap<>()),
                         myReactMap.get(sn), pfpUrl
