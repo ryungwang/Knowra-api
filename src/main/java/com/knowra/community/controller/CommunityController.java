@@ -2,6 +2,7 @@ package com.knowra.community.controller;
 
 import com.knowra.cmm.model.ResultVO;
 import com.knowra.community.entity.TblComm;
+import com.knowra.community.service.CommunityExploreService;
 import com.knowra.community.service.CommunityPostService;
 import com.knowra.community.service.CommunityService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -17,6 +18,7 @@ import java.util.Map;
 public class CommunityController {
 
     private final CommunityService communityService;
+    private final CommunityExploreService communityExploreService;
 
     @GetMapping("/api/community/getCommunityList")
     public ResultVO getCommunityList(Map<String, Object> params, HttpServletRequest request) {
@@ -49,5 +51,17 @@ public class CommunityController {
     public ResultVO setMember(@RequestBody Map<String, Object> params, HttpServletRequest request) {
         String token = request.getHeader("Authorization");
         return communityService.setMember(params, token);
+    }
+
+    @GetMapping("/api/community/explore")
+    public ResultVO getExploreCommunities(HttpServletRequest request) {
+        String token = request.getHeader("Authorization");
+        return communityExploreService.getExploreCommunities(token);
+    }
+
+    @GetMapping("/api/community/explore/filter")
+    public ResultVO getExploreFilterCommunities(@RequestParam Map<String, Object> params, HttpServletRequest request) {
+        String token = request.getHeader("Authorization");
+        return communityExploreService.getExploreFilterCommunities(params, token);
     }
 }

@@ -62,6 +62,8 @@ public class UserService {
     private final FileUtil fileUtil;
     private final TblComFileRepository tblComFileRepository;
     private final TblUserStngRepository tblUserStngRepository;
+    private final ActionLogService actionLogService;
+    private final InterestScoreService interestScoreService;
 
     @PersistenceContext
     private EntityManager em;
@@ -360,6 +362,13 @@ public class UserService {
             } else {
                 existing.setActvtnYn("Y".equals(existing.getActvtnYn()) ? "N" : "Y");
                 newState = "Y".equals(existing.getActvtnYn()) ? "FOLLOW" : "UNFOLLOW";
+            }
+
+            if ("FOLLOW".equals(newState)) {
+                actionLogService.log(myUserSn, TblUserActionLog.TARGET_USER, targetUserSn, TblUserActionLog.ACTION_FOLLOW);
+                interestScoreService.update(myUserSn, TblUserActionLog.TARGET_USER, targetUserSn, 6);
+            } else {
+                interestScoreService.update(myUserSn, TblUserActionLog.TARGET_USER, targetUserSn, -6);
             }
 
             resultVO.putResult("state", newState);

@@ -13,6 +13,9 @@ import com.knowra.post.entity.*;
 import com.knowra.post.repository.*;
 import com.knowra.post.entity.QTblPostSave;
 import com.knowra.user.entity.QTblUser;
+import com.knowra.user.entity.TblUserActionLog;
+import com.knowra.user.service.ActionLogService;
+import com.knowra.user.service.InterestScoreService;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.CaseBuilder;
 import com.querydsl.core.types.dsl.Expressions;
@@ -49,6 +52,8 @@ public class PostService {
     private final TblCommPostRepository tblCommPostRepository;
     private final ModelMapper modelMapper;
     private final RedisApiService redisApiService;
+    private final ActionLogService actionLogService;
+    private final InterestScoreService interestScoreService;
     private static final int REDIS_DB = 15;
 
     public ResultVO setPost(Map<String, Object> params, String token) {
@@ -70,6 +75,7 @@ public class PostService {
                 tblPost.setUserSn(userSn);
                 tblPost.setCreatrSn(userSn);
                 tblPostRepository.save(tblPost);
+                actionLogService.log(userSn, TblUserActionLog.TARGET_POST, tblPost.getPostSn(), TblUserActionLog.ACTION_POST);
             }
 
             @SuppressWarnings("unchecked")
@@ -161,7 +167,15 @@ public class PostService {
         ResultVO resultVO = new ResultVO();
         try {
             long postSn = Long.parseLong(params.get("postSn").toString());
-            redisApiService.incrementViewCount(REDIS_DB, params.get("type").toString(), postSn);
+            String type = params.get("type").toString();
+            redisApiService.incrementViewCount(REDIS_DB, type, postSn);
+
+            if (token != null) {
+                long userSn = jwtProvider.extractUserSn(token.replace("Bearer ", ""));
+                String targetType = "comm".equalsIgnoreCase(type) ? TblUserActionLog.TARGET_COMM_POST : TblUserActionLog.TARGET_POST;
+                actionLogService.log(userSn, targetType, postSn, TblUserActionLog.ACTION_VIEW);
+            }
+
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
             resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
         } catch (Exception e) {
@@ -195,15 +209,19 @@ public class PostService {
                         .likeTyp(postLike)
                         .creatrSn(userSn)
                         .build());
+                actionLogService.log(userSn, TblUserActionLog.TARGET_POST, postSn, TblUserActionLog.ACTION_LIKE);
+                if ("UP".equals(postLike)) interestScoreService.update(userSn, TblUserActionLog.TARGET_POST, postSn, 3);
             } else if (tblPostLike.getLikeTyp().equals(postLike)) {
                 // 같은 반응 재클릭 → 취소
                 delta = "UP".equals(postLike) ? -1 : 1;
                 tblPostLikeRepository.delete(tblPostLike);
+                if ("UP".equals(postLike)) interestScoreService.update(userSn, TblUserActionLog.TARGET_POST, postSn, -3);
             } else {
                 // 반대 반응으로 전환 (DOWN→UP: +2, UP→DOWN: -2)
                 delta = "UP".equals(postLike) ? 2 : -2;
                 tblPostLike.setLikeTyp(postLike);
                 tblPostLikeRepository.save(tblPostLike);
+                interestScoreService.update(userSn, TblUserActionLog.TARGET_POST, postSn, "UP".equals(postLike) ? 3 : -3);
             }
 
             q.update(qPost)
@@ -239,6 +257,7 @@ public class PostService {
                     .creatrSn(userSn)
                     .build();
             tblPostCmtRepository.save(cmt);
+            actionLogService.log(userSn, TblUserActionLog.TARGET_POST, postSn, TblUserActionLog.ACTION_COMMENT);
 
             // 댓글수 +1
             JPAQueryFactory q = new JPAQueryFactory(em);
@@ -550,6 +569,8 @@ public class PostService {
                 tblPostSave.setPostKind(postKind);
                 tblPostSave.setCreatrSn(userSn);
                 tblPostSaveRepository.save(tblPostSave);
+                String scrapTarget = "COMM".equals(postKind) ? TblUserActionLog.TARGET_COMM_POST : TblUserActionLog.TARGET_POST;
+                actionLogService.log(userSn, scrapTarget, postSn, TblUserActionLog.ACTION_SCRAP);
             }else{
                 TblPostSave tblPostSave = tblPostSaveRepository.findByUserSnAndPostSnAndPostKind(userSn, postSn, postKind);
                 if (tblPostSave != null) {

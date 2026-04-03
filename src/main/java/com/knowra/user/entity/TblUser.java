@@ -43,11 +43,15 @@ public class TblUser {
   @Comment("이름")
   private String name;
 
+  @Column(name = "NICK_NAME", length = 100, nullable = false)
+  @Comment("닉네임")
+  private String nickName;
+
   @Column(name = "BIO", length = 800)
   @Comment("자기소개")
   private String bio;
 
-  @Column(name = "INTEREST", length = 100, nullable = false)
+  @Column(name = "INTEREST", length = 100)
   @Comment("관심사( CATEGORY - CATEGORY_SN )")
   private String interest;
 
@@ -67,6 +71,18 @@ public class TblUser {
   @Column(name = "STATUS", length = 20, nullable = false)
   @Comment("상태")
   private String status = "Y";
+
+  @Column(name = "SNS_YN", length = 20, nullable = false, updatable = false)
+  @Comment("SNS 여부")
+  private String snsYn = "N";
+
+  @Column(name = "SNS_NAME", length = 20, updatable = false)
+  @Comment("SNS 명")
+  private String snsName;
+
+  @Column(name = "SNS_ID", length = 100, updatable = false)
+  @Comment("SNS 고유아이디")
+  private String snsId;
 
   @Column(name = "ACTVTN_YN", nullable = false)
   @Comment("활성여부")

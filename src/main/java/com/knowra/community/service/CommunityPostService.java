@@ -16,7 +16,10 @@ import com.knowra.post.repository.TblPostSaveRepository;
 import com.knowra.community.entity.*;
 import com.knowra.community.repository.*;
 import com.knowra.user.entity.QTblUser;
+import com.knowra.user.entity.TblUserActionLog;
 import com.knowra.user.entity.TblUserTag;
+import com.knowra.user.service.ActionLogService;
+import com.knowra.user.service.InterestScoreService;
 import org.modelmapper.ModelMapper;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
@@ -47,6 +50,8 @@ public class CommunityPostService {
     private final RedisApiService redisApiService;
     private final TagService tagService;
     private final JwtProvider jwtProvider;
+    private final ActionLogService actionLogService;
+    private final InterestScoreService interestScoreService;
 
     private static final int REDIS_DB = 15;
 
@@ -79,6 +84,7 @@ public class CommunityPostService {
                 tblCommPost.setUserSn(userSn);
                 tblCommPost.setCreatrSn(userSn);
                 tblCommPostRepository.save(tblCommPost);
+                actionLogService.log(userSn, TblUserActionLog.TARGET_COMM_POST, tblCommPost.getCommPostSn(), TblUserActionLog.ACTION_POST);
             }
 
             @SuppressWarnings("unchecked")
@@ -471,15 +477,20 @@ public class CommunityPostService {
                         .likeTyp(postLike)
                         .creatrSn(userSn)
                         .build());
+                actionLogService.log(userSn, TblUserActionLog.TARGET_COMM_POST, commPostSn, TblUserActionLog.ACTION_LIKE);
+                if ("UP".equals(postLike)) interestScoreService.update(userSn, TblUserActionLog.TARGET_COMM_POST, commPostSn, 3);
             } else if (commPostLike.getLikeTyp().equals(postLike)) {
                 // 같은 반응 재클릭 → 취소
                 delta = "UP".equals(postLike) ? -1 : 1;
                 tblCommPostLikeRepository.delete(commPostLike);
+                if ("UP".equals(postLike)) interestScoreService.update(userSn, TblUserActionLog.TARGET_COMM_POST, commPostSn, -3);
             } else {
                 // 반대 반응으로 전환 (DOWN→UP: +2, UP→DOWN: -2)
                 delta = "UP".equals(postLike) ? 2 : -2;
                 commPostLike.setLikeTyp(postLike);
                 tblCommPostLikeRepository.save(commPostLike);
+                // UP→DOWN: 기존 UP 점수 차감 / DOWN→UP: 점수 추가
+                interestScoreService.update(userSn, TblUserActionLog.TARGET_COMM_POST, commPostSn, "UP".equals(postLike) ? 3 : -3);
             }
 
             q.update(qCommPost)
@@ -549,6 +560,7 @@ public class CommunityPostService {
                     .creatrSn(userSn)
                     .build();
             tblCommPostCmtRepository.save(cmt);
+            actionLogService.log(userSn, TblUserActionLog.TARGET_COMM_POST, commPostSn, TblUserActionLog.ACTION_COMMENT);
 
             // 댓글수 +1
             JPAQueryFactory q = new JPAQueryFactory(em);

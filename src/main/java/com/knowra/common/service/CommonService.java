@@ -317,4 +317,15 @@ public class CommonService {
 
         return resultVO;
     }
+
+    public ResultVO uploadImage(MultipartFile image) {
+        ResultVO resultVO = new ResultVO();
+        try{
+            resultVO.putResult("url", fileUtil.devImageUpload(image, "/editor/"));
+            resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
+        }catch (IOException e) {
+            resultVO.setResultCode(ResponseCode.DELETE_ERROR.getCode());
+        }
+        return resultVO;
+    }
 }

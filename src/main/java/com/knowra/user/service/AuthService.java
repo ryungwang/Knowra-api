@@ -15,20 +15,26 @@ import com.knowra.user.repository.TblUserLgnHstryRepository;
 import com.knowra.user.repository.TblUserRepository;
 import com.knowra.user.repository.TblUserStngRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.*;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.multipart.MultipartHttpServletRequest;
 
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
 public class AuthService {
+
+    private final RestTemplate restTemplate = new RestTemplate();
 
     private final AuthenticationManager authenticationManager;
     private final JwtProvider jwtProvider;
@@ -60,6 +66,78 @@ public class AuthService {
 
             TblUserLgnHstry tblUserLgnHstry = new TblUserLgnHstry();
             tblUserLgnHstry.setUserSn(userSn);
+            tblUserLgnHstry.setLgnIp(clientIp);
+            tblUserLgnHstryRepository.save(tblUserLgnHstry);
+
+            resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
+        } catch (BadCredentialsException e) {
+            e.printStackTrace();
+            resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
+            resultVO.setResultMessage("이메일 또는 비밀번호가 올바르지 않습니다.");
+        } catch (Exception e) {
+            e.printStackTrace();
+            resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
+            resultVO.setResultMessage(ResponseCode.SELECT_ERROR.getMessage());
+        }
+        return resultVO;
+    }
+
+    public ResultVO snsLogin(Map<String, String> params, String clientIp) {
+        ResultVO resultVO = new ResultVO();
+        try {
+            String url = "https://www.googleapis.com/oauth2/v1/userinfo?access_token=" + ComUtil.getStrValue(params.get("accessToken"));
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            HttpEntity<String> entity = new HttpEntity<>(headers);
+
+            ResponseEntity<Map> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.GET,
+                    entity,
+                    Map.class
+            );
+
+            Map<String, Object> userInfo = response.getBody();
+
+            if (userInfo == null) {
+                throw new RuntimeException("구글 사용자 정보 조회 실패");
+            }
+
+            String googleId = (String) userInfo.get("id");
+            String email = (String) userInfo.get("email");
+            String name = (String) userInfo.get("name");
+            Boolean verifiedEmail = (Boolean) userInfo.get("verified_email");
+
+            if (email == null || email.isBlank()) {
+                throw new RuntimeException("이메일 정보가 없습니다.");
+            }
+
+            if (Boolean.FALSE.equals(verifiedEmail)) {
+                throw new RuntimeException("검증되지 않은 이메일입니다.");
+            }
+
+            TblUser tblUser = tblUserRepository.findByLoginId(email) .orElseGet(() -> {
+                TblUser newUser = new TblUser();
+                newUser.setLoginId(email);
+                newUser.setPassword("SNS 연동");
+                newUser.setName(name);
+                newUser.setEmail(email);
+                newUser.setSnsYn("Y");
+                newUser.setSnsName("GOOGLE");
+                newUser.setSnsId(googleId);
+                return tblUserRepository.save(newUser);
+            });
+
+            String accessToken = jwtProvider.generateAccessToken(tblUser.getUserSn(), email);
+            String refreshToken = jwtProvider.generateRefreshToken(tblUser.getUserSn(), email);
+
+            resultVO.putResult("accessToken", accessToken);
+            resultVO.putResult("refreshToken", refreshToken);
+
+            TblUserLgnHstry tblUserLgnHstry = new TblUserLgnHstry();
+            tblUserLgnHstry.setUserSn(tblUser.getUserSn());
             tblUserLgnHstry.setLgnIp(clientIp);
             tblUserLgnHstryRepository.save(tblUserLgnHstry);
 
