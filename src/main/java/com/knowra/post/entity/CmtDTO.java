@@ -15,6 +15,7 @@ public class CmtDTO {
 
     private long cmtSn;
     private long userSn;
+    private String authorId;
     private String authorNm;
     private String cmtCntnt;
     private int likeCnt;

@@ -144,17 +144,7 @@ public class AuthService {
             tblUser.setInterest(params.get("interest").toString());
             tblUserRepository.save(tblUser);
 
-            if (profileImage != null) {
-                TblComFile proFile = fileUtil.devFileInf(
-                        profileImage,
-                        "/user/" + tblUser.getUserSn() + "/profile",
-                        "user_" + tblUser.getUserSn()
-                );
-                proFile.setCreatrSn(tblUser.getUserSn());
-                TblComFile pfp = tblComFileRepository.save(proFile);
-                tblUser.setPfp(pfp);
-                tblUserRepository.save(tblUser);
-            }
+            UserService.profileImageSave(profileImage, tblUser, fileUtil, tblComFileRepository, tblUserRepository);
 
 
             TblUserStng tblUserStng = new TblUserStng();

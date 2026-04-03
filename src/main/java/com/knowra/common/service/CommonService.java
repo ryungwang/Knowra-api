@@ -4,7 +4,11 @@ import com.knowra.cmm.model.ResponseCode;
 import com.knowra.cmm.model.ResultVO;
 import com.knowra.cmm.util.FileUtil;
 import com.knowra.common.entity.TblComFile;
+import com.knowra.common.repository.TblComCategoryRepository;
 import com.knowra.common.repository.TblComFileRepository;
+import com.knowra.user.entity.QTblUserFlwr;
+import com.knowra.user.entity.TblUser;
+import com.knowra.user.entity.TblUserFlwr;
 import com.knowra.user.repository.TblUserRepository;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.Projections;
@@ -44,7 +48,7 @@ public class CommonService {
 
     private final FileUtil fileUtil;
     private final TblComFileRepository tblComFileRepository;
-//    private final TblPstRepository tblPstRepository;
+    private final TblComCategoryRepository tblComCategoryRepository;
     private final TblUserRepository tblUserRepository;
 //    private final TblBbsRepository tblBbsRepository;
 
@@ -298,28 +302,19 @@ public class CommonService {
         return resultVO;
     }
 
-//    public ResultVO getPst(TblPst tblPst) {
-//        ResultVO resultVO = new ResultVO();
-//
-//        try {
-//            QTblPst qTblPst = QTblPst.tblPst;
-//            JPAQueryFactory q = new JPAQueryFactory(em);
-//
-//            q.update(qTblPst).set(qTblPst.pstInqCnt, qTblPst.pstInqCnt.add(1)).where(qTblPst.pstSn.eq(tblPst.getPstSn())).execute();
-//
-//
-//            tblPst = tblPstRepository.findByPstSn(tblPst.getPstSn());
-//            tblPst.setTblUser(tblUserRepository.findByUserSn(tblPst.getCreatrSn()));
-//            tblPst.setTblBbs(tblBbsRepository.findByBbsSn(tblPst.getBbsSn()));
-//            tblPst.setTblComFiles(tblComFileRepository.findAllByPsnTblSn("pst_" + tblPst.getPstSn()));
-//            resultVO.putResult("pst", tblPst);
-//            resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
-//        }catch (Exception e){
-//            e.printStackTrace();
-//            resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
-//            resultVO.setResultMessage(ResponseCode.SELECT_ERROR.getMessage());
-//        }
-//
-//        return resultVO;
-//    }
+    public ResultVO getCategoryList() {
+        ResultVO resultVO = new ResultVO();
+
+        try {
+            resultVO.putResult("categoryList", tblComCategoryRepository.findAllByActvtnYn("Y"));
+            resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
+            resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
+        }catch (Exception e) {
+            e.printStackTrace();
+            resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
+            resultVO.setResultMessage(ResponseCode.SELECT_ERROR.getMessage());
+        }
+
+        return resultVO;
+    }
 }

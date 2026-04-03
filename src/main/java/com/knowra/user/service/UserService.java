@@ -4,10 +4,14 @@ import com.knowra.cmm.jwt.JwtProvider;
 import com.knowra.cmm.model.ResponseCode;
 import com.knowra.cmm.model.ResultVO;
 import com.knowra.cmm.service.RedisApiService;
+import com.knowra.cmm.util.FileUtil;
 import com.knowra.common.entity.QTblComFile;
 import com.knowra.common.entity.QTblTag;
+import com.knowra.common.entity.TblComFile;
 import com.knowra.common.entity.TblTag;
+import com.knowra.common.repository.TblComFileRepository;
 import com.knowra.common.service.TagService;
+import com.knowra.common.util.ComUtil;
 import com.knowra.community.entity.QTblComm;
 import com.knowra.community.entity.QTblCommMbr;
 import com.knowra.community.entity.QTblCommPost;
@@ -19,6 +23,7 @@ import com.knowra.community.service.CommunityPostService;
 import com.knowra.user.entity.*;
 import com.knowra.user.repository.TblUserFlwrRepository;
 import com.knowra.user.repository.TblUserRepository;
+import com.knowra.user.repository.TblUserStngRepository;
 import com.querydsl.core.Tuple;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.CaseBuilder;
@@ -33,7 +38,9 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -52,6 +59,9 @@ public class UserService {
     private final PostService postService;
     private final CommunityPostService communityPostService;
     private final TagService tagService;
+    private final FileUtil fileUtil;
+    private final TblComFileRepository tblComFileRepository;
+    private final TblUserStngRepository tblUserStngRepository;
 
     @PersistenceContext
     private EntityManager em;
@@ -90,6 +100,49 @@ public class UserService {
             }
 
             resultVO.putResult("userProfile", tblUserRepository.findByLoginId(loginId));
+            resultVO.putResult("userSetting", tblUserStngRepository.findByUserSn(userSn));
+            resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
+            resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
+        }catch (Exception e) {
+            e.printStackTrace();
+            resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
+            resultVO.setResultMessage(ResponseCode.SELECT_ERROR.getMessage());
+        }
+
+        return resultVO;
+    }
+
+
+    public ResultVO setUserInfo(Map<String, Object> params, MultipartFile profileImage, String token) {
+        ResultVO resultVO = new ResultVO();
+
+        try {
+            Long userSn = jwtProvider.extractUserSn(token.replace("Bearer ", ""));
+
+            TblUser tblUser = tblUserRepository.findByUserSn(userSn);
+            tblUser.setName(ComUtil.getStrValue(params.get("name")));
+            tblUser.setBio(ComUtil.getStrValue(params.get("bio")));
+            tblUser.setInterest(ComUtil.getStrValue(params.get("interest")));
+
+            if(params.get("removeProfileImage") != null){
+                boolean isDelete = fileUtil.deleteFile(new String[]{tblUser.getPfp().getStrgFileNm() + "." + tblUser.getPfp().getAtchFileExtnNm()}, tblUser.getPfp().getAtchFilePathNm());
+                if(isDelete){
+                    tblComFileRepository.delete(tblUser.getPfp());
+                    tblUser.setPfp(null);
+                    tblUserRepository.save(tblUser);
+                }else{
+                    throw new NullPointerException();
+                }
+            }
+
+            profileImageSave(profileImage, tblUser, fileUtil, tblComFileRepository, tblUserRepository);
+
+            boolean pfpChanged = params.get("removeProfileImage") != null || profileImage != null;
+            if (pfpChanged) {
+                String loginId = jwtProvider.extractLoginId(token.replace("Bearer ", ""));
+                resultVO.putResult("accessToken",  jwtProvider.generateAccessToken(userSn, loginId));
+                resultVO.putResult("refreshToken", jwtProvider.generateRefreshToken(userSn, loginId));
+            }
 
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
             resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
@@ -100,6 +153,44 @@ public class UserService {
         }
 
         return resultVO;
+    }
+
+    public ResultVO setUserSetting(TblUserStng tblUserStng, String token) {
+        ResultVO resultVO = new ResultVO();
+
+        try {
+            Long userSn = jwtProvider.extractUserSn(token.replace("Bearer ", ""));
+            tblUserStng.setMdfrSn(userSn);
+            tblUserStngRepository.save(tblUserStng);
+
+            resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
+            resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
+        }catch (Exception e) {
+            e.printStackTrace();
+            resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
+            resultVO.setResultMessage(ResponseCode.SELECT_ERROR.getMessage());
+        }
+
+        return resultVO;
+    }
+
+    static void profileImageSave(MultipartFile profileImage, TblUser tblUser, FileUtil fileUtil, TblComFileRepository tblComFileRepository, TblUserRepository tblUserRepository) throws IOException {
+        if (profileImage != null) {
+            TblComFile proFile = fileUtil.devFileInf(
+                    profileImage,
+                    "/user/" + tblUser.getUserSn() + "/profile",
+                    "user_" + tblUser.getUserSn()
+            );
+            proFile.setCreatrSn(tblUser.getUserSn());
+            TblComFile pfp = tblComFileRepository.save(proFile);
+
+            if(tblUser.getPfp() != null){
+                tblComFileRepository.delete(tblUser.getPfp());
+            }
+
+            tblUser.setPfp(pfp);
+            tblUserRepository.save(tblUser);
+        }
     }
 
     public ResultVO getUserPostList(Map<String, Object> params, String token) {
@@ -552,4 +643,6 @@ public class UserService {
 
         return resultVO;
     }
+
+
 }

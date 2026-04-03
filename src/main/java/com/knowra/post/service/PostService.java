@@ -346,7 +346,7 @@ public class PostService {
                     .and(cmt.prntCmtSn.isNull());
             if (cursor != null) rootCondition = rootCondition.and(cmt.postCmtSn.gt(cursor));
 
-            List<com.querydsl.core.Tuple> rootTuples = q.select(cmt, cmtUser.name, cmtPfpFile.atchFilePathNm, cmtPfpFile.strgFileNm, cmtPfpFile.atchFileExtnNm)
+            List<com.querydsl.core.Tuple> rootTuples = q.select(cmt, cmtUser.loginId, cmtUser.name, cmtPfpFile.atchFilePathNm, cmtPfpFile.strgFileNm, cmtPfpFile.atchFileExtnNm)
                     .from(cmt)
                     .join(cmtUser).on(cmt.userSn.eq(cmtUser.userSn))
                     .leftJoin(cmtUser.pfp, cmtPfpFile)
@@ -368,7 +368,7 @@ public class PostService {
                     .toList();
 
             // ── 2. 대댓글 배치 로드 ────────────────────────────────────────────
-            List<com.querydsl.core.Tuple> replyTuples = q.select(cmt, cmtUser.name, cmtPfpFile.atchFilePathNm, cmtPfpFile.strgFileNm, cmtPfpFile.atchFileExtnNm)
+            List<com.querydsl.core.Tuple> replyTuples = q.select(cmt, cmtUser.loginId, cmtUser.name, cmtPfpFile.atchFilePathNm, cmtPfpFile.strgFileNm, cmtPfpFile.atchFileExtnNm)
                     .from(cmt)
                     .join(cmtUser).on(cmt.userSn.eq(cmtUser.userSn))
                     .leftJoin(cmtUser.pfp, cmtPfpFile)
@@ -403,7 +403,7 @@ public class PostService {
                 String     pathNm = t.get(cmtPfpFile.atchFilePathNm);
                 String     pfpUrl = pathNm != null ? pathNm + "/" + t.get(cmtPfpFile.strgFileNm) + "." + t.get(cmtPfpFile.atchFileExtnNm) : null;
                 return new CmtDTO(
-                        sn, c.getUserSn(), t.get(cmtUser.name),
+                        sn, c.getUserSn(), t.get(cmtUser.loginId), t.get(cmtUser.name),
                         c.getCmtCntnt(), c.getLikeCnt(), c.getFrstCrtDt(), new ArrayList<>(),
                         reactionsMap.getOrDefault(sn, new java.util.HashMap<>()),
                         myReactMap.get(sn), pfpUrl
