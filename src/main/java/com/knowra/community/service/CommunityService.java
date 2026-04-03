@@ -12,6 +12,9 @@ import com.knowra.common.repository.TblComFileRepository;
 import com.knowra.community.entity.*;
 import com.knowra.community.repository.TblCommRepository;
 import com.knowra.community.repository.TblCommMbrRepository;
+import com.knowra.user.entity.TblUserActionLog;
+import com.knowra.user.service.ActionLogService;
+import com.knowra.user.service.InterestScoreService;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.Expressions;
@@ -42,6 +45,8 @@ public class CommunityService {
     private final FileUtil fileUtil;
     private final RedisApiService redisApiService;
     private final JwtProvider jwtProvider;
+    private final ActionLogService actionLogService;
+    private final InterestScoreService interestScoreService;
 
     @PersistenceContext
     private EntityManager em;
@@ -253,6 +258,7 @@ public class CommunityService {
                     ).execute();
                 tblComm.setMemberCnt(Math.max(0, tblComm.getMemberCnt() - 1));
                 tblCommRepository.save(tblComm);
+                interestScoreService.update(userSn, TblUserActionLog.TARGET_COMM, tblComm.getCommSn(), -8);
                 memberStatus = "WITHDRAWN";
             } else {
                 String privacy = tblComm.getPrvcyStng();
@@ -293,6 +299,8 @@ public class CommunityService {
                 if ("ACTIVE".equals(memberStatus)) {
                     tblComm.setMemberCnt(tblComm.getMemberCnt() + 1);
                     tblCommRepository.save(tblComm);
+                    actionLogService.log(userSn, TblUserActionLog.TARGET_COMM, tblComm.getCommSn(), TblUserActionLog.ACTION_JOIN);
+                    interestScoreService.update(userSn, TblUserActionLog.TARGET_COMM, tblComm.getCommSn(), 8);
                 }
             }
 

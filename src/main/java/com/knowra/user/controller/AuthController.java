@@ -48,6 +48,11 @@ public class AuthController {
         return authService.login(params, ComUtil.extractClientIp(request));
     }
 
+    @PostMapping("/snsLogin")
+    public ResultVO snsLogin(@RequestBody Map<String, String> params, HttpServletRequest request) {
+        return authService.snsLogin(params, ComUtil.extractClientIp(request));
+    }
+
     /**
      * 로그아웃
      * <p>Authorization 헤더의 토큰을 무효화하고 Redis 세션을 삭제한다.</p>

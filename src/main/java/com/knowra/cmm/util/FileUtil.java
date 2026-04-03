@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
@@ -95,6 +96,31 @@ public class FileUtil {
 		result.setPsnTblSn(psnTblSn);
 
 		return result;
+	}
+
+	public String devImageUpload(MultipartFile file, String subPath) throws IOException {
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy/MM/dd", Locale.KOREA);
+		Date date = new Date();
+
+		String storePathString = fileStorePath + subPath + sdf.format(date);
+		String relativePathString = "/upload" + subPath + sdf.format(date);
+
+		File saveFolder = new File(filePathBlackList(storePathString));
+		if (!saveFolder.exists() || saveFolder.isFile()) {
+			saveFolder.mkdirs();
+		}
+
+		String filePath = "";
+
+		String orginFileName = file.getOriginalFilename();
+		int index = orginFileName.lastIndexOf(".");
+		String fileExt = orginFileName.substring(index + 1);
+		String newName = getTimeStamp() + "_" + 0;
+		if (!"".equals(orginFileName)) {
+			filePath = storePathString + File.separator + newName + "." + fileExt;
+			file.transferTo(new File(filePathBlackList(filePath)).getAbsoluteFile());
+		}
+		return relativePathString + "/" + newName + "." + fileExt;
 	}
 
 	public boolean deleteFile(String[] fileNames, String filePath) {
