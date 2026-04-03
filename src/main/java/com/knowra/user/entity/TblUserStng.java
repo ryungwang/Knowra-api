@@ -63,7 +63,7 @@ public class TblUserStng {
   @Comment("수정자일련번호")
   private Long mdfrSn;
 
-  @Column(name = "MDFCN_DT", columnDefinition = "DATETIME ON UPDATE CURRENT_TIMESTAMP")
+  @Column(name = "MDFCN_DT", columnDefinition = "DATETIME ON UPDATE CURRENT_TIMESTAMP", updatable = false)
   @Comment("수정일")
   private LocalDateTime mdfcnDt;
 }

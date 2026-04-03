@@ -58,38 +58,8 @@ public class CommonController {
         out.flush();
     }
 
-//    @PostMapping("/api/common/getBnrList")
-//    public ResultVO getBnrList(@RequestBody Map<String, Object> params) {
-//        return commonService.getBnrList(params);
-//    }
-//
-//    @PostMapping("/api/common/getMenuList")
-//    public ResultVO getMenuList() {
-//        return commonService.getMenuList();
-//    }
-//
-//    @PostMapping("/api/common/getBbsList")
-//    public ResultVO getBbsList(@RequestBody Map<String, Object> params) {
-//        return commonService.getBbsList(params);
-//    }
-//
-//    @PostMapping("/api/common/getPstList")
-//    public ResultVO getPstList(@RequestBody Map<String, Object> params) {
-//        return commonService.getPstList(params);
-//    }
-//
-//    @PostMapping("/api/common/getPst")
-//    public ResultVO getPst(@RequestBody TblPst tblPst) {
-//        return commonService.getPst(tblPst);
-//    }
-//
-//    @PostMapping("/api/common/setComFileDel")
-//    public ResultVO setComFileDel(@RequestBody TblComFile tblComFile) {
-//        return commonService.setComFileDel(tblComFile);
-//    }
-//
-//    @PostMapping("/api/common/setCkEditorFiles")
-//    public ResultVO setCkEditorFiles(@RequestParam(value = "files", required = false) List<MultipartFile> files) {
-//        return commonService.setCkEditorFiles(files);
-//    }
+    @GetMapping("/api/common/getCategoryList")
+    public ResultVO getCategoryList() {
+        return commonService.getCategoryList();
+    }
 }

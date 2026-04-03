@@ -1,13 +1,16 @@
 package com.knowra.user.controller;
 
 import com.knowra.cmm.model.ResultVO;
+import com.knowra.community.entity.TblComm;
 import com.knowra.community.service.CommunityService;
+import com.knowra.user.entity.TblUserStng;
 import com.knowra.user.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 
 import java.util.Map;
@@ -24,6 +27,19 @@ public class UserController {
     @PostMapping("/api/user/getUserProfile")
     public ResultVO getUserProfile(@RequestBody Map<String, Object> params, HttpServletRequest request) {
         return userService.getUserProfile(params, request.getHeader("Authorization"));
+    }
+
+    @PostMapping("/api/user/setUserInfo")
+    public ResultVO setUserInfo(@RequestParam Map<String, Object> params,
+                                @RequestParam(required = false) MultipartFile profileImage,
+                                HttpServletRequest request) {
+        return userService.setUserInfo(params, profileImage, request.getHeader("Authorization"));
+    }
+
+    @PostMapping("/api/user/setUserSetting")
+    public ResultVO setUserSetting(@RequestBody TblUserStng tblUserStng,
+                                   HttpServletRequest request) {
+        return userService.setUserSetting(tblUserStng, request.getHeader("Authorization"));
     }
 
     @PostMapping("/api/user/getUserPostList")

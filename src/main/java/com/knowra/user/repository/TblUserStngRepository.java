@@ -15,4 +15,5 @@ import java.util.Optional;
 @Repository
 public interface TblUserStngRepository extends JpaRepository<TblUserStng, Long> {
 
+    TblUserStng findByUserSn(Long userSn);
 }
