@@ -54,6 +54,7 @@ public class TblUserActionLog {
     public static final String TARGET_COMM_POST = "COMM_POST";
     public static final String TARGET_POST      = "POST";
     public static final String TARGET_USER      = "USER";
+    public static final String TARGET_TAG       = "TAG";
 
     public static final String ACTION_VIEW    = "VIEW";
     public static final String ACTION_LIKE    = "LIKE";

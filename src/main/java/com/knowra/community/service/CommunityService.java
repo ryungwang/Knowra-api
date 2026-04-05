@@ -158,6 +158,8 @@ public class CommunityService {
                     .filter(m -> m.getUserSn() == userSn)
                     .findFirst().orElse(null);
 
+            actionLogService.log(userSn, TblUserActionLog.TARGET_COMM, tblComm.getCommSn(), TblUserActionLog.ACTION_VIEW);
+
             resultVO.putResult("community", tblComm);
             resultVO.putResult("logoFile", logoFile);
             resultVO.putResult("bannerFile", bannerFile);
