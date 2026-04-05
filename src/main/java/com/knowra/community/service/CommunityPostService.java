@@ -4,6 +4,7 @@ import com.knowra.cmm.jwt.JwtProvider;
 import com.knowra.cmm.model.ResponseCode;
 import com.knowra.cmm.model.ResultVO;
 import com.knowra.cmm.service.RedisApiService;
+import com.knowra.common.CommunityQueryHelper;
 import com.knowra.common.entity.QTblComFile;
 import com.knowra.common.entity.QTblTag;
 import com.knowra.common.entity.TblTag;
@@ -478,19 +479,26 @@ public class CommunityPostService {
                         .creatrSn(userSn)
                         .build());
                 actionLogService.log(userSn, TblUserActionLog.TARGET_COMM_POST, commPostSn, TblUserActionLog.ACTION_LIKE);
-                if ("UP".equals(postLike)) interestScoreService.update(userSn, TblUserActionLog.TARGET_COMM_POST, commPostSn, 3);
+                if ("UP".equals(postLike)) {
+                    interestScoreService.update(userSn, TblUserActionLog.TARGET_COMM_POST, commPostSn, 3);
+                    interestScoreService.updateForTags(userSn, fetchCommPostTagSns(commPostSn), 3);
+                }
             } else if (commPostLike.getLikeTyp().equals(postLike)) {
                 // 같은 반응 재클릭 → 취소
                 delta = "UP".equals(postLike) ? -1 : 1;
                 tblCommPostLikeRepository.delete(commPostLike);
-                if ("UP".equals(postLike)) interestScoreService.update(userSn, TblUserActionLog.TARGET_COMM_POST, commPostSn, -3);
+                if ("UP".equals(postLike)) {
+                    interestScoreService.update(userSn, TblUserActionLog.TARGET_COMM_POST, commPostSn, -3);
+                    interestScoreService.updateForTags(userSn, fetchCommPostTagSns(commPostSn), -3);
+                }
             } else {
                 // 반대 반응으로 전환 (DOWN→UP: +2, UP→DOWN: -2)
                 delta = "UP".equals(postLike) ? 2 : -2;
                 commPostLike.setLikeTyp(postLike);
                 tblCommPostLikeRepository.save(commPostLike);
-                // UP→DOWN: 기존 UP 점수 차감 / DOWN→UP: 점수 추가
-                interestScoreService.update(userSn, TblUserActionLog.TARGET_COMM_POST, commPostSn, "UP".equals(postLike) ? 3 : -3);
+                double tagDelta = "UP".equals(postLike) ? 3 : -3;
+                interestScoreService.update(userSn, TblUserActionLog.TARGET_COMM_POST, commPostSn, tagDelta);
+                interestScoreService.updateForTags(userSn, fetchCommPostTagSns(commPostSn), tagDelta);
             }
 
             q.update(qCommPost)
@@ -561,6 +569,7 @@ public class CommunityPostService {
                     .build();
             tblCommPostCmtRepository.save(cmt);
             actionLogService.log(userSn, TblUserActionLog.TARGET_COMM_POST, commPostSn, TblUserActionLog.ACTION_COMMENT);
+            interestScoreService.updateForTags(userSn, fetchCommPostTagSns(commPostSn), 4);
 
             // 댓글수 +1
             JPAQueryFactory q = new JPAQueryFactory(em);
@@ -592,26 +601,10 @@ public class CommunityPostService {
         QTblTag          qTbl     = QTblTag.tblTag;
         QTblComFile      pfpFile  = new QTblComFile("pfpFile");
 
-        QTblCommMbr qMbr = QTblCommMbr.tblCommMbr;
-
-        // 비공개 커뮤니티 필터: public 이거나 viewer가 해당 커뮤니티 멤버인 경우만 노출
-        com.querydsl.core.types.dsl.BooleanExpression visibilityCondition = qComm.prvcyStng.eq("public");
-        if (viewerUserSn != null) {
-            visibilityCondition = visibilityCondition.or(
-                com.querydsl.jpa.JPAExpressions.selectOne()
-                    .from(qMbr)
-                    .where(qMbr.commSn.eq(qComm.commSn)
-                        .and(qMbr.userSn.eq(viewerUserSn))
-                        .and(qMbr.stat.eq("ACTIVE"))
-                        .and(qMbr.actvtnYn.eq("Y")))
-                    .exists()
-            );
-        }
-
         var condition = qPost.userSn.eq(userSn)
                 .and(qPost.stat.eq("ACTIVE"))
                 .and(qPost.actvtnYn.eq("Y"))
-                .and(visibilityCondition);
+                .and(CommunityQueryHelper.accessCondition(qComm, viewerUserSn));
         if (cursor != null) condition = condition.and(qPost.frstCrtDt.lt(cursor));
 
         List<com.querydsl.core.Tuple> tuples = q
@@ -677,6 +670,15 @@ public class CommunityPostService {
             map.put("pfpUrl", pathNm != null ? pathNm + "/" + t.get(pfpFile.strgFileNm) + "." + t.get(pfpFile.atchFileExtnNm) : null);
             return (Map<String, Object>) map;
         }).toList();
+    }
+
+    List<Long> fetchCommPostTagSns(long commPostSn) {
+        QTblCommPostTag q = QTblCommPostTag.tblCommPostTag;
+        return new JPAQueryFactory(em)
+                .select(q.tagSn)
+                .from(q)
+                .where(q.commPostSn.eq(commPostSn))
+                .fetch();
     }
 
 }

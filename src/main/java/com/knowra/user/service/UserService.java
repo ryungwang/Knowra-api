@@ -1,6 +1,7 @@
 package com.knowra.user.service;
 
 import com.knowra.cmm.jwt.JwtProvider;
+import com.knowra.common.CommunityQueryHelper;
 import com.knowra.cmm.model.ResponseCode;
 import com.knowra.cmm.model.ResultVO;
 import com.knowra.cmm.service.RedisApiService;
@@ -123,6 +124,7 @@ public class UserService {
 
             TblUser tblUser = tblUserRepository.findByUserSn(userSn);
             tblUser.setName(ComUtil.getStrValue(params.get("name")));
+            tblUser.setNickName(ComUtil.getStrValue(params.get("nickName")));
             tblUser.setBio(ComUtil.getStrValue(params.get("bio")));
             tblUser.setInterest(ComUtil.getStrValue(params.get("interest")));
 
@@ -162,8 +164,17 @@ public class UserService {
 
         try {
             Long userSn = jwtProvider.extractUserSn(token.replace("Bearer ", ""));
-            tblUserStng.setMdfrSn(userSn);
-            tblUserStngRepository.save(tblUserStng);
+
+            if(tblUserStng.getUserStngSn() == null){
+                /** 헤더에서 테마 변견시 */
+                TblUserStng orgUserStng = tblUserStngRepository.findByUserSn(userSn);
+                orgUserStng.setThemeTyp(tblUserStng.getThemeTyp());
+                orgUserStng.setMdfrSn(userSn);
+                tblUserStngRepository.save(orgUserStng);
+            }else{
+                tblUserStng.setMdfrSn(userSn);
+                tblUserStngRepository.save(tblUserStng);
+            }
 
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
             resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
@@ -521,17 +532,6 @@ public class UserService {
             QTblComm qComm = QTblComm.tblComm;
             QTblCommPostTag qCommPostTag = QTblCommPostTag.tblCommPostTag;
             QTblCommPostLike qCommPostLike = QTblCommPostLike.tblCommPostLike;
-            QTblCommMbr qMbr = QTblCommMbr.tblCommMbr;
-
-            // 비공개 커뮤니티 필터: public이거나 내가 멤버인 경우만 노출
-            com.querydsl.core.types.dsl.BooleanExpression visibilityCondition = qComm.prvcyStng.eq("public")
-                .or(com.querydsl.jpa.JPAExpressions.selectOne()
-                    .from(qMbr)
-                    .where(qMbr.commSn.eq(qComm.commSn)
-                        .and(qMbr.userSn.eq(userSn))
-                        .and(qMbr.stat.eq("ACTIVE"))
-                        .and(qMbr.actvtnYn.eq("Y")))
-                    .exists());
 
             List<PostDTO> posts = q.select(
                 Projections.constructor(
@@ -596,7 +596,7 @@ public class UserService {
             .join(qTag)
             .on(qCommPostTag.tagSn.eq(qTag.tagSn))
             .where(qTag.tagSn.eq(tagSn)
-                .and(visibilityCondition)
+                .and(CommunityQueryHelper.accessCondition(qComm, userSn))
                 .and(cursor != null ? qCommPost.frstCrtDt.lt(cursor) : null))
             .orderBy(qCommPost.frstCrtDt.desc())
             .limit(size)

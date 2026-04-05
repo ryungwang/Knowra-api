@@ -210,18 +210,26 @@ public class PostService {
                         .creatrSn(userSn)
                         .build());
                 actionLogService.log(userSn, TblUserActionLog.TARGET_POST, postSn, TblUserActionLog.ACTION_LIKE);
-                if ("UP".equals(postLike)) interestScoreService.update(userSn, TblUserActionLog.TARGET_POST, postSn, 3);
+                if ("UP".equals(postLike)) {
+                    interestScoreService.update(userSn, TblUserActionLog.TARGET_POST, postSn, 3);
+                    interestScoreService.updateForTags(userSn, fetchPostTagSns(postSn), 3);
+                }
             } else if (tblPostLike.getLikeTyp().equals(postLike)) {
                 // 같은 반응 재클릭 → 취소
                 delta = "UP".equals(postLike) ? -1 : 1;
                 tblPostLikeRepository.delete(tblPostLike);
-                if ("UP".equals(postLike)) interestScoreService.update(userSn, TblUserActionLog.TARGET_POST, postSn, -3);
+                if ("UP".equals(postLike)) {
+                    interestScoreService.update(userSn, TblUserActionLog.TARGET_POST, postSn, -3);
+                    interestScoreService.updateForTags(userSn, fetchPostTagSns(postSn), -3);
+                }
             } else {
                 // 반대 반응으로 전환 (DOWN→UP: +2, UP→DOWN: -2)
                 delta = "UP".equals(postLike) ? 2 : -2;
                 tblPostLike.setLikeTyp(postLike);
                 tblPostLikeRepository.save(tblPostLike);
-                interestScoreService.update(userSn, TblUserActionLog.TARGET_POST, postSn, "UP".equals(postLike) ? 3 : -3);
+                double tagDelta = "UP".equals(postLike) ? 3 : -3;
+                interestScoreService.update(userSn, TblUserActionLog.TARGET_POST, postSn, tagDelta);
+                interestScoreService.updateForTags(userSn, fetchPostTagSns(postSn), tagDelta);
             }
 
             q.update(qPost)
@@ -258,6 +266,7 @@ public class PostService {
                     .build();
             tblPostCmtRepository.save(cmt);
             actionLogService.log(userSn, TblUserActionLog.TARGET_POST, postSn, TblUserActionLog.ACTION_COMMENT);
+            interestScoreService.updateForTags(userSn, fetchPostTagSns(postSn), 4);
 
             // 댓글수 +1
             JPAQueryFactory q = new JPAQueryFactory(em);
@@ -571,6 +580,8 @@ public class PostService {
                 tblPostSaveRepository.save(tblPostSave);
                 String scrapTarget = "COMM".equals(postKind) ? TblUserActionLog.TARGET_COMM_POST : TblUserActionLog.TARGET_POST;
                 actionLogService.log(userSn, scrapTarget, postSn, TblUserActionLog.ACTION_SCRAP);
+                List<Long> tagSns = "COMM".equals(postKind) ? fetchCommPostTagSns(postSn) : fetchPostTagSns(postSn);
+                interestScoreService.updateForTags(userSn, tagSns, 5);
             }else{
                 TblPostSave tblPostSave = tblPostSaveRepository.findByUserSnAndPostSnAndPostKind(userSn, postSn, postKind);
                 if (tblPostSave != null) {
@@ -686,5 +697,23 @@ public class PostService {
         }
 
         return resultVO;
+    }
+
+    private List<Long> fetchPostTagSns(long postSn) {
+        QTblPostTag q = QTblPostTag.tblPostTag;
+        return new JPAQueryFactory(em)
+                .select(q.tagSn)
+                .from(q)
+                .where(q.postSn.eq(postSn))
+                .fetch();
+    }
+
+    private List<Long> fetchCommPostTagSns(long commPostSn) {
+        QTblCommPostTag q = QTblCommPostTag.tblCommPostTag;
+        return new JPAQueryFactory(em)
+                .select(q.tagSn)
+                .from(q)
+                .where(q.commPostSn.eq(commPostSn))
+                .fetch();
     }
 }
