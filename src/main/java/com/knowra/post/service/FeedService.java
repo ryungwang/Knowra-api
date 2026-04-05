@@ -254,7 +254,29 @@ public class FeedService {
             return result.stream().limit(MAX_CANDIDATES).collect(Collectors.toList());
         }
 
-        // 팔로우한 유저의 일반 게시글 (날짜 제한 없음)
+        if ("POPULAR".equals(mode)) {
+            // 인기 피드: 반응 수 기준 상위 게시글 (날짜 무관)
+            fetchTopPostsByQuality(MAX_CANDIDATES / 2).stream()
+                    .filter(p -> dedup.add("POST:" + p.postSn()))
+                    .forEach(result::add);
+            fetchTopCommPostsByQuality(MAX_CANDIDATES / 2, userSn).stream()
+                    .filter(p -> dedup.add("COMM:" + p.postSn()))
+                    .forEach(result::add);
+            return result.stream().limit(MAX_CANDIDATES).collect(Collectors.toList());
+        }
+
+        if ("LATEST".equals(mode)) {
+            // 최신 피드: 전체 최신 게시글 500개
+            fetchLatestPosts(MAX_CANDIDATES / 2).stream()
+                    .filter(p -> dedup.add("POST:" + p.postSn()))
+                    .forEach(result::add);
+            fetchLatestCommPosts(MAX_CANDIDATES / 2, userSn).stream()
+                    .filter(p -> dedup.add("COMM:" + p.postSn()))
+                    .forEach(result::add);
+            return result.stream().limit(MAX_CANDIDATES).collect(Collectors.toList());
+        }
+
+        // PERSONALIZED: 팔로우한 유저의 일반 게시글 (날짜 제한 없음)
         if (!followedUserSns.isEmpty()) {
             fetchPostsByUsers(followedUserSns).stream()
                     .filter(p -> dedup.add("POST:" + p.postSn()))
@@ -439,6 +461,50 @@ public class FeedService {
                         .and(CommunityQueryHelper.accessCondition(qComm, viewerSn)))
                 .distinct()
                 .orderBy(qPost.frstCrtDt.desc())
+                .fetch()
+                .stream()
+                .map(t -> toFeedCommPost(t, qPost, qComm, qUser, pfpFile))
+                .collect(Collectors.toList());
+    }
+
+    // likeCnt*2 + cmtCnt*4 + viewCnt*0.2 순 (DB 정렬은 정수 근사)
+    private List<FeedPost> fetchTopPostsByQuality(int limit) {
+        QTblPost    qPost   = QTblPost.tblPost;
+        QTblUser    qUser   = QTblUser.tblUser;
+        QTblComFile pfpFile = new QTblComFile("pfpFile");
+        return new JPAQueryFactory(em)
+                .select(qPost, qUser.nickName, qUser.name,
+                        pfpFile.atchFilePathNm, pfpFile.strgFileNm, pfpFile.atchFileExtnNm)
+                .from(qPost)
+                .join(qUser).on(qPost.userSn.eq(qUser.userSn))
+                .leftJoin(qUser.pfp, pfpFile)
+                .where(qPost.stat.eq("ACTIVE").and(qPost.actvtnYn.eq("Y")))
+                .orderBy(qPost.likeCnt.multiply(2).add(qPost.cmtCnt.multiply(4)).desc())
+                .limit(limit)
+                .fetch()
+                .stream()
+                .map(t -> toFeedPost(t, qPost, qUser, pfpFile))
+                .collect(Collectors.toList());
+    }
+
+    private List<FeedPost> fetchTopCommPostsByQuality(int limit, Long viewerSn) {
+        QTblCommPost qPost   = QTblCommPost.tblCommPost;
+        QTblComm     qComm   = QTblComm.tblComm;
+        QTblUser     qUser   = QTblUser.tblUser;
+        QTblComFile  pfpFile = new QTblComFile("pfpFile");
+        return new JPAQueryFactory(em)
+                .select(qPost, qComm.commNm, qComm.commDsplNm,
+                        qUser.nickName, qUser.name,
+                        pfpFile.atchFilePathNm, pfpFile.strgFileNm, pfpFile.atchFileExtnNm)
+                .from(qPost)
+                .join(qComm).on(qPost.commSn.eq(qComm.commSn))
+                .join(qUser).on(qPost.userSn.eq(qUser.userSn))
+                .leftJoin(qUser.pfp, pfpFile)
+                .where(qPost.stat.eq("ACTIVE")
+                        .and(qPost.actvtnYn.eq("Y"))
+                        .and(CommunityQueryHelper.accessCondition(qComm, viewerSn)))
+                .orderBy(qPost.likeCnt.multiply(2).add(qPost.cmtCnt.multiply(4)).desc())
+                .limit(limit)
                 .fetch()
                 .stream()
                 .map(t -> toFeedCommPost(t, qPost, qComm, qUser, pfpFile))
