@@ -45,3 +45,12 @@
 |---|------|------|
 | D-1 | TBL_USER DDL 프로필 사진 컬럼 수정 | `ATCH_FILE_SN BIGINT` → `ATCH_FILE_SN BIGINT (FK → KNOWRA_COM.TBL_COM_FILE)` 반영 |
 | D-2 | TBL_COM_CATEGORY DDL 추가 | 엔티티는 생성됨, all_DDL.sql에 누락 확인 후 추가 |
+
+---
+
+## 운영 배포 전 필수
+
+| # | 항목 | 설명 |
+|---|------|------|
+| P-1 | CORS 출처 제한 | `SecurityConfig.corsConfigurationSource()` — `allowedOriginPatterns("*")` → 프론트 도메인으로 변경 |
+| P-2 | JWT secret 환경변수 분리 | application.properties의 JWT secret을 환경변수/Vault로 이동 |
