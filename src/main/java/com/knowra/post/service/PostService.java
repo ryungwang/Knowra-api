@@ -10,12 +10,17 @@ import com.knowra.common.service.TagService;
 import com.knowra.community.entity.*;
 import com.knowra.community.repository.TblCommPostRepository;
 import com.knowra.post.entity.*;
+import com.knowra.cmm.event.NotifTriggerEvent;
+import com.knowra.post.event.PostCreatedEvent;
+import com.knowra.post.event.PostDeletedEvent;
+import com.knowra.post.event.PostReactedEvent;
 import com.knowra.post.repository.*;
 import com.knowra.post.entity.QTblPostSave;
 import com.knowra.user.entity.QTblUser;
 import com.knowra.user.entity.TblUserActionLog;
 import com.knowra.user.service.ActionLogService;
 import com.knowra.user.service.InterestScoreService;
+import org.springframework.context.ApplicationEventPublisher;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.CaseBuilder;
 import com.querydsl.core.types.dsl.Expressions;
@@ -54,6 +59,7 @@ public class PostService {
     private final RedisApiService redisApiService;
     private final ActionLogService actionLogService;
     private final InterestScoreService interestScoreService;
+    private final ApplicationEventPublisher eventPublisher;
     private static final int REDIS_DB = 15;
 
     public ResultVO setPost(Map<String, Object> params, String token) {
@@ -76,6 +82,8 @@ public class PostService {
                 tblPost.setCreatrSn(userSn);
                 tblPostRepository.save(tblPost);
                 actionLogService.log(userSn, TblUserActionLog.TARGET_POST, tblPost.getPostSn(), TblUserActionLog.ACTION_POST);
+                eventPublisher.publishEvent(new PostCreatedEvent(
+                        tblPost.getPostSn(), "POST", userSn, null, tblPost.getFrstCrtDt()));
             }
 
             @SuppressWarnings("unchecked")
@@ -237,6 +245,18 @@ public class PostService {
                     .where(qPost.postSn.eq(postSn))
                     .execute();
 
+            eventPublisher.publishEvent(new PostReactedEvent(postSn, "POST", "LIKE", delta));
+
+            // 좋아요 시에만 알림 (취소·DOWN은 제외)
+            if ("UP".equals(postLike) && delta > 0) {
+                Long ownerSn = new JPAQueryFactory(em)
+                        .select(qPost.userSn).from(qPost)
+                        .where(qPost.postSn.eq(postSn)).fetchOne();
+                if (ownerSn != null) {
+                    eventPublisher.publishEvent(new NotifTriggerEvent(ownerSn, userSn, "LIKE", postSn, "POST"));
+                }
+            }
+
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
             resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
         }catch (Exception e) {
@@ -275,6 +295,17 @@ public class PostService {
                     .set(qPost.cmtCnt, qPost.cmtCnt.add(1))
                     .where(qPost.postSn.eq(postSn))
                     .execute();
+
+            eventPublisher.publishEvent(new PostReactedEvent(postSn, "POST", "COMMENT", 1));
+
+            // 댓글 알림 (게시글 작성자에게)
+            QTblPost qPostRef = QTblPost.tblPost;
+            Long ownerSn = new JPAQueryFactory(em)
+                    .select(qPostRef.userSn).from(qPostRef)
+                    .where(qPostRef.postSn.eq(postSn)).fetchOne();
+            if (ownerSn != null) {
+                eventPublisher.publishEvent(new NotifTriggerEvent(ownerSn, userSn, "COMMENT", postSn, "POST"));
+            }
 
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
         } catch (Exception e) {
@@ -334,11 +365,13 @@ public class PostService {
                 tblCommPost.setActvtnYn("N");
                 tblCommPost.setMdfrSn(userSn);
                 tblCommPostRepository.save(tblCommPost);
+                eventPublisher.publishEvent(new PostDeletedEvent(postSn, "COMM"));
             }else{
                 TblPost tblPost = tblPostRepository.findByPostSn(postSn);
                 tblPost.setActvtnYn("N");
                 tblPost.setMdfrSn(userSn);
                 tblPostRepository.save(tblPost);
+                eventPublisher.publishEvent(new PostDeletedEvent(postSn, "POST"));
             }
 
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
