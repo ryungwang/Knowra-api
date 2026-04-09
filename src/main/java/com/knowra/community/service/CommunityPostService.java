@@ -14,13 +14,17 @@ import com.knowra.post.entity.CmtDTO;
 import com.knowra.post.entity.PostDTO;
 import com.knowra.post.entity.QTblPostSave;
 import com.knowra.post.repository.TblPostSaveRepository;
+import com.knowra.cmm.event.NotifTriggerEvent;
 import com.knowra.community.entity.*;
 import com.knowra.community.repository.*;
+import com.knowra.post.event.PostCreatedEvent;
+import com.knowra.post.event.PostReactedEvent;
 import com.knowra.user.entity.QTblUser;
 import com.knowra.user.entity.TblUserActionLog;
 import com.knowra.user.entity.TblUserTag;
 import com.knowra.user.service.ActionLogService;
 import com.knowra.user.service.InterestScoreService;
+import org.springframework.context.ApplicationEventPublisher;
 import org.modelmapper.ModelMapper;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
@@ -53,6 +57,7 @@ public class CommunityPostService {
     private final JwtProvider jwtProvider;
     private final ActionLogService actionLogService;
     private final InterestScoreService interestScoreService;
+    private final ApplicationEventPublisher eventPublisher;
 
     private static final int REDIS_DB = 15;
 
@@ -86,6 +91,10 @@ public class CommunityPostService {
                 tblCommPost.setCreatrSn(userSn);
                 tblCommPostRepository.save(tblCommPost);
                 actionLogService.log(userSn, TblUserActionLog.TARGET_COMM_POST, tblCommPost.getCommPostSn(), TblUserActionLog.ACTION_POST);
+                Long commSn = params.get("commSn") != null
+                        ? Long.parseLong(params.get("commSn").toString()) : null;
+                eventPublisher.publishEvent(new PostCreatedEvent(
+                        tblCommPost.getCommPostSn(), "COMM", userSn, commSn, tblCommPost.getFrstCrtDt()));
             }
 
             @SuppressWarnings("unchecked")
@@ -506,6 +515,18 @@ public class CommunityPostService {
                     .where(qCommPost.commPostSn.eq(commPostSn))
                     .execute();
 
+            eventPublisher.publishEvent(new PostReactedEvent(commPostSn, "COMM", "LIKE", delta));
+
+            // 좋아요 알림 (게시글 작성자에게)
+            if ("UP".equals(postLike) && delta > 0) {
+                Long ownerSn = new JPAQueryFactory(em)
+                        .select(qCommPost.userSn).from(qCommPost)
+                        .where(qCommPost.commPostSn.eq(commPostSn)).fetchOne();
+                if (ownerSn != null) {
+                    eventPublisher.publishEvent(new NotifTriggerEvent(ownerSn, userSn, "LIKE", commPostSn, "COMM_POST"));
+                }
+            }
+
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
             resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
         }catch (Exception e) {
@@ -578,6 +599,17 @@ public class CommunityPostService {
                     .set(qCommPost.cmtCnt, qCommPost.cmtCnt.add(1))
                     .where(qCommPost.commPostSn.eq(commPostSn))
                     .execute();
+
+            eventPublisher.publishEvent(new PostReactedEvent(commPostSn, "COMM", "COMMENT", 1));
+
+            // 댓글 알림 (게시글 작성자에게)
+            QTblCommPost qCommPostRef = QTblCommPost.tblCommPost;
+            Long ownerSn = new JPAQueryFactory(em)
+                    .select(qCommPostRef.userSn).from(qCommPostRef)
+                    .where(qCommPostRef.commPostSn.eq(commPostSn)).fetchOne();
+            if (ownerSn != null) {
+                eventPublisher.publishEvent(new NotifTriggerEvent(ownerSn, userSn, "COMMENT", commPostSn, "COMM_POST"));
+            }
 
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
         } catch (Exception e) {

@@ -136,6 +136,25 @@ CREATE TABLE IF NOT EXISTS KNOWRA_USER.TBL_USER_INTEREST_SCORE
 ) ENGINE = InnoDB COMMENT = '유저 관심도 점수 (현재 상태 스냅샷)';
 
 
+-- 1-8. TBL_USER_NOTIF (알림)
+CREATE TABLE IF NOT EXISTS KNOWRA_USER.TBL_USER_NOTIF
+(
+    NOTIF_SN    BIGINT       NOT NULL AUTO_INCREMENT                    COMMENT '알림일련번호',
+    USER_SN     BIGINT       NOT NULL                                   COMMENT '수신자 SN',
+    SENDER_SN   BIGINT                                                  COMMENT '발신자 SN (SYSTEM 공지는 NULL)',
+    NOTIF_TYP   VARCHAR(20)  NOT NULL                                   COMMENT '알림유형 COMMENT|LIKE|FOLLOW|SYSTEM',
+    MESSAGE     VARCHAR(255) NOT NULL                                   COMMENT '알림메시지',
+    TARGET_SN   BIGINT                                                  COMMENT '대상 게시글/유저 SN',
+    TARGET_KIND VARCHAR(20)                                             COMMENT '대상종류 POST|COMM_POST',
+    IS_READ     CHAR(1)      NOT NULL DEFAULT 'N'                       COMMENT '읽음여부',
+    FRST_CRT_DT DATETIME     NOT NULL DEFAULT NOW()                     COMMENT '생성일시',
+    PRIMARY KEY (NOTIF_SN),
+    CONSTRAINT FK_NOTIF_USER   FOREIGN KEY (USER_SN)   REFERENCES KNOWRA_USER.TBL_USER (USER_SN),
+    CONSTRAINT FK_NOTIF_SENDER FOREIGN KEY (SENDER_SN) REFERENCES KNOWRA_USER.TBL_USER (USER_SN),
+    INDEX IDX_NOTIF_USER_SN (USER_SN, FRST_CRT_DT DESC)
+) ENGINE = InnoDB COMMENT = '유저 알림';
+
+
 -- ============================================================
 -- 2. KNOWRA_COM
 -- ============================================================

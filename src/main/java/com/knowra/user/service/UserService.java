@@ -21,10 +21,13 @@ import com.knowra.community.entity.QTblCommPostTag;
 import com.knowra.post.entity.*;
 import com.knowra.post.service.PostService;
 import com.knowra.community.service.CommunityPostService;
+import com.knowra.cmm.event.NotifTriggerEvent;
 import com.knowra.user.entity.*;
+import com.knowra.user.event.UserFollowChangedEvent;
 import com.knowra.user.repository.TblUserFlwrRepository;
 import com.knowra.user.repository.TblUserRepository;
 import com.knowra.user.repository.TblUserStngRepository;
+import org.springframework.context.ApplicationEventPublisher;
 import com.querydsl.core.Tuple;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.CaseBuilder;
@@ -65,6 +68,7 @@ public class UserService {
     private final TblUserStngRepository tblUserStngRepository;
     private final ActionLogService actionLogService;
     private final InterestScoreService interestScoreService;
+    private final ApplicationEventPublisher eventPublisher;
 
     @PersistenceContext
     private EntityManager em;
@@ -380,6 +384,10 @@ public class UserService {
                 interestScoreService.update(myUserSn, TblUserActionLog.TARGET_USER, targetUserSn, 6);
             } else {
                 interestScoreService.update(myUserSn, TblUserActionLog.TARGET_USER, targetUserSn, -6);
+            }
+            eventPublisher.publishEvent(new UserFollowChangedEvent(myUserSn, targetUserSn, "FOLLOW".equals(newState)));
+            if ("FOLLOW".equals(newState)) {
+                eventPublisher.publishEvent(new NotifTriggerEvent(targetUserSn, myUserSn, "FOLLOW", null, null));
             }
 
             resultVO.putResult("state", newState);

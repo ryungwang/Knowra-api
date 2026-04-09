@@ -10,11 +10,13 @@ import com.knowra.common.entity.QTblComFile;
 import com.knowra.common.entity.TblComFile;
 import com.knowra.common.repository.TblComFileRepository;
 import com.knowra.community.entity.*;
+import com.knowra.community.event.CommunityMemberChangedEvent;
 import com.knowra.community.repository.TblCommRepository;
 import com.knowra.community.repository.TblCommMbrRepository;
 import com.knowra.user.entity.TblUserActionLog;
 import com.knowra.user.service.ActionLogService;
 import com.knowra.user.service.InterestScoreService;
+import org.springframework.context.ApplicationEventPublisher;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.Expressions;
@@ -47,6 +49,7 @@ public class CommunityService {
     private final JwtProvider jwtProvider;
     private final ActionLogService actionLogService;
     private final InterestScoreService interestScoreService;
+    private final ApplicationEventPublisher eventPublisher;
 
     @PersistenceContext
     private EntityManager em;
@@ -305,6 +308,9 @@ public class CommunityService {
                     interestScoreService.update(userSn, TblUserActionLog.TARGET_COMM, tblComm.getCommSn(), 8);
                 }
             }
+
+            eventPublisher.publishEvent(new CommunityMemberChangedEvent(
+                    userSn, tblComm.getCommSn(), isMember));
 
             resultVO.putResult("memberStatus", memberStatus);
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());

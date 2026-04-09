@@ -33,6 +33,7 @@ public class FeedService {
     private final JwtProvider jwtProvider;
     private final TblUserInterestScoreRepository interestScoreRepository;
     private final TagService tagService;
+    private final FeedCacheService feedCacheService;
 
     private static final int PAGE_SIZE      = 50;
     private static final int MAX_CANDIDATES = 500;
@@ -90,9 +91,25 @@ public class FeedService {
             int page = params.get("pageIndex") != null
                     ? Integer.parseInt(params.get("pageIndex").toString()) : 0;
 
+            String cacheKey = buildCacheKey(mode, userSn);
+
+            // ── Cache HIT ────────────────────────────────────────────────
+            if (cacheKey != null && feedCacheService.exists(cacheKey)) {
+                List<String>   members  = feedCacheService.getPage(cacheKey, page, PAGE_SIZE);
+                long           total    = feedCacheService.size(cacheKey);
+                List<FeedPost> items    = hydrateMembers(members, userSn);
+                List<PostDTO>  list     = buildPostDtoList(items, userSn);
+
+                resultVO.putResult("list",     list);
+                resultVO.putResult("totalCnt", total);
+                resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
+                resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
+                return resultVO;
+            }
+
+            // ── Cache MISS: DB 후보 수집 ─────────────────────────────────
             Set<Long> followedUserSns = userSn != null ? fetchFollowedUserSns(userSn) : Set.of();
             Set<Long> joinedCommSns   = userSn != null ? fetchJoinedCommSns(userSn)   : Set.of();
-
             List<FeedPost> candidates = collectCandidates(userSn, followedUserSns, joinedCommSns, mode);
 
             if (candidates.isEmpty()) {
@@ -113,54 +130,31 @@ public class FeedService {
             Map<Long, List<Long>> postTagSnMap     = fetchPostTagSnMap(allPostSns);
             Map<Long, List<Long>> commPostTagSnMap = fetchCommPostTagSnMap(allCommPostSns);
 
-            // 점수 내림차순 정렬
+            // 점수를 Map에 미리 계산 (정렬 + Redis 저장 공용)
+            Map<String, Double> memberScores = new LinkedHashMap<>();
+            candidates.forEach(p -> memberScores.put(
+                    p.postKind() + ":" + p.postSn(),
+                    computeScore(p, mode, userTagScores, authorScores, commScores,
+                            followedUserSns, joinedCommSns, postTagSnMap, commPostTagSnMap)));
+
             List<FeedPost> scored = candidates.stream()
-                    .sorted(Comparator.comparingDouble((FeedPost p) ->
-                            -computeScore(p, mode, userTagScores, authorScores, commScores,
-                                    followedUserSns, joinedCommSns, postTagSnMap, commPostTagSnMap)))
+                    .sorted(Comparator.comparingDouble(p -> -memberScores.get(p.postKind() + ":" + p.postSn())))
                     .collect(Collectors.toList());
+
+            // Redis 캐시 저장
+            if (cacheKey != null) {
+                feedCacheService.populate(cacheKey, memberScores);
+                if ("PERSONALIZED".equals(mode)) {
+                    feedCacheService.expirePersonalized(cacheKey);
+                }
+            }
 
             // 페이지네이션
             int from      = page * PAGE_SIZE;
             int to        = Math.min(from + PAGE_SIZE, scored.size());
             List<FeedPost> pageItems = from < scored.size() ? scored.subList(from, to) : List.of();
 
-            // tagNms / 내 좋아요 / 내 저장 배치 조회 (페이지 단위만)
-            List<Long> pagePostSns     = pageItems.stream().filter(p -> "POST".equals(p.postKind())).map(FeedPost::postSn).toList();
-            List<Long> pageCommPostSns = pageItems.stream().filter(p -> "COMM".equals(p.postKind())).map(FeedPost::postSn).toList();
-
-            Map<Long, List<String>> postTagNms     = tagService.fetchTagMap(pagePostSns,     "post");
-            Map<Long, List<String>> commPostTagNms = tagService.fetchTagMap(pageCommPostSns, "commPost");
-
-            Map<Long, String> myPostLikeMap     = userSn != null ? fetchMyPostLikeMap(userSn, pagePostSns)         : Map.of();
-            Map<Long, String> myCommPostLikeMap = userSn != null ? fetchMyCommPostLikeMap(userSn, pageCommPostSns) : Map.of();
-            Set<Long>         mySavedPostSet    = userSn != null ? fetchMySavedSet(userSn, pagePostSns,     "POST") : Set.of();
-            Set<Long>         mySavedCommSet    = userSn != null ? fetchMySavedSet(userSn, pageCommPostSns, "COMM") : Set.of();
-
-            List<PostDTO> list = pageItems.stream().map(p -> {
-                PostDTO dto;
-                if ("COMM".equals(p.postKind())) {
-                    dto = new PostDTO("COMM", p.postTyp(),
-                            Optional.ofNullable(p.commSn()).orElse(0L),
-                            p.commNm(), p.commDsplNm(),
-                            p.postSn(), p.userSn(), p.nickName(), p.authorNm(),
-                            p.postTtl(), p.postCntnt(), p.frstCrtDt(),
-                            p.viewCnt(), p.likeCnt(), p.cmtCnt(),
-                            myCommPostLikeMap.get(p.postSn()), mySavedCommSet.contains(p.postSn()));
-                    dto.setTagNms(commPostTagNms.getOrDefault(p.postSn(), List.of()));
-                } else {
-                    dto = new PostDTO("POST", p.postTyp(),
-                            p.postSn(), p.userSn(), p.nickName(), p.authorNm(),
-                            p.postTtl(), p.postCntnt(), p.frstCrtDt(),
-                            p.viewCnt(), p.likeCnt(), p.cmtCnt(),
-                            myPostLikeMap.get(p.postSn()), mySavedPostSet.contains(p.postSn()));
-                    dto.setTagNms(postTagNms.getOrDefault(p.postSn(), List.of()));
-                }
-                dto.setPfpUrl(p.pfpUrl());
-                return dto;
-            }).toList();
-
-            resultVO.putResult("list",     list);
+            resultVO.putResult("list",     buildPostDtoList(pageItems, userSn));
             resultVO.putResult("totalCnt", scored.size());
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
             resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
@@ -171,6 +165,88 @@ public class FeedService {
             resultVO.setResultMessage(ResponseCode.SELECT_ERROR.getMessage());
         }
         return resultVO;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // 캐시 키 생성 (null = 캐시 미적용)
+    // ─────────────────────────────────────────────────────────────────────
+    private String buildCacheKey(String mode, Long userSn) {
+        return switch (mode) {
+            case "FOLLOWING"    -> userSn != null ? feedCacheService.followingKey(userSn)    : null;
+            case "PERSONALIZED" -> userSn != null ? feedCacheService.personalizedKey(userSn) : null;
+            case "POPULAR"      -> feedCacheService.popularKey();
+            case "LATEST"       -> feedCacheService.latestKey();
+            default             -> null;
+        };
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // 캐시 멤버 → FeedPost (ID만 저장된 캐시에서 DB 배치 조회)
+    // ─────────────────────────────────────────────────────────────────────
+    private List<FeedPost> hydrateMembers(List<String> members, Long viewerSn) {
+        List<Long> postSns     = new ArrayList<>();
+        List<Long> commPostSns = new ArrayList<>();
+        for (String m : members) {
+            String[] parts = m.split(":", 2);
+            if (parts.length < 2) continue;
+            if ("POST".equals(parts[0])) postSns.add(Long.parseLong(parts[1]));
+            else                          commPostSns.add(Long.parseLong(parts[1]));
+        }
+
+        Map<Long, FeedPost> postMap     = fetchPostsByIds(postSns).stream()
+                .collect(Collectors.toMap(FeedPost::postSn, p -> p));
+        Map<Long, FeedPost> commPostMap = fetchCommPostsByIds(commPostSns, viewerSn).stream()
+                .collect(Collectors.toMap(FeedPost::postSn, p -> p));
+
+        // Redis 순서(score DESC) 유지
+        return members.stream()
+                .map(m -> {
+                    String[] parts = m.split(":", 2);
+                    if (parts.length < 2) return null;
+                    long sn = Long.parseLong(parts[1]);
+                    return "POST".equals(parts[0]) ? postMap.get(sn) : commPostMap.get(sn);
+                })
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // FeedPost 리스트 → PostDTO 리스트 (tagNms / 좋아요 / 저장 배치 조회)
+    // ─────────────────────────────────────────────────────────────────────
+    private List<PostDTO> buildPostDtoList(List<FeedPost> items, Long userSn) {
+        List<Long> pagePostSns     = items.stream().filter(p -> "POST".equals(p.postKind())).map(FeedPost::postSn).toList();
+        List<Long> pageCommPostSns = items.stream().filter(p -> "COMM".equals(p.postKind())).map(FeedPost::postSn).toList();
+
+        Map<Long, List<String>> postTagNms     = tagService.fetchTagMap(pagePostSns,     "post");
+        Map<Long, List<String>> commPostTagNms = tagService.fetchTagMap(pageCommPostSns, "commPost");
+
+        Map<Long, String> myPostLikeMap     = userSn != null ? fetchMyPostLikeMap(userSn, pagePostSns)         : Map.of();
+        Map<Long, String> myCommPostLikeMap = userSn != null ? fetchMyCommPostLikeMap(userSn, pageCommPostSns) : Map.of();
+        Set<Long>         mySavedPostSet    = userSn != null ? fetchMySavedSet(userSn, pagePostSns,     "POST") : Set.of();
+        Set<Long>         mySavedCommSet    = userSn != null ? fetchMySavedSet(userSn, pageCommPostSns, "COMM") : Set.of();
+
+        return items.stream().map(p -> {
+            PostDTO dto;
+            if ("COMM".equals(p.postKind())) {
+                dto = new PostDTO("COMM", p.postTyp(),
+                        Optional.ofNullable(p.commSn()).orElse(0L),
+                        p.commNm(), p.commDsplNm(),
+                        p.postSn(), p.userSn(), p.nickName(), p.authorNm(),
+                        p.postTtl(), p.postCntnt(), p.frstCrtDt(),
+                        p.viewCnt(), p.likeCnt(), p.cmtCnt(),
+                        myCommPostLikeMap.get(p.postSn()), mySavedCommSet.contains(p.postSn()));
+                dto.setTagNms(commPostTagNms.getOrDefault(p.postSn(), List.of()));
+            } else {
+                dto = new PostDTO("POST", p.postTyp(),
+                        p.postSn(), p.userSn(), p.nickName(), p.authorNm(),
+                        p.postTtl(), p.postCntnt(), p.frstCrtDt(),
+                        p.viewCnt(), p.likeCnt(), p.cmtCnt(),
+                        myPostLikeMap.get(p.postSn()), mySavedPostSet.contains(p.postSn()));
+                dto.setTagNms(postTagNms.getOrDefault(p.postSn(), List.of()));
+            }
+            dto.setPfpUrl(p.pfpUrl());
+            return dto;
+        }).toList();
     }
 
     // ─────────────────────────────────────────────────────────────────────
@@ -461,6 +537,53 @@ public class FeedService {
                         .and(CommunityQueryHelper.accessCondition(qComm, viewerSn)))
                 .distinct()
                 .orderBy(qPost.frstCrtDt.desc())
+                .fetch()
+                .stream()
+                .map(t -> toFeedCommPost(t, qPost, qComm, qUser, pfpFile))
+                .collect(Collectors.toList());
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // ID 배치 조회 (캐시 히트 시 사용)
+    // ─────────────────────────────────────────────────────────────────────
+    private List<FeedPost> fetchPostsByIds(List<Long> postSns) {
+        if (postSns.isEmpty()) return List.of();
+        QTblPost    qPost   = QTblPost.tblPost;
+        QTblUser    qUser   = QTblUser.tblUser;
+        QTblComFile pfpFile = new QTblComFile("pfpFile");
+        return new JPAQueryFactory(em)
+                .select(qPost, qUser.nickName, qUser.name,
+                        pfpFile.atchFilePathNm, pfpFile.strgFileNm, pfpFile.atchFileExtnNm)
+                .from(qPost)
+                .join(qUser).on(qPost.userSn.eq(qUser.userSn))
+                .leftJoin(qUser.pfp, pfpFile)
+                .where(qPost.postSn.in(postSns)
+                        .and(qPost.stat.eq("ACTIVE"))
+                        .and(qPost.actvtnYn.eq("Y")))
+                .fetch()
+                .stream()
+                .map(t -> toFeedPost(t, qPost, qUser, pfpFile))
+                .collect(Collectors.toList());
+    }
+
+    private List<FeedPost> fetchCommPostsByIds(List<Long> commPostSns, Long viewerSn) {
+        if (commPostSns.isEmpty()) return List.of();
+        QTblCommPost qPost   = QTblCommPost.tblCommPost;
+        QTblComm     qComm   = QTblComm.tblComm;
+        QTblUser     qUser   = QTblUser.tblUser;
+        QTblComFile  pfpFile = new QTblComFile("pfpFile");
+        return new JPAQueryFactory(em)
+                .select(qPost, qComm.commNm, qComm.commDsplNm,
+                        qUser.nickName, qUser.name,
+                        pfpFile.atchFilePathNm, pfpFile.strgFileNm, pfpFile.atchFileExtnNm)
+                .from(qPost)
+                .join(qComm).on(qPost.commSn.eq(qComm.commSn))
+                .join(qUser).on(qPost.userSn.eq(qUser.userSn))
+                .leftJoin(qUser.pfp, pfpFile)
+                .where(qPost.commPostSn.in(commPostSns)
+                        .and(qPost.stat.eq("ACTIVE"))
+                        .and(qPost.actvtnYn.eq("Y"))
+                        .and(CommunityQueryHelper.accessCondition(qComm, viewerSn)))
                 .fetch()
                 .stream()
                 .map(t -> toFeedCommPost(t, qPost, qComm, qUser, pfpFile))
