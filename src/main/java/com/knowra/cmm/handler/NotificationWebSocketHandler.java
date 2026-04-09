@@ -1,12 +1,12 @@
 package com.knowra.cmm.handler;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.knowra.cmm.jwt.JwtProvider;
 import com.knowra.common.entity.QTblComFile;
 import com.knowra.user.dto.NotifDTO;
 import com.knowra.user.entity.QTblUser;
 import com.knowra.user.entity.TblUserNotif;
-import com.knowra.user.repository.TblUserNotifRepository;
+import com.knowra.user.service.NotifService;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -27,7 +27,7 @@ import java.util.stream.Collectors;
 public class NotificationWebSocketHandler extends TextWebSocketHandler {
 
     private final JwtProvider jwtProvider;
-    private final TblUserNotifRepository notifRepository;
+    private final NotifService notifService;
 
     @PersistenceContext
     private EntityManager em;
@@ -39,7 +39,6 @@ public class NotificationWebSocketHandler extends TextWebSocketHandler {
 
     // ── 연결 수립 ─────────────────────────────────────────────────────────
     @Override
-    @Transactional(readOnly = true)
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
         Long userSn = extractUserSn(session);
         if (userSn == null) {
@@ -48,8 +47,8 @@ public class NotificationWebSocketHandler extends TextWebSocketHandler {
         }
         sessions.put(userSn, session);
 
-        List<TblUserNotif> entities = notifRepository.findTop50ByUserSnOrderByFrstCrtDtDesc(userSn);
-        long unreadCnt = notifRepository.countByUserSnAndIsRead(userSn, "N");
+        List<TblUserNotif> entities = notifService.getAll(userSn);
+        long unreadCnt = notifService.countUnread(userSn);
 
         Map<Long, String[]> senderInfoMap = fetchSenderInfoMap(entities);
 
@@ -67,7 +66,6 @@ public class NotificationWebSocketHandler extends TextWebSocketHandler {
 
     // ── 클라이언트 메시지 수신 ────────────────────────────────────────────
     @Override
-    @Transactional
     public void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
         Long userSn = extractUserSn(session);
         if (userSn == null) return;
@@ -79,9 +77,14 @@ public class NotificationWebSocketHandler extends TextWebSocketHandler {
         switch (type) {
             case "MARK_READ" -> {
                 long notifSn = Long.parseLong(String.valueOf(payload.get("notifSn")));
-                notifRepository.markRead(notifSn, userSn);
+                notifService.markRead(notifSn, userSn);
             }
-            case "MARK_ALL_READ" -> notifRepository.markAllRead(userSn);
+            case "MARK_ALL_READ" -> notifService.markAllRead(userSn);
+            case "DISMISS" -> {
+                long notifSn = Long.parseLong(String.valueOf(payload.get("notifSn")));
+                notifService.dismiss(notifSn, userSn);
+            }
+            case "DISMISS_ALL" -> notifService.dismissAll(userSn);
         }
     }
 

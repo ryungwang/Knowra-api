@@ -147,6 +147,7 @@ CREATE TABLE IF NOT EXISTS KNOWRA_USER.TBL_USER_NOTIF
     TARGET_SN   BIGINT                                                  COMMENT '대상 게시글/유저 SN',
     TARGET_KIND VARCHAR(20)                                             COMMENT '대상종류 POST|COMM_POST',
     IS_READ     CHAR(1)      NOT NULL DEFAULT 'N'                       COMMENT '읽음여부',
+    IS_DISPLAY  CHAR(1)      NOT NULL DEFAULT 'Y'                       COMMENT '표시여부 (N = X 버튼으로 숨김)',
     FRST_CRT_DT DATETIME     NOT NULL DEFAULT NOW()                     COMMENT '생성일시',
     PRIMARY KEY (NOTIF_SN),
     CONSTRAINT FK_NOTIF_USER   FOREIGN KEY (USER_SN)   REFERENCES KNOWRA_USER.TBL_USER (USER_SN),
