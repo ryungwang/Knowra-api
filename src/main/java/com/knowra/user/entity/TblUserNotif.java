@@ -51,6 +51,11 @@ public class TblUserNotif {
     private String isRead = "N";
 
     @Builder.Default
+    @Column(name = "IS_DISPLAY", columnDefinition = "CHAR(1) DEFAULT 'Y'", nullable = false)
+    @Comment("표시여부 (N = X 버튼으로 숨김)")
+    private String isDisplay = "Y";
+
+    @Builder.Default
     @Column(name = "FRST_CRT_DT", columnDefinition = "DATETIME DEFAULT NOW()", updatable = false)
     @Comment("생성일시")
     private LocalDateTime frstCrtDt = LocalDateTime.now();

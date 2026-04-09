@@ -95,6 +95,21 @@ ws://localhost:8080/ws/notification?token=eyJhbGciOiJIUzI1...
 }
 ```
 
+#### DISMISS — 단건 숨김 (X 버튼)
+```json
+{
+  "type": "DISMISS",
+  "notifSn": 1
+}
+```
+
+#### DISMISS_ALL — 전체 숨김
+```json
+{
+  "type": "DISMISS_ALL"
+}
+```
+
 ---
 
 ## notifTyp 종류
