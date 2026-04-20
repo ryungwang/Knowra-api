@@ -19,6 +19,9 @@ jobs:
           java-version: '23'
           distribution: 'temurin'
 
+      - name: Grant execute permission
+        run: chmod +x ./mvnw
+
       - name: Build JAR
         run: ./mvnw clean package -DskipTests
 
@@ -28,6 +31,7 @@ jobs:
           host: ${{ secrets.SERVER_HOST }}
           username: root
           key: ${{ secrets.SERVER_SSH_KEY }}
+          port: 10022
           source: "target/*.jar"
           target: "/home/deer/knowra/api/"
           strip_components: 1
@@ -38,6 +42,7 @@ jobs:
           host: ${{ secrets.SERVER_HOST }}
           username: root
           key: ${{ secrets.SERVER_SSH_KEY }}
+          port: 10022
           script: |
             mv /home/deer/knowra/api/*.jar /home/deer/knowra/api/app.jar
             cd /home/deer/knowra
