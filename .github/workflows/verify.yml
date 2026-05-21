@@ -1,0 +1,36 @@
+name: verify
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  verify:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Enable Corepack
+        shell: pwsh
+        run: |
+          if (Test-Path package.json) {
+            corepack enable
+          }
+
+      - name: Install Node dependencies
+        shell: pwsh
+        run: |
+          if (Test-Path pnpm-lock.yaml) {
+            pnpm install --frozen-lockfile
+          } elseif (Test-Path package-lock.json) {
+            npm ci
+          } elseif (Test-Path yarn.lock) {
+            yarn install --frozen-lockfile
+          }
+
+      - name: Run verification
+        shell: pwsh
+        run: powershell -ExecutionPolicy Bypass -File .\scripts\verify.ps1 -Mode full

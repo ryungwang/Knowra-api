@@ -1,0 +1,14 @@
+#!/usr/bin/env sh
+set -eu
+
+if command -v pwsh >/dev/null 2>&1; then
+  PS_CMD=pwsh
+elif command -v powershell >/dev/null 2>&1; then
+  PS_CMD=powershell
+else
+  echo "PowerShell is required to run automation checks."
+  exit 1
+fi
+
+"$PS_CMD" -NoProfile -ExecutionPolicy Bypass -File scripts/verify.ps1 -Mode full
+"$PS_CMD" -NoProfile -ExecutionPolicy Bypass -File scripts/sync-lessons.ps1 -ProjectPath .
