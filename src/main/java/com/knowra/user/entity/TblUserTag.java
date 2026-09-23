@@ -11,7 +11,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "TBL_USER_TAG", catalog = "KNOWRA_USER")
+@Table(name = "TBL_USER_TAG", schema = "KNOWRA_USER")
 @Data
 @Builder
 @NoArgsConstructor
@@ -36,18 +36,18 @@ public class TblUserTag {
     @Comment("사용횟수")
     private long useCount;
 
-    @Column(name = "ACTVTN_YN", columnDefinition = "CHAR(1) DEFAULT 'Y'")
+    @Column(name = "ACTVTN_YN")
     @Comment("활성여부")
     @Builder.Default
     private String actvtnYn = "Y";
 
-    @Column(name = "CREATR_SN", columnDefinition = "INT(10)", updatable=false, nullable = false)
+    @Column(name = "CREATR_SN", updatable=false, nullable = false)
     @Comment("생성자일련번호")
     @Builder.Default
     private long creatrSn = 1;
 
     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-    @Column(name = "FRST_CRT_DT", columnDefinition = "DATETIME DEFAULT CURRENT_TIMESTAMP", updatable = false)
+    @Column(name = "FRST_CRT_DT", updatable = false)
     @Comment("최초생성일시")
     @Builder.Default
     private LocalDateTime frstCrtDt = LocalDateTime.now();

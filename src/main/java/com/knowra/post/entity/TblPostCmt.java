@@ -11,7 +11,7 @@ import org.hibernate.annotations.Comment;
 @Entity
 @Table(
         name = "TBL_POST_CMT",
-        catalog = "KNOWRA_POST",
+        schema = "KNOWRA_POST",
         indexes = {
                 @Index(name = "IDX_POST_CMT_POST", columnList = "POST_SN"),
                 @Index(name = "IDX_POST_CMT_PRNT", columnList = "PRNT_CMT_SN")

@@ -2,6 +2,7 @@ package com.knowra.community.entity;
 
 import com.knowra.common.entity.TblComFile;
 import jakarta.persistence.*;
+import org.hibernate.annotations.UpdateTimestamp;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -12,7 +13,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Entity
-@Table(name = "TBL_COMM", catalog = "KNOWRA_COMMUNITY")
+@Table(name = "TBL_COMM", schema = "KNOWRA_COMMUNITY")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -81,7 +82,7 @@ public class TblComm {
   private long creatrSn;
 
   @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-  @Column(name = "FRST_CRT_DT", columnDefinition = "DATETIME DEFAULT CURRENT_TIMESTAMP", nullable = false, updatable = false)
+  @Column(name = "FRST_CRT_DT", nullable = false, updatable = false)
   @Comment("최초 생성일시")
   private LocalDateTime frstCrtDt = LocalDateTime.now();
 
@@ -89,7 +90,8 @@ public class TblComm {
   @Comment("수정자 SN")
   private Long mdfrSn;
 
-  @Column(name = "MDFCN_DT", columnDefinition = "DATETIME ON UPDATE CURRENT_TIMESTAMP")
+  @UpdateTimestamp
+  @Column(name = "MDFCN_DT")
   @Comment("수정일시")
   private LocalDateTime mdfcnDt;
 }

@@ -12,7 +12,7 @@ import org.hibernate.annotations.Comment;
 @Entity
 @Table(
         name = "TBL_USER_FLWR",
-        catalog = "KNOWRA_USER",
+        schema = "KNOWRA_USER",
         uniqueConstraints = @UniqueConstraint(name = "UK_USR_FLWR_REL", columnNames = {"FLWR_USER_SN", "FLWNG_USER_SN"})
 )
 @Getter

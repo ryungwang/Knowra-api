@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 @Entity
 @Table(
     name = "TBL_USER_ACTION_LOG",
-    catalog = "KNOWRA_USER",
+    schema = "KNOWRA_USER",
     indexes = {
         @Index(name = "idx_action_user_target", columnList = "USER_SN, TARGET_TYPE, TARGET_SN"),
         @Index(name = "idx_action_reg_dt",      columnList = "REG_DT")
@@ -43,8 +43,7 @@ public class TblUserActionLog {
     @Comment("VIEW | LIKE | COMMENT | SCRAP | POST | JOIN | FOLLOW")
     private String actionType;
 
-    @Column(name = "REG_DT", nullable = false, updatable = false,
-            columnDefinition = "DATETIME DEFAULT CURRENT_TIMESTAMP")
+    @Column(name = "REG_DT", nullable = false, updatable = false)
     @Comment("행동 발생 일시")
     @Builder.Default
     private LocalDateTime regDt = LocalDateTime.now();

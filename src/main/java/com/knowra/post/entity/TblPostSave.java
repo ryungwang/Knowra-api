@@ -11,7 +11,7 @@ import org.hibernate.annotations.Comment;
 @Entity
 @Table(
         name = "TBL_POST_SAVE",
-        catalog = "KNOWRA_POST",
+        schema = "KNOWRA_POST",
         uniqueConstraints = @UniqueConstraint(name = "UK_POST_SAVE_USR", columnNames = {"USER_SN", "POST_KIND", "POST_SN"}),
         indexes = {
                 @Index(name = "IDX_POST_SAVE_POST",    columnList = "POST_KIND, POST_SN"),

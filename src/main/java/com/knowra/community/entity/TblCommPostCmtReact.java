@@ -13,7 +13,7 @@ import org.hibernate.annotations.Comment;
 @Entity
 @Table(
         name = "TBL_COMM_POST_CMT_REACT",
-        catalog = "KNOWRA_COMMUNITY",
+        schema = "KNOWRA_COMMUNITY",
         uniqueConstraints = @UniqueConstraint(
                 name = "UK_CMT_REACT",
                 columnNames = {"COMM_POST_CMT_SN", "USER_SN"}

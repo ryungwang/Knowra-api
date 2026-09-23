@@ -8,7 +8,7 @@ import org.hibernate.annotations.Comment;
 @Entity
 @Table(
         name = "TBL_POST",
-        catalog = "KNOWRA_POST",
+        schema = "KNOWRA_POST",
         indexes = {
                 @Index(name = "IDX_POST_USER",        columnList = "USER_SN"),
                 @Index(name = "IDX_POST_FRST_CRT_DT", columnList = "FRST_CRT_DT")

@@ -1,0 +1,967 @@
+/*M!999999\- enable the sandbox mode */ 
+-- MariaDB dump 10.19  Distrib 10.6.20-MariaDB, for Win64 (AMD64)
+--
+-- Host: 121.186.165.80    Database: knowra_cms
+-- ------------------------------------------------------
+-- Server version	11.4.10-MariaDB-ubu2404
+
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!40101 SET NAMES utf8mb4 */;
+/*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
+/*!40103 SET TIME_ZONE='+00:00' */;
+/*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
+/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
+/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
+/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
+
+--
+-- Current Database: `knowra_cms`
+--
+
+CREATE DATABASE /*!32312 IF NOT EXISTS*/ `knowra_cms` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci */;
+
+USE `knowra_cms`;
+
+--
+-- Table structure for table `tbl_acs_ip`
+--
+
+DROP TABLE IF EXISTS `tbl_acs_ip`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `tbl_acs_ip` (
+  `ACS_IP_SN` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '관리자접근일련번호',
+  `IP_ADDR` varchar(45) NOT NULL COMMENT 'IP주소',
+  `PLCUS_NM` varchar(200) NOT NULL COMMENT '사용처명',
+  `ACTVTN_YN` varchar(1) NOT NULL DEFAULT 'Y' COMMENT '활성여부',
+  `CREATR_SN` bigint(20) NOT NULL COMMENT '생성자일련번호',
+  `FRST_CRT_DT` datetime NOT NULL DEFAULT current_timestamp() COMMENT '최초생성일시',
+  `MDFR_SN` bigint(20) DEFAULT NULL COMMENT '수정자일련번호',
+  `MDFCN_DT` datetime DEFAULT NULL ON UPDATE current_timestamp() COMMENT '수정일',
+  PRIMARY KEY (`ACS_IP_SN`)
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='관리자 접근 허용 IP';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `tbl_acs_ip`
+--
+
+LOCK TABLES `tbl_acs_ip` WRITE;
+/*!40000 ALTER TABLE `tbl_acs_ip` DISABLE KEYS */;
+INSERT INTO `tbl_acs_ip` VALUES (1,'127.0.0.1','로컬 개발 환경','Y',1,'2026-04-01 17:31:52',NULL,NULL),(2,'10.0.0.0/8','사내 VPN','Y',1,'2026-04-01 17:31:52',NULL,NULL),(3,'192.168.1.100','운영 서버 1','Y',1,'2026-04-01 17:31:52',NULL,NULL),(4,'192.168.1.101','운영 서버 2','Y',1,'2026-04-01 17:31:52',NULL,NULL),(5,'203.0.113.10','관리자 사무실 IP','Y',1,'2026-04-01 17:31:52',NULL,NULL);
+/*!40000 ALTER TABLE `tbl_acs_ip` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `tbl_bnr`
+--
+
+DROP TABLE IF EXISTS `tbl_bnr`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `tbl_bnr` (
+  `BNR_SN` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '배너일련번호',
+  `BNR_KND` varchar(50) NOT NULL COMMENT '배너종류',
+  `BNR_TTL` varchar(200) NOT NULL COMMENT '배너제목',
+  `BNR_URL_ADDR` varchar(500) NOT NULL COMMENT '배너URL주소',
+  `START_DT` varchar(20) NOT NULL COMMENT '시작일 (YYYYMMDD)',
+  `END_DT` varchar(20) NOT NULL COMMENT '종료일 (YYYYMMDD)',
+  `ACTVTN_YN` varchar(1) NOT NULL DEFAULT 'Y' COMMENT '활성여부',
+  `CREATR_SN` bigint(20) NOT NULL COMMENT '생성자일련번호',
+  `FRST_CRT_DT` datetime NOT NULL DEFAULT current_timestamp() COMMENT '최초생성일시',
+  `MDFR_SN` bigint(20) DEFAULT NULL COMMENT '수정자일련번호',
+  `MDFCN_DT` datetime DEFAULT NULL ON UPDATE current_timestamp() COMMENT '수정일',
+  PRIMARY KEY (`BNR_SN`)
+) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='배너';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `tbl_bnr`
+--
+
+LOCK TABLES `tbl_bnr` WRITE;
+/*!40000 ALTER TABLE `tbl_bnr` DISABLE KEYS */;
+INSERT INTO `tbl_bnr` VALUES (1,'MAIN_TOP','AI 시대, 개발자 커리어를 바꾸는 Knowra','/community/ai-lab','20260101','20261231','Y',1,'2026-04-01 17:31:52',NULL,NULL),(2,'MAIN_TOP','스타트업 창업자들의 생생한 이야기','/community/startup-hub','20260301','20261231','Y',1,'2026-04-01 17:31:52',NULL,NULL),(3,'MAIN_MID','커리어 업! 연봉 협상부터 이직까지','/community/career-up','20260301','20260630','Y',1,'2026-04-01 17:31:52',NULL,NULL),(4,'MAIN_MID','투자 고수들의 재테크 전략 공개','/community/rich-road','20260401','20260930','Y',1,'2026-04-01 17:31:52',NULL,NULL),(5,'SIDE_RIGHT','신규 가입 이벤트 — 첫 글 작성 시 배지 지급','/event/newbie','20260101','20260630','Y',1,'2026-04-01 17:31:52',NULL,NULL),(6,'SIDE_RIGHT','4월의 추천 커뮤니티: 그로스 랩','/community/growth-lab','20260401','20260430','Y',1,'2026-04-01 17:31:52',NULL,NULL),(7,'POPUP','서비스 점검 안내 (4/5 새벽 2~4시)','/notice/maintenance','20260404','20260405','Y',1,'2026-04-01 17:31:52',NULL,NULL);
+/*!40000 ALTER TABLE `tbl_bnr` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Current Database: `knowra_com`
+--
+
+CREATE DATABASE /*!32312 IF NOT EXISTS*/ `knowra_com` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci */;
+
+USE `knowra_com`;
+
+--
+-- Table structure for table `tbl_com_category`
+--
+
+DROP TABLE IF EXISTS `tbl_com_category`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `tbl_com_category` (
+  `CATEGORY_SN` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '카테고리 시퀀스 (PK)',
+  `CATEGORY_NM` varchar(100) NOT NULL COMMENT '카테고리명 (예: IT, 게임)',
+  `CATEGORY_ICON` varchar(50) DEFAULT NULL COMMENT '이모지 아이콘',
+  `SORT_ORDER` int(11) NOT NULL DEFAULT 0 COMMENT '정렬 순서',
+  `ACTVTN_YN` char(1) NOT NULL DEFAULT 'Y' COMMENT '활성여부',
+  `CREATR_SN` bigint(20) NOT NULL COMMENT '생성자일련번호',
+  `FRST_CRT_DT` datetime NOT NULL DEFAULT current_timestamp() COMMENT '최초생성일시',
+  `MDFR_SN` bigint(20) DEFAULT NULL COMMENT '수정자일련번호',
+  `MDFCN_DT` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp() COMMENT '수정일',
+  PRIMARY KEY (`CATEGORY_SN`),
+  UNIQUE KEY `CATEGORY_NM` (`CATEGORY_NM`)
+) ENGINE=InnoDB AUTO_INCREMENT=23 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='카테고리';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `tbl_com_category`
+--
+
+LOCK TABLES `tbl_com_category` WRITE;
+/*!40000 ALTER TABLE `tbl_com_category` DISABLE KEYS */;
+INSERT INTO `tbl_com_category` VALUES (1,'IT/개발','💻',1,'Y',1,'2026-04-02 19:00:27',NULL,'2026-04-02 19:00:27'),(2,'게임','🎮',2,'Y',1,'2026-04-02 19:00:27',NULL,'2026-04-02 19:00:27'),(3,'연애/관계','💝',3,'Y',1,'2026-04-02 19:00:27',NULL,'2026-04-02 19:00:27'),(4,'주식/투자','📈',4,'Y',1,'2026-04-02 19:00:27',NULL,'2026-04-02 19:00:27'),(5,'생활/일상','🏠',5,'Y',1,'2026-04-02 19:00:27',NULL,'2026-04-02 19:00:27'),(6,'음식/요리','🍳',6,'Y',1,'2026-04-02 19:00:27',NULL,'2026-04-02 19:00:27'),(7,'스포츠','🏃',7,'Y',1,'2026-04-02 19:00:27',NULL,'2026-04-02 19:21:06'),(8,'영화/드라마','🎬',8,'Y',1,'2026-04-02 19:00:27',NULL,'2026-04-02 19:00:27'),(9,'음악','🎵',9,'Y',1,'2026-04-02 19:00:27',NULL,'2026-04-02 19:00:27'),(10,'공부/교육','📚',10,'Y',1,'2026-04-02 19:00:27',NULL,'2026-04-02 19:00:27'),(11,'취업/커리어','💼',11,'Y',1,'2026-04-02 19:00:27',NULL,'2026-04-02 19:00:27'),(12,'기타','💬',12,'Y',1,'2026-04-02 19:00:27',NULL,'2026-04-02 19:00:27'),(13,'여행','✈️',13,'Y',1,'2026-04-02 19:16:01',NULL,'2026-04-02 19:16:01'),(14,'패션/뷰티','👗',14,'Y',1,'2026-04-02 19:16:01',NULL,'2026-04-02 19:16:01'),(15,'반려동물','🐾',15,'Y',1,'2026-04-02 19:16:01',NULL,'2026-04-02 19:16:01'),(16,'건강/운동','💪',16,'Y',1,'2026-04-02 19:16:01',NULL,'2026-04-02 19:16:01'),(17,'자동차','🚗',17,'Y',1,'2026-04-02 19:16:01',NULL,'2026-04-02 19:16:01'),(18,'육아/parenting','👶',18,'Y',1,'2026-04-02 19:16:01',NULL,'2026-04-02 19:16:01'),(19,'환경/사회','🌱',19,'Y',1,'2026-04-02 19:16:01',NULL,'2026-04-02 19:16:01'),(20,'종교/철학','🧘',20,'Y',1,'2026-04-02 19:16:01',NULL,'2026-04-02 19:16:01'),(21,'언어/외국어','🌐',21,'Y',1,'2026-04-02 19:16:01',NULL,'2026-04-02 19:16:01'),(22,'DIY/공예','🔨',22,'Y',1,'2026-04-02 19:16:01',NULL,'2026-04-02 19:16:01');
+/*!40000 ALTER TABLE `tbl_com_category` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `tbl_com_file`
+--
+
+DROP TABLE IF EXISTS `tbl_com_file`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `tbl_com_file` (
+  `ATCH_FILE_SN` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '파일일련번호',
+  `STRG_FILE_NM` varchar(100) NOT NULL COMMENT '저장 파일명 (UUID)',
+  `ATCH_FILE_NM` varchar(100) NOT NULL COMMENT '첨부파일명',
+  `ATCH_FILE_PATH_NM` varchar(100) NOT NULL COMMENT '첨부파일경로',
+  `ATCH_FILE_SZ` bigint(20) NOT NULL COMMENT '첨부파일사이즈',
+  `ATCH_FILE_EXTN_NM` varchar(20) NOT NULL COMMENT '첨부파일확장자',
+  `PSN_TBL_SN` varchar(40) NOT NULL COMMENT '소유테이블데이터기본키',
+  `ACTVTN_YN` char(1) NOT NULL DEFAULT 'Y' COMMENT '활성여부',
+  `CREATR_SN` bigint(20) NOT NULL COMMENT '생성자일련번호',
+  `FRST_CRT_DT` datetime NOT NULL DEFAULT current_timestamp() COMMENT '최초생성일시',
+  `MDFR_SN` bigint(20) DEFAULT NULL COMMENT '수정자일련번호',
+  `MDFCN_DT` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp() COMMENT '수정일',
+  PRIMARY KEY (`ATCH_FILE_SN`)
+) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='파일';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `tbl_com_file`
+--
+
+LOCK TABLES `tbl_com_file` WRITE;
+/*!40000 ALTER TABLE `tbl_com_file` DISABLE KEYS */;
+INSERT INTO `tbl_com_file` VALUES (1,'20260402032636869_0','서명.png','/upload/communities/16/logo',34046,'png','community_16','Y',1,'2026-04-02 15:26:36',NULL,NULL),(2,'20260402032636869_0','서명.png','/upload/communities/16/banner',34046,'png','community_16','Y',1,'2026-04-02 15:26:36',NULL,NULL),(3,'20260402034338697_0','증명사진.jpeg','/upload/user/46/profile',47397,'jpeg','user_46','Y',46,'2026-04-02 15:43:38',NULL,NULL),(9,'20260419052959353_0','SNS_Meta_800.jpg','/upload/communities/17/logo',84546,'jpg','community_17','Y',1,'2026-04-19 05:29:59',NULL,NULL);
+/*!40000 ALTER TABLE `tbl_com_file` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `tbl_tag`
+--
+
+DROP TABLE IF EXISTS `tbl_tag`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `tbl_tag` (
+  `TAG_SN` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '태그 SN (PK)',
+  `TAG_NM` varchar(100) NOT NULL COMMENT '태그명 (예: #Python)',
+  `USE_COUNT` bigint(20) NOT NULL DEFAULT 0 COMMENT '사용횟수',
+  `ACTVTN_YN` char(1) NOT NULL DEFAULT 'Y' COMMENT '활성화 여부',
+  `CREATR_SN` bigint(20) NOT NULL COMMENT '생성자 SN',
+  `FRST_CRT_DT` datetime NOT NULL DEFAULT current_timestamp() COMMENT '최초 생성일시',
+  `MDFR_SN` bigint(20) DEFAULT NULL COMMENT '수정자 SN',
+  `MDFCN_DT` datetime DEFAULT NULL ON UPDATE current_timestamp() COMMENT '수정일시',
+  PRIMARY KEY (`TAG_SN`),
+  UNIQUE KEY `UK_TAG_NM` (`TAG_NM`)
+) ENGINE=InnoDB AUTO_INCREMENT=27 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='태그';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `tbl_tag`
+--
+
+LOCK TABLES `tbl_tag` WRITE;
+/*!40000 ALTER TABLE `tbl_tag` DISABLE KEYS */;
+INSERT INTO `tbl_tag` VALUES (1,'#개발',25,'Y',1,'2026-04-01 17:22:12',NULL,NULL),(2,'#AI',22,'Y',1,'2026-04-01 17:22:12',NULL,NULL),(3,'#코인',18,'Y',1,'2026-04-01 17:22:12',NULL,NULL),(4,'#주식',17,'Y',1,'2026-04-01 17:22:12',NULL,NULL),(5,'#창업',21,'Y',1,'2026-04-01 17:22:12',NULL,NULL),(6,'#사이드프로젝트',14,'Y',1,'2026-04-01 17:22:12',NULL,NULL),(7,'#여행',19,'Y',1,'2026-04-01 17:22:12',NULL,NULL),(8,'#맛집',12,'Y',1,'2026-04-01 17:22:12',NULL,NULL),(9,'#헬스',16,'Y',1,'2026-04-01 17:22:12',NULL,NULL),(10,'#다이어트',13,'Y',1,'2026-04-01 17:22:12',NULL,NULL),(11,'#투자',20,'Y',1,'2026-04-01 17:22:12',NULL,NULL),(12,'#부동산',15,'Y',1,'2026-04-01 17:22:12',NULL,NULL),(13,'#사진',11,'Y',1,'2026-04-01 17:22:12',NULL,NULL),(14,'#음악',10,'Y',1,'2026-04-01 17:22:12',NULL,NULL),(15,'#게임',14,'Y',1,'2026-04-01 17:22:12',NULL,NULL),(16,'#독서',9,'Y',1,'2026-04-01 17:22:12',NULL,NULL),(17,'#커리어',18,'Y',1,'2026-04-01 17:22:12',NULL,NULL),(18,'#이직',16,'Y',1,'2026-04-01 17:22:12',NULL,NULL),(19,'#ChatGPT',20,'Y',1,'2026-04-01 17:22:12',NULL,NULL),(20,'#자동화',12,'Y',1,'2026-04-01 17:22:12',NULL,NULL),(21,'#요리',11,'Y',1,'2026-04-01 17:22:12',NULL,NULL),(22,'#재테크',17,'Y',1,'2026-04-01 17:22:12',NULL,NULL),(23,'#자기계발',13,'Y',1,'2026-04-01 17:22:12',NULL,NULL),(24,'#러닝',8,'Y',1,'2026-04-01 17:22:12',NULL,NULL),(25,'#등산',7,'Y',1,'2026-04-01 17:22:12',NULL,NULL);
+/*!40000 ALTER TABLE `tbl_tag` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Current Database: `knowra_community`
+--
+
+CREATE DATABASE /*!32312 IF NOT EXISTS*/ `knowra_community` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci */;
+
+USE `knowra_community`;
+
+--
+-- Table structure for table `tbl_comm`
+--
+
+DROP TABLE IF EXISTS `tbl_comm`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `tbl_comm` (
+  `COMM_SN` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '커뮤니티 SN (PK)',
+  `COMM_NM` varchar(320) NOT NULL COMMENT '슬러그 (URL 식별자)',
+  `COMM_DSPL_NM` varchar(100) DEFAULT NULL COMMENT '표시 이름',
+  `COMM_DESC` varchar(320) DEFAULT NULL COMMENT '설명',
+  `CTGR_SN` bigint(20) NOT NULL COMMENT '카테고리 SN',
+  `PRVCY_STNG` varchar(20) NOT NULL COMMENT 'public / restricted / anonymous / private',
+  `LOGO_FILE_SN` bigint(20) DEFAULT NULL COMMENT '로고 이미지 (TBL_COM_FILE FK)',
+  `BNR_FILE_SN` bigint(20) DEFAULT NULL COMMENT '배너 이미지 (TBL_COM_FILE FK)',
+  `MEMBER_CNT` bigint(20) NOT NULL DEFAULT 0 COMMENT '멤버 수 (캐시)',
+  `STAT` char(1) NOT NULL DEFAULT 'Y' COMMENT 'Y / N',
+  `ACTVTN_YN` char(1) NOT NULL DEFAULT 'Y' COMMENT '활성화 여부',
+  `CREATR_SN` bigint(20) NOT NULL COMMENT '생성자 SN',
+  `FRST_CRT_DT` datetime NOT NULL DEFAULT current_timestamp() COMMENT '최초 생성일시',
+  `MDFR_SN` bigint(20) DEFAULT NULL COMMENT '수정자 SN',
+  `MDFCN_DT` datetime DEFAULT NULL ON UPDATE current_timestamp() COMMENT '수정일시',
+  PRIMARY KEY (`COMM_SN`),
+  UNIQUE KEY `UK_COMM_NM` (`COMM_NM`)
+) ENGINE=InnoDB AUTO_INCREMENT=18 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='커뮤니티';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `tbl_comm`
+--
+
+LOCK TABLES `tbl_comm` WRITE;
+/*!40000 ALTER TABLE `tbl_comm` DISABLE KEYS */;
+INSERT INTO `tbl_comm` VALUES (1,'dev-life','개발자 라이프','개발자들의 일상, 커리어, 사이드프로젝트 이야기. 코딩 말고 삶도 나눠요.',1,'public',NULL,NULL,6,'Y','Y',2,'2026-04-01 17:22:12',NULL,NULL),(2,'ai-lab','AI 연구소','ChatGPT·LLM·이미지 AI 최신 트렌드를 가장 빠르게 공유하는 곳.',1,'public',NULL,NULL,5,'Y','Y',4,'2026-04-01 17:22:12',NULL,NULL),(3,'crypto-talk','코인토크','비트코인·이더리움·알트코인 분석과 실전 투자 경험 공유.',2,'public',NULL,NULL,5,'Y','Y',5,'2026-04-01 17:22:12',NULL,NULL),(4,'startup-hub','스타트업 허브','아이디어 검증부터 투자 유치까지. 창업가들의 생생한 경험담.',3,'public',NULL,NULL,5,'Y','Y',3,'2026-04-01 17:22:12',NULL,NULL),(5,'healthy-life','헬시라이프','운동·식단·수면. 몸과 마음을 챙기는 커뮤니티.',4,'public',NULL,NULL,5,'Y','Y',8,'2026-04-01 17:22:12',NULL,NULL),(6,'realty-talk','부동산 이야기','갭투자·전세·청약·재개발. 내 집 마련 실전 정보 공유.',2,'public',NULL,NULL,5,'Y','Y',20,'2026-04-01 17:22:12',NULL,NULL),(7,'gamers-gg','게이머스 GG','게임 공략, 티어, 신작 리뷰. 유일하게 랭크 올라가는 커뮤니티.',5,'public',NULL,NULL,5,'Y','Y',19,'2026-04-01 17:22:12',NULL,NULL),(8,'book-club','독서 클럽','한 달에 책 한 권. 함께 읽고 삶이 달라진 사람들의 이야기.',5,'public',NULL,NULL,4,'Y','Y',18,'2026-04-01 17:22:12',NULL,NULL),(9,'travel-log','트래블 로그','배낭여행·호캉스·항공권 꿀팁. 가본 사람만 아는 여행 정보.',5,'public',NULL,NULL,5,'Y','Y',7,'2026-04-01 17:22:12',NULL,NULL),(10,'music-band','뮤직 & 밴드','악기, 작곡, 공연 후기. 음악 하는 사람들의 아지트.',5,'public',NULL,NULL,4,'Y','Y',11,'2026-04-01 17:22:12',NULL,NULL),(11,'photo-lens','포토 렌즈','카메라·구도·보정. 일상을 작품으로 만드는 사진가들의 모임.',5,'public',NULL,NULL,4,'Y','Y',6,'2026-04-01 17:22:12',NULL,NULL),(12,'cookers','쿡방 클럽','오늘 뭐 먹지? 레시피·맛집·요리 팁 다 여기 있어요.',5,'public',NULL,NULL,4,'Y','Y',10,'2026-04-01 17:22:12',NULL,NULL),(13,'career-up','커리어 업','이직·면접·연봉협상·퇴사 고민. 직장인이라면 한 번쯤 겪는 모든 것.',1,'public',NULL,NULL,6,'Y','Y',12,'2026-04-01 17:22:12',NULL,NULL),(14,'rich-road','부자 되는 길','주식·ETF·배당·절세. 월급쟁이 재테크 실전 전략.',2,'public',NULL,NULL,5,'Y','Y',21,'2026-04-01 17:22:12',NULL,NULL),(15,'growth-lab','그로스 랩','독서·명상·습관·루틴. 어제보다 1% 나아지고 싶은 사람들.',5,'public',NULL,NULL,4,'Y','Y',1,'2026-04-01 17:22:12',NULL,NULL),(16,'2222','1122','222',7,'private',1,2,0,'Y','Y',1,'2026-04-02 15:26:36',NULL,NULL),(17,'ggddd','1111','',1,'public',9,NULL,0,'Y','Y',1,'2026-04-19 05:29:59',NULL,NULL);
+/*!40000 ALTER TABLE `tbl_comm` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `tbl_comm_mbr`
+--
+
+DROP TABLE IF EXISTS `tbl_comm_mbr`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `tbl_comm_mbr` (
+  `MBR_SN` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '멤버 SN (PK)',
+  `COMM_SN` bigint(20) NOT NULL COMMENT '커뮤니티 SN (TBL_COMM FK)',
+  `USER_SN` bigint(20) NOT NULL COMMENT '사용자 SN (TBL_USER FK)',
+  `ROLE` varchar(20) NOT NULL DEFAULT 'MEMBER' COMMENT 'OWNER / ADMIN / MEMBER',
+  `JOIN_TYP` varchar(20) NOT NULL DEFAULT 'APPLY' COMMENT 'APPLY / INVITE / AUTO',
+  `STAT` varchar(20) NOT NULL DEFAULT 'ACTIVE' COMMENT 'PENDING / ACTIVE / REJECTED / BANNED / WITHDRAWN',
+  `ACTVTN_YN` char(1) NOT NULL DEFAULT 'Y' COMMENT '활성화 여부',
+  `CREATR_SN` bigint(20) NOT NULL COMMENT '생성자 SN',
+  `FRST_CRT_DT` datetime NOT NULL DEFAULT current_timestamp() COMMENT '최초 생성일시',
+  `MDFR_SN` bigint(20) DEFAULT NULL COMMENT '수정자 SN',
+  `MDFCN_DT` datetime DEFAULT NULL ON UPDATE current_timestamp() COMMENT '수정일시',
+  PRIMARY KEY (`MBR_SN`),
+  UNIQUE KEY `UK_COMM_MBR_USR` (`COMM_SN`,`USER_SN`)
+) ENGINE=InnoDB AUTO_INCREMENT=75 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='커뮤니티 멤버';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `tbl_comm_mbr`
+--
+
+LOCK TABLES `tbl_comm_mbr` WRITE;
+/*!40000 ALTER TABLE `tbl_comm_mbr` DISABLE KEYS */;
+INSERT INTO `tbl_comm_mbr` VALUES (1,1,2,'OWNER','AUTO','ACTIVE','Y',2,'2026-04-01 17:22:12',NULL,NULL),(2,1,3,'MEMBER','AUTO','ACTIVE','Y',3,'2026-04-01 17:22:12',NULL,NULL),(3,1,4,'MEMBER','AUTO','ACTIVE','Y',4,'2026-04-01 17:22:12',NULL,NULL),(4,1,12,'MEMBER','AUTO','ACTIVE','Y',12,'2026-04-01 17:22:12',NULL,NULL),(5,1,13,'MEMBER','AUTO','ACTIVE','Y',13,'2026-04-01 17:22:12',NULL,NULL),(6,1,16,'MEMBER','AUTO','ACTIVE','Y',16,'2026-04-01 17:22:12',NULL,NULL),(7,2,4,'OWNER','AUTO','ACTIVE','Y',4,'2026-04-01 17:22:12',NULL,NULL),(8,2,2,'MEMBER','AUTO','ACTIVE','Y',2,'2026-04-01 17:22:12',NULL,NULL),(9,2,16,'MEMBER','AUTO','ACTIVE','Y',16,'2026-04-01 17:22:12',NULL,NULL),(10,2,15,'MEMBER','AUTO','ACTIVE','Y',15,'2026-04-01 17:22:12',NULL,NULL),(11,2,23,'MEMBER','AUTO','ACTIVE','Y',23,'2026-04-01 17:22:12',NULL,NULL),(12,3,5,'OWNER','AUTO','ACTIVE','Y',5,'2026-04-01 17:22:12',NULL,NULL),(13,3,9,'MEMBER','AUTO','ACTIVE','Y',9,'2026-04-01 17:22:12',NULL,NULL),(14,3,30,'MEMBER','AUTO','ACTIVE','Y',30,'2026-04-01 17:22:12',NULL,NULL),(15,3,21,'MEMBER','AUTO','ACTIVE','Y',21,'2026-04-01 17:22:12',NULL,NULL),(16,3,3,'MEMBER','AUTO','ACTIVE','Y',3,'2026-04-01 17:22:12',NULL,NULL),(17,4,3,'OWNER','AUTO','ACTIVE','Y',3,'2026-04-01 17:22:12',NULL,NULL),(18,4,2,'MEMBER','AUTO','ACTIVE','Y',2,'2026-04-01 17:22:12',NULL,NULL),(19,4,29,'MEMBER','AUTO','ACTIVE','Y',29,'2026-04-01 17:22:12',NULL,NULL),(20,4,13,'MEMBER','AUTO','ACTIVE','Y',13,'2026-04-01 17:22:12',NULL,NULL),(21,4,15,'MEMBER','AUTO','ACTIVE','Y',15,'2026-04-01 17:22:12',NULL,NULL),(22,5,8,'OWNER','AUTO','ACTIVE','Y',8,'2026-04-01 17:22:12',NULL,NULL),(23,5,22,'MEMBER','AUTO','ACTIVE','Y',22,'2026-04-01 17:22:12',NULL,NULL),(24,5,24,'MEMBER','AUTO','ACTIVE','Y',24,'2026-04-01 17:22:12',NULL,NULL),(25,5,7,'MEMBER','AUTO','ACTIVE','Y',7,'2026-04-01 17:22:12',NULL,NULL),(26,5,25,'MEMBER','AUTO','ACTIVE','Y',25,'2026-04-01 17:22:12',NULL,NULL),(27,6,20,'OWNER','AUTO','ACTIVE','Y',20,'2026-04-01 17:22:12',NULL,NULL),(28,6,9,'MEMBER','AUTO','ACTIVE','Y',9,'2026-04-01 17:22:12',NULL,NULL),(29,6,21,'MEMBER','AUTO','ACTIVE','Y',21,'2026-04-01 17:22:12',NULL,NULL),(30,6,3,'MEMBER','AUTO','ACTIVE','Y',3,'2026-04-01 17:22:12',NULL,NULL),(31,6,1,'MEMBER','AUTO','ACTIVE','Y',1,'2026-04-01 17:22:12',NULL,NULL),(32,7,19,'OWNER','AUTO','ACTIVE','Y',19,'2026-04-01 17:22:12',NULL,NULL),(33,7,2,'MEMBER','AUTO','ACTIVE','Y',2,'2026-04-01 17:22:12',NULL,NULL),(34,7,14,'MEMBER','AUTO','ACTIVE','Y',14,'2026-04-01 17:22:12',NULL,NULL),(35,7,23,'MEMBER','AUTO','ACTIVE','Y',23,'2026-04-01 17:22:12',NULL,NULL),(36,7,16,'MEMBER','AUTO','ACTIVE','Y',16,'2026-04-01 17:22:12',NULL,NULL),(37,8,18,'OWNER','AUTO','ACTIVE','Y',18,'2026-04-01 17:22:12',NULL,NULL),(38,8,17,'MEMBER','AUTO','ACTIVE','Y',17,'2026-04-01 17:22:12',NULL,NULL),(39,8,1,'MEMBER','AUTO','ACTIVE','Y',1,'2026-04-01 17:22:12',NULL,NULL),(40,8,22,'MEMBER','AUTO','ACTIVE','Y',22,'2026-04-01 17:22:12',NULL,NULL),(41,9,7,'OWNER','AUTO','ACTIVE','Y',7,'2026-04-01 17:22:12',NULL,NULL),(42,9,25,'MEMBER','AUTO','ACTIVE','Y',25,'2026-04-01 17:22:12',NULL,NULL),(43,9,6,'MEMBER','AUTO','ACTIVE','Y',6,'2026-04-01 17:22:12',NULL,NULL),(44,9,23,'MEMBER','AUTO','ACTIVE','Y',23,'2026-04-01 17:22:12',NULL,NULL),(45,9,24,'MEMBER','AUTO','ACTIVE','Y',24,'2026-04-01 17:22:12',NULL,NULL),(46,10,11,'OWNER','AUTO','ACTIVE','Y',11,'2026-04-01 17:22:12',NULL,NULL),(47,10,27,'MEMBER','AUTO','ACTIVE','Y',27,'2026-04-01 17:22:12',NULL,NULL),(48,10,17,'MEMBER','AUTO','ACTIVE','Y',17,'2026-04-01 17:22:12',NULL,NULL),(49,10,14,'MEMBER','AUTO','ACTIVE','Y',14,'2026-04-01 17:22:12',NULL,NULL),(50,11,6,'OWNER','AUTO','ACTIVE','Y',6,'2026-04-01 17:22:12',NULL,NULL),(51,11,28,'MEMBER','AUTO','ACTIVE','Y',28,'2026-04-01 17:22:12',NULL,NULL),(52,11,23,'MEMBER','AUTO','ACTIVE','Y',23,'2026-04-01 17:22:12',NULL,NULL),(53,11,7,'MEMBER','AUTO','ACTIVE','Y',7,'2026-04-01 17:22:12',NULL,NULL),(54,12,10,'OWNER','AUTO','ACTIVE','Y',10,'2026-04-01 17:22:12',NULL,NULL),(55,12,26,'MEMBER','AUTO','ACTIVE','Y',26,'2026-04-01 17:22:12',NULL,NULL),(56,12,9,'MEMBER','AUTO','ACTIVE','Y',9,'2026-04-01 17:22:12',NULL,NULL),(57,12,22,'MEMBER','AUTO','ACTIVE','Y',22,'2026-04-01 17:22:12',NULL,NULL),(58,13,12,'OWNER','AUTO','ACTIVE','Y',12,'2026-04-01 17:22:12',NULL,NULL),(59,13,2,'MEMBER','AUTO','ACTIVE','Y',2,'2026-04-01 17:22:12',NULL,NULL),(60,13,13,'MEMBER','AUTO','ACTIVE','Y',13,'2026-04-01 17:22:12',NULL,NULL),(61,13,15,'MEMBER','AUTO','ACTIVE','Y',15,'2026-04-01 17:22:12',NULL,NULL),(62,13,3,'MEMBER','AUTO','ACTIVE','Y',3,'2026-04-01 17:22:12',NULL,NULL),(63,13,14,'MEMBER','AUTO','ACTIVE','Y',14,'2026-04-01 17:22:12',NULL,NULL),(64,14,21,'OWNER','AUTO','ACTIVE','Y',21,'2026-04-01 17:22:12',NULL,NULL),(65,14,9,'MEMBER','AUTO','ACTIVE','Y',9,'2026-04-01 17:22:12',NULL,NULL),(66,14,5,'MEMBER','AUTO','ACTIVE','Y',5,'2026-04-01 17:22:12',NULL,NULL),(67,14,20,'MEMBER','AUTO','ACTIVE','Y',20,'2026-04-01 17:22:12',NULL,NULL),(68,14,1,'MEMBER','AUTO','ACTIVE','Y',1,'2026-04-01 17:22:12',NULL,'2026-04-04 20:49:57'),(69,15,1,'OWNER','AUTO','ACTIVE','Y',1,'2026-04-01 17:22:12',NULL,NULL),(70,15,18,'MEMBER','AUTO','ACTIVE','Y',18,'2026-04-01 17:22:12',NULL,NULL),(71,15,22,'MEMBER','AUTO','ACTIVE','Y',22,'2026-04-01 17:22:12',NULL,NULL),(72,15,17,'MEMBER','AUTO','ACTIVE','Y',17,'2026-04-01 17:22:12',NULL,NULL),(73,16,1,'OWNER','AUTO','ACTIVE','Y',1,'2026-04-02 15:26:36',NULL,NULL),(74,17,1,'OWNER','AUTO','ACTIVE','Y',1,'2026-04-19 05:29:59',NULL,NULL);
+/*!40000 ALTER TABLE `tbl_comm_mbr` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `tbl_comm_post`
+--
+
+DROP TABLE IF EXISTS `tbl_comm_post`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `tbl_comm_post` (
+  `COMM_POST_SN` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '커뮤니티 게시글 SN (PK)',
+  `COMM_SN` bigint(20) NOT NULL COMMENT '커뮤니티 SN (TBL_COMM FK)',
+  `POST_TYP` varchar(10) NOT NULL DEFAULT 'NORMAL' COMMENT 'NORMAL / NOTICE',
+  `USER_SN` bigint(20) NOT NULL COMMENT '작성자 SN (TBL_USER FK)',
+  `POST_TTL` varchar(300) NOT NULL COMMENT '제목',
+  `POST_CNTNT` text NOT NULL COMMENT '본문',
+  `VIEW_CNT` int(11) NOT NULL DEFAULT 0 COMMENT '조회수 (캐시, Redis 동기화)',
+  `LIKE_CNT` int(11) NOT NULL DEFAULT 0 COMMENT '순 추천수 (UP - DOWN 캐시)',
+  `CMT_CNT` int(11) NOT NULL DEFAULT 0 COMMENT '댓글수 (캐시)',
+  `STAT` varchar(20) NOT NULL DEFAULT 'ACTIVE' COMMENT 'ACTIVE / DELETED / BLOCKED',
+  `ACTVTN_YN` char(1) NOT NULL DEFAULT 'Y' COMMENT '활성화 여부',
+  `CREATR_SN` bigint(20) NOT NULL COMMENT '생성자 SN',
+  `FRST_CRT_DT` datetime NOT NULL DEFAULT current_timestamp() COMMENT '최초 생성일시',
+  `MDFR_SN` bigint(20) DEFAULT NULL COMMENT '수정자 SN',
+  `MDFCN_DT` datetime DEFAULT NULL ON UPDATE current_timestamp() COMMENT '수정일시',
+  PRIMARY KEY (`COMM_POST_SN`),
+  KEY `IDX_COMM_POST_COMM` (`COMM_SN`),
+  KEY `IDX_COMM_POST_USER` (`USER_SN`),
+  KEY `IDX_COMM_POST_FRST_CRT_DT` (`FRST_CRT_DT`)
+) ENGINE=InnoDB AUTO_INCREMENT=92 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='커뮤니티 게시글';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `tbl_comm_post`
+--
+
+LOCK TABLES `tbl_comm_post` WRITE;
+/*!40000 ALTER TABLE `tbl_comm_post` DISABLE KEYS */;
+INSERT INTO `tbl_comm_post` VALUES (1,1,'NOTICE',2,'[공지] 커뮤니티 이용 규칙','비방·욕설·광고 금지. 즐거운 개발 이야기 나눠요!',310,4,2,'ACTIVE','Y',2,'2026-04-01 17:22:12',NULL,NULL),(2,1,'NORMAL',2,'연봉 1억 개발자, 진짜 가능한 이야기인가요?','주변에 신입 2년 만에 연봉 1억 찍었다는 사람 나왔습니다. 스톡옵션 포함이긴 한데... 5년차인 저는 아직 멀었거든요 ㅠ',1840,127,34,'ACTIVE','Y',2,'2026-04-01 17:22:12',NULL,NULL),(3,1,'NORMAL',3,'사이드 프로젝트로 월 300 버는 중인데 회사 때려칠까요?','퇴근 후 틈틈이 만든 크롬 익스텐션이 갑자기 ProductHunt 1위 먹었어요. 지금 월 300만원 정도 들어오는데 나와도 될까요?',3210,256,89,'ACTIVE','Y',3,'2026-04-01 17:22:12',NULL,NULL),(4,1,'NORMAL',4,'ChatGPT로 코드 짜면 실력이 늘까요 줄까요?','요즘 ChatGPT 없으면 코딩 못 하겠다는 분들 많은데, 저는 오히려 문제 해결 능력이 줄어드는 느낌이에요.',2560,198,67,'ACTIVE','Y',4,'2026-04-01 17:22:12',NULL,NULL),(5,1,'NORMAL',12,'비전공 6개월 독학으로 네카라쿠배 합격 후기','문과 출신 29살에 무작정 개발 공부 시작해서 6개월 만에 카카오 합격했습니다. 커리큘럼 다 공유할게요.',5670,489,124,'ACTIVE','Y',12,'2026-04-01 17:22:12',NULL,NULL),(6,1,'NORMAL',2,'스타트업 vs 대기업, 5년 다 다녀본 솔직 비교','스타트업 3년, 대기업 2년. 연봉·성장·워라밸·안정성 모두 다른 두 세계. 솔직하게 공유합니다.',2890,211,78,'ACTIVE','Y',2,'2026-04-01 17:22:12',NULL,NULL),(7,2,'NOTICE',4,'[공지] AI 연구소 운영 방침','출처 없는 허위 정보는 삭제됩니다. 논문·실험 결과·프롬프트 팁 모두 환영.',280,9,2,'ACTIVE','Y',4,'2026-04-01 17:22:12',NULL,'2026-04-04 01:59:02'),(8,2,'NORMAL',4,'GPT-5 나오면 개발자 직업 진짜 없어질까? 현직자 시각','GPT-4o 나왔을 때도 같은 말 나왔는데 설계·아키텍처 결정은 여전히 사람이 해요. 근데 GPT-5 스펙 보면... 솔직히 무서운 부분도 있습니다.',4120,312,98,'ACTIVE','Y',4,'2026-04-01 17:22:12',NULL,NULL),(9,2,'NORMAL',16,'Sora 영상 생성 AI 직접 써봤는데 충격 받은 이유','유튜브 썸네일, 광고 영상, 쇼츠 콘텐츠를 텍스트 몇 줄로 만들었어요. 크리에이터들한테 미칠 영향이 상상 이상입니다.',3780,287,76,'ACTIVE','Y',16,'2026-04-01 17:22:12',NULL,NULL),(10,2,'NORMAL',2,'프롬프트 엔지니어링 6개월 독학 핵심 정리 (무료 공유)','Chain of thought·Few-shot·RAG까지 실무에서 바로 쓸 수 있게 정리했어요. 노션 링크 공유합니다.',6230,521,143,'ACTIVE','Y',2,'2026-04-01 17:22:12',NULL,NULL),(11,2,'NORMAL',4,'AI가 내 일자리 빼앗기 전에 내가 AI를 활용하는 법','같은 직군에서도 AI 잘 쓰는 사람이 못 쓰는 사람 몫까지 가져가는 게 현실이에요.',5110,398,117,'ACTIVE','Y',4,'2026-04-01 17:22:12',NULL,NULL),(12,2,'NORMAL',23,'Claude vs ChatGPT vs Gemini 실무 사용 1년 비교','코딩·글쓰기·분석·창작 분야별로 어떤 AI가 진짜 잘하는지 솔직하게 비교합니다.',3450,264,88,'ACTIVE','Y',23,'2026-04-01 17:22:12',NULL,NULL),(13,3,'NOTICE',5,'[필독] 투자는 본인 판단으로, 이 글은 참고만','모든 투자 결정은 본인 책임입니다.',190,4,1,'ACTIVE','Y',5,'2026-04-01 17:22:12',NULL,NULL),(14,3,'NORMAL',5,'비트코인 10만 달러 돌파 직전, 지금 사도 늦지 않은 이유','온체인 데이터·기관 유입·반감기 사이클 분석해보면 지금도 초입입니다. 근거 데이터 공유할게요.',4560,234,89,'ACTIVE','Y',5,'2026-04-01 17:22:12',NULL,NULL),(15,3,'NORMAL',30,'코인으로 1억 잃고 배운 것들 (쓴소리 주의)','2021년 불장 때 영끌해서 다 날렸어요. FOMO·레버리지·리딩방... 제가 한 모든 실수 솔직하게 씁니다.',7831,612,202,'ACTIVE','Y',30,'2026-04-01 17:22:12',NULL,'2026-04-22 07:27:13'),(16,3,'NORMAL',9,'이더리움 스테이킹 연 5% vs S&P500, 뭐가 나을까','리스크 대비 수익률. 변동성·세금·유동성까지 다 따져봤어요.',2340,178,54,'ACTIVE','Y',9,'2026-04-01 17:22:12',NULL,NULL),(17,3,'NORMAL',5,'알트코인 99% 망하는 이유 (생존하는 1% 조건)','지난 5년간 상장된 코인 추적해봤어요. 살아남는 프로젝트는 공통점이 있습니다.',3120,267,73,'ACTIVE','Y',5,'2026-04-01 17:22:12',NULL,NULL),(18,3,'NORMAL',30,'월급쟁이가 코인 투자하는 현실적인 방법 (DCA 전략)','월 50만원씩 2년 DCA 결과 공개합니다. 꾸준함이 답이에요.',2780,198,61,'ACTIVE','Y',30,'2026-04-01 17:22:12',NULL,NULL),(19,4,'NOTICE',3,'[공지] 스타트업 허브 소개 및 이용 안내','창업 경험·투자 유치·팀 빌딩 이야기를 나눠요.',210,6,2,'ACTIVE','Y',3,'2026-04-01 17:22:12',NULL,NULL),(20,4,'NORMAL',3,'아이디어 하나로 시드 투자 3억 받은 덱 공유합니다','PMF도 없고 팀도 2명이었는데 어떻게 투자 받았냐고요? 문제 정의가 전부였습니다.',5890,423,134,'ACTIVE','Y',3,'2026-04-01 17:22:12',NULL,NULL),(21,4,'NORMAL',29,'창업 3년, 폐업하면서 배운 것들','MAU 10만 찍고도 망할 수 있다는 거 아세요? 수익화 실패·번아웃·공동창업자 갈등 모두 공유합니다.',6342,513,178,'ACTIVE','Y',29,'2026-04-01 17:22:12',NULL,'2026-04-10 13:08:22'),(22,4,'NORMAL',2,'VC가 절대 투자 안 하는 스타트업 특징 (현직 VC 내부 이야기)','아이디어보다 팀, 시장보다 타이밍. 왜 좋은 아이디어도 퇴짜 맞는지 공유합니다.',4780,367,112,'ACTIVE','Y',2,'2026-04-01 17:22:12',NULL,NULL),(23,4,'NORMAL',3,'직장 다니면서 창업 준비하는 현실적인 방법','언제 퇴사할지, 법인 설립 타이밍, 첫 고객 만들기까지 단계별로 정리했습니다.',3210,248,87,'ACTIVE','Y',3,'2026-04-01 17:22:12',NULL,NULL),(24,4,'NORMAL',29,'MVP 2주 만에 만들고 초기 고객 100명 모은 방법','노코드 툴만 썼습니다. Notion·Typeform·Zapier로 만든 MVP가 실제로 돈을 벌었어요.',2980,223,69,'ACTIVE','Y',29,'2026-04-01 17:22:12',NULL,NULL),(25,5,'NOTICE',8,'[공지] 헬시라이프 커뮤니티 운영 원칙','근거 없는 다이어트 정보·특정 제품 광고는 삭제합니다.',170,5,1,'ACTIVE','Y',8,'2026-04-01 17:22:12',NULL,NULL),(26,5,'NORMAL',8,'3개월 만에 체지방 15kg 뺀 방법 (의사한테 혼났지만)','극단적인 방법이라 추천은 못 하지만 실제로 한 것들 공유합니다.',4230,334,97,'ACTIVE','Y',8,'2026-04-01 17:22:12',NULL,NULL),(27,5,'NORMAL',22,'헬스 3년 했는데 근육이 안 느는 이유 찾았습니다','결국 문제는 단백질도 볼륨도 아니었어요. 수면이었습니다.',3560,278,81,'ACTIVE','Y',22,'2026-04-01 17:22:12',NULL,NULL),(28,5,'NORMAL',24,'직장인이 퇴근 후 30분으로 1년간 변한 몸 공개','맨몸 운동 30분, 1년 꾸준히 한 전후 사진과 루틴 공유합니다.',5120,421,138,'ACTIVE','Y',24,'2026-04-01 17:22:12',NULL,NULL),(29,5,'NORMAL',8,'하루 커피 3잔 마시면서 수면의 질 잡은 방법','마시는 타이밍만 바꿨는데 수면이 달라졌어요. 수면 트래커 데이터도 공유합니다.',2890,213,62,'ACTIVE','Y',8,'2026-04-01 17:22:12',NULL,NULL),(30,5,'NORMAL',22,'간헐적 단식 1년 결과, 진짜 효과 있을까?','16:8 방식 1년. 체중·혈당·집중력·소화 모두 추적했어요.',3140,242,73,'ACTIVE','Y',22,'2026-04-01 17:22:12',NULL,NULL),(31,6,'NOTICE',20,'[공지] 부동산 커뮤니티 이용 안내','허위 정보·투자 권유 목적 글은 삭제됩니다.',169,4,1,'ACTIVE','Y',20,'2026-04-01 17:22:12',NULL,'2026-04-03 14:39:53'),(32,6,'NORMAL',20,'갭투자 3년 후 솔직 후기 (수익·손실 다 공개)','2021년에 2억 갭투자로 시작해서 지금 어떻게 됐는지 전부 공개합니다. 좋은 것만 말하지 않을게요.',5340,421,112,'ACTIVE','Y',20,'2026-04-01 17:22:12',NULL,NULL),(33,6,'NORMAL',9,'무주택자가 청약 당첨되기까지 10년의 기록','가점 올리는 법, 당첨 확률 높은 단지 고르는 법, 실거주 vs 투자 판단 기준까지.',4120,334,87,'ACTIVE','Y',9,'2026-04-01 17:22:12',NULL,NULL),(34,6,'NORMAL',20,'전세 사기 피하는 방법 (당한 사람이 알려주는 체크리스트)','저도 피해자입니다. 계약서 작성 전 반드시 확인해야 할 10가지 공유합니다.',6784,587,200,'ACTIVE','Y',20,'2026-04-01 17:22:12',NULL,'2026-04-21 13:39:12'),(35,6,'NORMAL',21,'재개발 구역 투자, 진짜 돈 되는 지역 고르는 법','관리처분인가 단계별 투자 타이밍, 명도 리스크, 이주비 대출까지 정리했습니다.',3210,245,68,'ACTIVE','Y',21,'2026-04-01 17:22:12',NULL,NULL),(36,6,'NORMAL',1,'월세 받는 건물주 되기까지 직장인 7년의 투자 이력','월급 200 받으면서 어떻게 소형 아파트 3채까지 갔는지 연도별로 공개합니다.',4578,379,103,'ACTIVE','Y',1,'2026-04-01 17:22:12',NULL,'2026-04-10 13:11:19'),(37,7,'NOTICE',19,'[공지] 게이머스 GG 이용 규칙','핵·버그 악용 정보는 금지. 건전한 게임 이야기 나눠요.',140,2,1,'ACTIVE','Y',19,'2026-04-01 17:22:12',NULL,'2026-04-05 00:47:54'),(38,7,'NORMAL',19,'롤 챌린저 달성하고 느낀 것 (게임이 인생이었다)','다이아에서 챌린저까지 1년. 3000판 넘게 돌리면서 깨달은 멘탈·루틴·메타 분석.',4890,378,112,'ACTIVE','Y',19,'2026-04-01 17:22:12',NULL,NULL),(39,7,'NORMAL',2,'하루 2시간으로 랭크 올리는 방법 (직장인 게이머 가이드)','야근 없는 날 2시간. 효율적으로 실력 올리는 챔프 선택·복기 방법 공유합니다.',3120,234,67,'ACTIVE','Y',2,'2026-04-01 17:22:12',NULL,NULL),(40,7,'NORMAL',16,'게임 중독이라고 생각했는데 알고 보니 번아웃이었습니다','하루 10시간 게임하면서 현실 도피하던 시절 이야기. 솔직하게 씁니다.',5670,445,134,'ACTIVE','Y',16,'2026-04-01 17:22:12',NULL,NULL),(41,7,'NORMAL',19,'신작 게임 사기 전 꼭 확인해야 할 것들','스팀 환불 정책, 얼리 엑세스 함정, 리뷰 조작 판별법 총정리.',2780,198,54,'ACTIVE','Y',19,'2026-04-01 17:22:12',NULL,NULL),(42,7,'NORMAL',23,'e스포츠 선수 지망생이 알아야 할 현실 (전직 코치)','화려해 보이는 프로 게이머의 현실. 수입·수명·이후 커리어까지 솔직하게.',3450,267,78,'ACTIVE','Y',23,'2026-04-01 17:22:12',NULL,NULL),(43,8,'NOTICE',18,'[공지] 독서 클럽 이달의 책','이달의 책: 「아주 작은 습관의 힘」. 27일까지 후기 남겨주세요.',121,4,3,'ACTIVE','Y',18,'2026-04-01 17:22:12',NULL,NULL),(44,8,'NORMAL',18,'책 1000권 읽은 사람이 추천하는 인생책 10권','독서 편식 버리고 인문·과학·철학 넘나들며 읽은 책 중 삶이 달라진 책들.',3450,267,78,'ACTIVE','Y',18,'2026-04-01 17:22:12',NULL,NULL),(45,8,'NORMAL',17,'독서 기록 3년째 하는 방법 (노션 템플릿 공유)','읽은 책 기억하는 방법, 핵심 문장 정리법, 행동으로 연결하는 법 공유합니다.',2340,178,54,'ACTIVE','Y',17,'2026-04-01 17:22:12',NULL,NULL),(46,8,'NORMAL',18,'30대에 읽어야 할 재테크·경제 책 5권 (직접 효과 본 것만)','책 읽고 실제로 투자 방식이 바뀐 5권. 이론서 말고 실전서 위주로 골랐어요.',2890,212,61,'ACTIVE','Y',18,'2026-04-01 17:22:12',NULL,NULL),(47,8,'NORMAL',1,'소설 한 권이 번아웃을 치료했습니다','기술서만 읽다가 처음 소설 읽었을 때의 충격. 어떤 소설이었는지 후기 공유합니다.',1904,146,45,'ACTIVE','Y',1,'2026-04-01 17:22:12',NULL,'2026-04-10 13:06:58'),(48,8,'NORMAL',17,'책 안 읽히는 사람을 위한 독서 습관 만들기','하루 10분부터 시작한 독서가 하루 2시간이 되기까지. 제가 한 방법 공유합니다.',2126,167,51,'ACTIVE','Y',17,'2026-04-01 17:22:12',NULL,NULL),(49,9,'NOTICE',7,'[공지] 트래블 로그 이용 안내','광고성 여행사 홍보글은 삭제됩니다.',130,3,1,'ACTIVE','Y',7,'2026-04-01 17:22:12',NULL,NULL),(50,9,'NORMAL',7,'배낭 하나로 동남아 3개월 살아본 이야기 (총비용 공개)','월 60만원으로 태국·베트남·캄보디아 3개월. 숙소·식비·교통비 전부 공개합니다.',4230,312,89,'ACTIVE','Y',7,'2026-04-01 17:22:12',NULL,NULL),(51,9,'NORMAL',25,'히말라야 트레킹 혼자 다녀온 후기 (EBC 14일)','에베레스트 베이스캠프 14일 일정·준비물·비용·위험 요소 전부 정리했어요.',3782,289,78,'ACTIVE','Y',25,'2026-04-01 17:22:12',NULL,NULL),(52,9,'NORMAL',7,'항공권 최저가 잡는 방법 완전 정복 (5년간 연구 결과)','언제 사야 가장 싼지, 어떤 사이트 써야 하는지, 마일리지 활용법까지.',5120,421,112,'ACTIVE','Y',7,'2026-04-01 17:22:12',NULL,NULL),(53,9,'NORMAL',6,'혼자 유럽 여행 한 달, 여자 혼자 가도 안전할까?','10개국 혼자 다닌 솔직 후기. 무서웠던 순간, 안전 팁, 추천 도시 공유합니다.',4670,378,103,'ACTIVE','Y',6,'2026-04-01 17:22:12',NULL,NULL),(54,9,'NORMAL',24,'국내 숨은 여행지 15곳 (관광객 없는 진짜 여행)','SNS에 안 나오는 곳들만 골랐어요. 지역민만 아는 풍경들입니다.',3120,245,67,'ACTIVE','Y',24,'2026-04-01 17:22:12',NULL,NULL),(55,10,'NOTICE',11,'[공지] 뮤직 & 밴드 운영 안내','저작권 있는 악보·음원 무단 공유는 금지됩니다.',100,2,1,'ACTIVE','Y',11,'2026-04-01 17:22:12',NULL,NULL),(56,10,'NORMAL',11,'30살에 기타 독학 시작해서 공연까지 한 이야기','음악 지식 제로에서 1년 만에 홍대 공연까지. 독학 커리큘럼 공유합니다.',2340,178,54,'ACTIVE','Y',11,'2026-04-01 17:22:12',NULL,NULL),(57,10,'NORMAL',27,'밴드 하면서 배운 것들 (음악보다 사람이 문제)','악기보다 멤버 관리가 더 어렵더라고요. 밴드 운영 10년의 경험 공유합니다.',1890,145,43,'ACTIVE','Y',27,'2026-04-01 17:22:12',NULL,NULL),(58,10,'NORMAL',11,'집에서 홈레코딩 시작하는 방법 (50만원으로 세팅)','DAW·인터페이스·마이크. 최소 비용으로 꽤 쓸만한 홈스튜디오 만드는 법.',2120,167,51,'ACTIVE','Y',11,'2026-04-01 17:22:12',NULL,NULL),(59,10,'NORMAL',27,'유튜브 음악 채널 수익화까지 걸린 시간 (1년 기록)','구독자 0에서 수익화까지. 어떤 콘텐츠가 터졌는지 분석합니다.',2560,198,61,'ACTIVE','Y',27,'2026-04-01 17:22:12',NULL,NULL),(60,10,'NORMAL',17,'음악이 우울증 치료에 도움이 될까? 내 경험','약 대신 기타를 잡았습니다. 음악 치료의 효과를 직접 경험한 이야기.',3120,245,78,'ACTIVE','Y',17,'2026-04-01 17:22:12',NULL,NULL),(61,11,'NOTICE',6,'[공지] 포토 렌즈 운영 방침','타인 사진 무단 게시·출처 미표기는 금지됩니다.',110,3,1,'ACTIVE','Y',6,'2026-04-01 17:22:12',NULL,NULL),(62,11,'NORMAL',6,'입문자가 카메라 사기 전에 꼭 알아야 할 것 (5년차 조언)','미러리스 vs DSLR, 화소 함정, 렌즈가 더 중요한 이유. 돈 낭비 안 하는 법.',3450,267,78,'ACTIVE','Y',6,'2026-04-01 17:22:12',NULL,NULL),(63,11,'NORMAL',28,'스마트폰으로 DSLR 같은 사진 찍는 방법','카메라 없어도 됩니다. 구도·빛·타이밍. 장비보다 눈이 먼저입니다.',4120,334,89,'ACTIVE','Y',28,'2026-04-01 17:22:12',NULL,NULL),(64,11,'NORMAL',6,'사진작가로 부업 월 100 버는 방법','결혼식·증명사진·상업 사진. 어떻게 첫 고객 만들었는지 공유합니다.',3781,289,78,'ACTIVE','Y',6,'2026-04-01 17:22:12',NULL,NULL),(65,11,'NORMAL',28,'Lightroom 보정 전후 비교 (무료 프리셋 공유)','같은 사진인데 보정하면 완전 달라져요. 제가 쓰는 프리셋 무료로 드립니다.',5120,421,112,'ACTIVE','Y',28,'2026-04-01 17:22:12',NULL,NULL),(66,11,'NORMAL',23,'필름 카메라로 돌아온 이유 (디지털 세대의 아날로그 경험)','일부러 느리게 찍는다는 게 무슨 의미인지 필름 사용 6개월 후기.',2340,178,54,'ACTIVE','Y',23,'2026-04-01 17:22:12',NULL,NULL),(67,12,'NOTICE',10,'[공지] 쿡방 클럽 이용 안내','상업 광고성 홍보글은 사전 허가 필요합니다.',102,2,1,'ACTIVE','Y',10,'2026-04-01 17:22:12',NULL,NULL),(68,12,'NORMAL',10,'요리 잘하는 사람들의 공통점 (셰프 10년이 알려주는 비밀)','레시피 외우는 게 아니에요. 비율과 원리를 이해하면 뭐든 만들 수 있습니다.',3120,245,67,'ACTIVE','Y',10,'2026-04-01 17:22:12',NULL,NULL),(69,12,'NORMAL',26,'1만원으로 4인 가족 한 끼 해결하는 레시피 5개','마트 세일 식재료로 만드는 진짜 맛있는 요리. 가성비 끝판왕.',4560,367,98,'ACTIVE','Y',26,'2026-04-01 17:22:12',NULL,NULL),(70,12,'NORMAL',10,'집에서 미슐랭 레스토랑 스테이크 굽는 방법','팬·온도·레스팅. 3가지만 지키면 집에서도 레스토랑 맛 납니다.',5670,456,123,'ACTIVE','Y',10,'2026-04-01 17:22:12',NULL,NULL),(71,12,'NORMAL',9,'혼자 사는 사람을 위한 밀프렙 주간 루틴','일요일 2시간으로 한 주 식사 해결하는 방법. 재료·레시피·보관법 공유.',3450,267,78,'ACTIVE','Y',9,'2026-04-01 17:22:12',NULL,NULL),(72,12,'NORMAL',26,'편의점 재료로 만드는 진짜 맛있는 요리 7가지','편의점 가면 뭔가 있긴 한데 뭘 해야 할지 모르겠다는 분들을 위해.',4122,334,89,'ACTIVE','Y',26,'2026-04-01 17:22:12',NULL,NULL),(73,13,'NOTICE',12,'[공지] 커리어 업 이용 안내','특정 기업·개인 비방은 금지됩니다.',130,4,2,'ACTIVE','Y',12,'2026-04-01 17:22:12',NULL,NULL),(74,13,'NORMAL',12,'이직 협상에서 연봉 30% 올린 방법 (실전 대화 스크립트)','연봉 협상은 기술입니다. 제가 실제로 한 말, 반박에 어떻게 대응했는지 전부 공개합니다.',6782,535,167,'ACTIVE','Y',12,'2026-04-01 17:22:12',NULL,'2026-04-19 05:44:18'),(75,13,'NORMAL',3,'나쁜 상사 때문에 퇴사하기 전에 해볼 것들','관계 개선 시도, 인사팀 활용, 그래도 안 될 때 퇴사하는 타이밍. 경험 공유합니다.',5342,421,134,'ACTIVE','Y',3,'2026-04-01 17:22:12',NULL,NULL),(76,13,'NORMAL',13,'면접관이 싫어하는 대답 TOP 10 (HR 담당자 관점)','면접 1000번 이상 본 HR 담당자가 실제로 탈락 결정한 이유들.',4890,389,112,'ACTIVE','Y',13,'2026-04-01 17:22:12',NULL,NULL),(77,13,'NORMAL',12,'연봉 1억 받는 사람들의 공통점 (데이터 분석)','링크드인 데이터, 채용 공고 분석, 실제 인터뷰. 스펙보다 중요한 게 있습니다.',5120,412,123,'ACTIVE','Y',12,'2026-04-01 17:22:12',NULL,NULL),(78,13,'NORMAL',2,'사수 없는 신입의 3년 생존기','아무도 안 가르쳐줬지만 어떻게든 살아남은 방법. 주도적으로 배운 것들 공유합니다.',3780,298,87,'ACTIVE','Y',2,'2026-04-01 17:22:12',NULL,NULL),(79,14,'NOTICE',21,'[공지] 부자 되는 길 운영 방침','투자 권유·리딩방 홍보는 즉시 삭제됩니다.',154,4,2,'ACTIVE','Y',21,'2026-04-01 17:22:12',NULL,NULL),(80,14,'NORMAL',21,'월급 300으로 10년 만에 순자산 10억 만든 방법','특별한 투자 아닙니다. 저축률·복리·시간의 마법. 연도별 포트폴리오 공개합니다.',7908,623,189,'ACTIVE','Y',21,'2026-04-01 17:22:12',NULL,NULL),(81,14,'NORMAL',9,'주식 vs 부동산, 30년 데이터로 보면 답이 나온다','감이 아닌 데이터로 비교했습니다. 어떤 게 더 나은지는 개인마다 다른 이유.',5673,445,134,'ACTIVE','Y',9,'2026-04-01 17:22:12',NULL,NULL),(82,14,'NORMAL',21,'ETF 하나로 노후 준비하는 방법 (월 30만원으로 가능)','S&P500·나스닥·전세계 분산. 어떤 ETF를 어떻게 사야 하는지 실전 가이드.',4560,356,103,'ACTIVE','Y',21,'2026-04-01 17:22:12',NULL,NULL),(83,14,'NORMAL',5,'코인 폭락 후 주식으로 갈아탄 이유 (포트폴리오 대공개)','코인 500만원 → 300만원 됐을 때 주식 전환 결정. 지금 수익률 공개합니다.',3892,298,87,'ACTIVE','Y',5,'2026-04-01 17:22:12',NULL,NULL),(84,14,'NORMAL',20,'절세 모르면 손해 보는 것들 (직장인 세금 총정리)','연말정산·ISA·IRP·주택청약. 연봉 5000이면 100만원은 돌려받을 수 있어요.',6122,489,145,'ACTIVE','Y',20,'2026-04-01 17:22:12',NULL,NULL),(85,15,'NOTICE',1,'[공지] 그로스 랩 운영 안내','근거 없는 자기계발 정보는 삭제됩니다. 실증적인 이야기만 나눠요.',113,2,1,'ACTIVE','Y',1,'2026-04-01 17:22:12',NULL,'2026-04-05 00:38:42'),(86,15,'NORMAL',1,'아침 5시 기상 1년 후 삶이 바뀐 것들 (데이터 포함)','억지로 일어나던 사람이 자연스럽게 일어나게 된 과정. 수면·생산성·멘탈 변화 공유.',4560,356,103,'ACTIVE','Y',1,'2026-04-01 17:22:12',NULL,NULL),(87,15,'NORMAL',18,'독서·운동·명상 동시에 하는 사람의 루틴 공개','하루 24시간으로 어떻게 다 하냐고요? 루틴의 핵심은 순서입니다.',3780,289,78,'ACTIVE','Y',18,'2026-04-01 17:22:12',NULL,NULL),(88,15,'NORMAL',22,'요가 5년, 몸보다 마음이 먼저 바뀐 이야기','유연성이 아니라 마음 챙김이었어요. 어떻게 멘탈이 강해졌는지 공유합니다.',3120,245,67,'ACTIVE','Y',22,'2026-04-01 17:22:12',NULL,NULL),(89,15,'NORMAL',1,'작심삼일을 200번 반복하다 드디어 습관 만든 방법','의지력 문제가 아니었어요. 환경 설계가 전부였습니다.',5340,421,123,'ACTIVE','Y',1,'2026-04-01 17:22:12',NULL,NULL),(90,15,'NORMAL',17,'책 속 지식을 실제 행동으로 연결하는 방법','읽기만 하면 소용없어요. 어떻게 읽은 것을 삶에 적용했는지 구체적으로 씁니다.',2894,224,61,'ACTIVE','Y',17,'2026-04-01 17:22:12',NULL,'2026-04-05 00:39:31'),(91,8,'NORMAL',1,'ㄷ','<p>ㄷ</p>',0,0,0,'ACTIVE','Y',1,'2026-04-14 17:18:27',NULL,NULL);
+/*!40000 ALTER TABLE `tbl_comm_post` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `tbl_comm_post_cmt`
+--
+
+DROP TABLE IF EXISTS `tbl_comm_post_cmt`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `tbl_comm_post_cmt` (
+  `COMM_POST_CMT_SN` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '댓글 SN (PK)',
+  `COMM_POST_SN` bigint(20) NOT NULL COMMENT '커뮤니티 게시글 SN (TBL_COMM_POST FK)',
+  `USER_SN` bigint(20) NOT NULL COMMENT '작성자 SN (TBL_USER FK)',
+  `PRNT_CMT_SN` bigint(20) DEFAULT NULL COMMENT '부모 댓글 SN — NULL이면 최상위',
+  `CMT_CNTNT` text NOT NULL COMMENT '댓글 내용',
+  `LIKE_CNT` int(11) NOT NULL DEFAULT 0 COMMENT '좋아요수 (캐시)',
+  `STAT` varchar(20) NOT NULL DEFAULT 'ACTIVE' COMMENT 'ACTIVE / DELETED / BLOCKED',
+  `ACTVTN_YN` char(1) NOT NULL DEFAULT 'Y' COMMENT '활성화 여부',
+  `CREATR_SN` bigint(20) NOT NULL COMMENT '생성자 SN',
+  `FRST_CRT_DT` datetime NOT NULL DEFAULT current_timestamp() COMMENT '최초 생성일시',
+  `MDFR_SN` bigint(20) DEFAULT NULL COMMENT '수정자 SN',
+  `MDFCN_DT` datetime DEFAULT NULL ON UPDATE current_timestamp() COMMENT '수정일시',
+  PRIMARY KEY (`COMM_POST_CMT_SN`),
+  KEY `IDX_COMM_POST_CMT_POST` (`COMM_POST_SN`),
+  KEY `IDX_COMM_POST_CMT_PRNT` (`PRNT_CMT_SN`)
+) ENGINE=InnoDB AUTO_INCREMENT=49 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='커뮤니티 게시글 댓글';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `tbl_comm_post_cmt`
+--
+
+LOCK TABLES `tbl_comm_post_cmt` WRITE;
+/*!40000 ALTER TABLE `tbl_comm_post_cmt` DISABLE KEYS */;
+INSERT INTO `tbl_comm_post_cmt` VALUES (1,2,4,NULL,'스톡옵션 제외하면 결국 시장 평균이라는 거 다들 알면서 포장하는 거죠 뭐',34,'ACTIVE','Y',4,'2026-04-01 17:22:12',NULL,NULL),(2,2,12,1,'맞아요. 현금 연봉 기준으로는 대기업 시니어가 오히려 높을 수도 있어요',21,'ACTIVE','Y',12,'2026-04-01 17:22:12',NULL,NULL),(3,2,3,NULL,'저 작년에 찍었는데 스타트업 아니에요. 빅테크 이직이 답입니다',28,'ACTIVE','Y',3,'2026-04-01 17:22:12',NULL,NULL),(4,2,2,NULL,'5년차면 이제 시니어 도전해야죠. 점프 타이밍이에요',19,'ACTIVE','Y',2,'2026-04-01 17:22:12',NULL,NULL),(5,3,2,NULL,'월 300이면 세금 떼고 220 정도인데, 안정성 생각하면 좀 더 키우고 나오는 게 낫지 않을까요',45,'ACTIVE','Y',2,'2026-04-01 17:22:12',NULL,NULL),(6,3,4,5,'맞아요. 6개월치 생활비 모아두고 결정하는 게 맞습니다',22,'ACTIVE','Y',4,'2026-04-01 17:22:12',NULL,NULL),(7,3,12,NULL,'저도 비슷한 상황인데 못 나가겠어요. 300이 유지된다는 보장이 없잖아요',38,'ACTIVE','Y',12,'2026-04-01 17:22:12',NULL,NULL),(8,3,13,NULL,'Product Hunt 어떻게 1위 했는지 그게 더 궁금한데요ㅋㅋ',31,'ACTIVE','Y',13,'2026-04-01 17:22:12',NULL,NULL),(9,3,3,8,'새벽에 론칭하고 커뮤니티 마케팅이요. 따로 글 써드릴게요',18,'ACTIVE','Y',3,'2026-04-01 17:22:12',NULL,NULL),(10,8,2,NULL,'결국 가장 위험한 건 AI를 두려워하기만 하고 안 써본 사람이라고 생각해요',56,'ACTIVE','Y',2,'2026-04-01 17:22:12',NULL,NULL),(11,8,16,10,'100% 동의. 이미 격차가 벌어지고 있는 게 느껴져요',34,'ACTIVE','Y',16,'2026-04-01 17:22:12',NULL,NULL),(12,8,4,NULL,'LLM 아키텍처 이해하는 사람이 결국 살아남는다고 봐요',42,'ACTIVE','Y',4,'2026-04-01 17:22:12',NULL,NULL),(13,8,23,NULL,'유튜브 크리에이터 입장에서 Sora는 진짜 위협입니다. 지금도 대체되고 있어요',38,'ACTIVE','Y',23,'2026-04-01 17:22:12',NULL,NULL),(14,15,30,NULL,'온체인 데이터는 좋은데 거시경제 변수 빠진 것 같아요. 미국 금리가 변수 아닐까요?',45,'ACTIVE','Y',30,'2026-04-01 17:22:12',NULL,NULL),(15,15,5,14,'맞아요. 금리 인하 시나리오 같이 넣어야 완성되는 분석이긴 해요',28,'ACTIVE','Y',5,'2026-04-01 17:22:12',NULL,NULL),(16,15,9,NULL,'2020년에도 이 말 했고 2021년에도 이 말 했잖아요ㅋㅋ 그때마다 틀리지 않았긴 하지만',52,'ACTIVE','Y',9,'2026-04-01 17:22:12',NULL,NULL),(17,15,21,NULL,'반감기 사이클 무시하는 사람들이 항상 늦게 타요',34,'ACTIVE','Y',21,'2026-04-01 17:22:12',NULL,NULL),(18,15,30,NULL,'데이터 공유 감사합니다. 개인적으로 12만 달러는 볼 것 같아요',29,'ACTIVE','Y',30,'2026-04-01 17:22:12',NULL,NULL),(19,20,29,NULL,'덱 공유 정말 감사합니다. 문제 정의 슬라이드가 특히 인상적이었어요',67,'ACTIVE','Y',29,'2026-04-01 17:22:12',NULL,NULL),(20,20,13,19,'저도 보면서 우리 덱이랑 비교했는데 차이가 확 느껴졌어요. 바로 수정했습니다',34,'ACTIVE','Y',13,'2026-04-01 17:22:12',NULL,NULL),(21,20,3,NULL,'투자사 이름 공개 가능한가요? 시드 단계 투자 활발한 곳이 어딘지 알고 싶어서',41,'ACTIVE','Y',3,'2026-04-01 17:22:12',NULL,NULL),(22,20,15,NULL,'팀 구성 부분도 자세히 써주실 수 있을까요? 2명으로 어떻게 설득했는지',38,'ACTIVE','Y',15,'2026-04-01 17:22:12',NULL,NULL),(23,21,3,NULL,'공동창업자 갈등 부분 더 자세히 써주실 수 있나요? 지금 저도 비슷한 상황이라서',62,'ACTIVE','Y',3,'2026-04-01 17:22:12',NULL,NULL),(24,21,29,23,'지분 계약을 처음부터 명확하게 안 한 게 제일 컸어요. 따로 글 쓸게요',47,'ACTIVE','Y',29,'2026-04-01 17:22:12',NULL,NULL),(25,21,2,NULL,'폐업한 게 실패가 아니라 이런 글 쓸 수 있는 게 진짜 자산이에요. 감사합니다',89,'ACTIVE','Y',2,'2026-04-01 17:22:12',NULL,NULL),(26,21,13,NULL,'MAU 10만인데 왜 망했는지 수익화 파트 더 자세히 보고 싶어요',34,'ACTIVE','Y',13,'2026-04-01 17:22:12',NULL,NULL),(27,28,8,NULL,'루틴 공유 감사해요. 저도 비슷하게 했는데 식단을 같이 바꿨더니 효과가 훨씬 좋았어요',52,'ACTIVE','Y',8,'2026-04-01 17:22:12',NULL,NULL),(28,28,22,27,'식단 어떻게 바꾸셨어요? 운동만으로는 한계 느끼고 있어서요',28,'ACTIVE','Y',22,'2026-04-01 17:22:12',NULL,NULL),(29,28,25,NULL,'맨몸 운동 초보인데 구체적인 루틴 공유 가능할까요?',41,'ACTIVE','Y',25,'2026-04-01 17:22:12',NULL,NULL),(30,28,24,NULL,'1년 꾸준히 한 게 진짜 대단한 거예요. 저도 시작해봐야겠네요',34,'ACTIVE','Y',24,'2026-04-01 17:22:12',NULL,NULL),(31,34,9,NULL,'전입신고 하기 전에 확정일자 받는 것도 꼭 추가해주세요. 순서가 중요해요',67,'ACTIVE','Y',9,'2026-04-01 17:22:12',NULL,NULL),(32,34,21,31,'맞아요. 전입신고 당일 확정일자 같이 받아야 보호 효력이 생깁니다',45,'ACTIVE','Y',21,'2026-04-01 17:22:12',NULL,NULL),(33,34,20,NULL,'등기부등본 근저당 설정 금액 확인이 제일 기본이고 중요한데 모르는 분들 너무 많아요',58,'ACTIVE','Y',20,'2026-04-01 17:22:12',NULL,NULL),(34,34,1,NULL,'직접 피해 당하신 분이 쓰셨다니 더 신뢰가 가요. 주변에 많이 공유할게요',43,'ACTIVE','Y',1,'2026-04-01 17:22:12',NULL,NULL),(35,74,2,NULL,'스크립트 공유 진짜 감사해요. 저는 협상 시작도 못 하고 제시하는 대로 받았거든요',78,'ACTIVE','Y',2,'2026-04-01 17:22:12',NULL,NULL),(36,74,12,35,'협상 못 하는 게 능력 없는 게 아니에요. 그냥 배운 적이 없는 거예요. 저도 처음엔 그랬어요',45,'ACTIVE','Y',12,'2026-04-01 17:22:12',NULL,NULL),(37,74,3,NULL,'오퍼 받은 후 72시간 기다리는 전략은 진짜 효과 있어요. 실제로 해봤습니다',56,'ACTIVE','Y',3,'2026-04-01 17:22:12',NULL,NULL),(38,74,13,NULL,'HR 입장에서 말씀드리면 협상 하는 게 나쁜 인상 안 줘요. 오히려 자기 가치 아는 사람으로 봐요',67,'ACTIVE','Y',13,'2026-04-01 17:22:12',NULL,NULL),(39,74,15,NULL,'연봉 외에 복지·재택·스톡 같은 비금전적 요소도 협상 가능한 거 모르는 분들 많아요',42,'ACTIVE','Y',15,'2026-04-01 17:22:12',NULL,NULL),(40,80,9,NULL,'저축률이 핵심인 것 같아요. 연봉 얼마였는지보다 얼마나 아꼈는지가 차이를 만드는 거죠',89,'ACTIVE','Y',9,'2026-04-01 17:22:12',NULL,NULL),(41,80,5,NULL,'코인·주식 비중은 어떻게 가져가셨나요? 현금 비중이 궁금해요',45,'ACTIVE','Y',5,'2026-04-01 17:22:12',NULL,NULL),(42,80,20,NULL,'부동산은 언제 처음 들어가셨어요? 지금 같은 시장에서도 가능할까요?',56,'ACTIVE','Y',20,'2026-04-01 17:22:12',NULL,NULL),(43,80,21,NULL,'10년이라는 시간이 주는 교훈이네요. 빨리 시작하는 게 제일 중요한 것 같아요',67,'ACTIVE','Y',21,'2026-04-01 17:22:12',NULL,NULL),(44,47,1,NULL,'d',0,'ACTIVE','Y',1,'2026-04-02 18:20:58',NULL,NULL),(45,47,1,44,'dd',0,'ACTIVE','Y',1,'2026-04-02 18:21:03',NULL,NULL),(46,34,1,NULL,'gkgkgk',0,'ACTIVE','Y',1,'2026-04-21 13:39:06',NULL,NULL),(47,34,1,46,'아니야',0,'ACTIVE','Y',1,'2026-04-21 13:39:12',NULL,NULL),(48,15,1,NULL,'안녕하세요',0,'ACTIVE','Y',1,'2026-04-22 07:27:13',NULL,NULL);
+/*!40000 ALTER TABLE `tbl_comm_post_cmt` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `tbl_comm_post_cmt_react`
+--
+
+DROP TABLE IF EXISTS `tbl_comm_post_cmt_react`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `tbl_comm_post_cmt_react` (
+  `CMT_REACT_SN` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '반응 SN (PK)',
+  `COMM_POST_CMT_SN` bigint(20) NOT NULL COMMENT '댓글 SN (TBL_COMM_POST_CMT FK)',
+  `USER_SN` bigint(20) NOT NULL COMMENT '사용자 SN (TBL_USER FK)',
+  `REACT_TYP` varchar(10) NOT NULL COMMENT 'LIKE / LOVE / HAHA / WOW / SAD / ANGRY',
+  `ACTVTN_YN` char(1) NOT NULL DEFAULT 'Y' COMMENT '활성화 여부',
+  `CREATR_SN` bigint(20) NOT NULL COMMENT '생성자 SN',
+  `FRST_CRT_DT` datetime NOT NULL DEFAULT current_timestamp() COMMENT '최초 생성일시',
+  `MDFR_SN` bigint(20) DEFAULT NULL COMMENT '수정자 SN',
+  `MDFCN_DT` datetime DEFAULT NULL ON UPDATE current_timestamp() COMMENT '수정일시',
+  PRIMARY KEY (`CMT_REACT_SN`),
+  UNIQUE KEY `UK_COMM_CMT_REACT` (`COMM_POST_CMT_SN`,`USER_SN`)
+) ENGINE=InnoDB AUTO_INCREMENT=28 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='커뮤니티 댓글 반응';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `tbl_comm_post_cmt_react`
+--
+
+LOCK TABLES `tbl_comm_post_cmt_react` WRITE;
+/*!40000 ALTER TABLE `tbl_comm_post_cmt_react` DISABLE KEYS */;
+INSERT INTO `tbl_comm_post_cmt_react` VALUES (1,3,31,'LIKE','Y',31,'2026-04-01 17:31:52',NULL,NULL),(2,3,34,'LIKE','Y',34,'2026-04-01 17:31:52',NULL,NULL),(3,3,40,'LIKE','Y',40,'2026-04-01 17:31:52',NULL,NULL),(4,10,32,'LIKE','Y',32,'2026-04-01 17:31:52',NULL,NULL),(5,10,39,'LIKE','Y',39,'2026-04-01 17:31:52',NULL,NULL),(6,10,36,'LIKE','Y',36,'2026-04-01 17:31:52',NULL,NULL),(7,10,1,'LIKE','Y',1,'2026-04-01 17:31:52',NULL,NULL),(8,16,36,'HAHA','Y',36,'2026-04-01 17:31:52',NULL,NULL),(9,16,42,'HAHA','Y',42,'2026-04-01 17:31:52',NULL,NULL),(10,16,1,'LIKE','Y',1,'2026-04-01 17:31:52',NULL,NULL),(11,25,31,'LOVE','Y',31,'2026-04-01 17:31:52',NULL,NULL),(12,25,34,'LIKE','Y',34,'2026-04-01 17:31:52',NULL,NULL),(13,25,40,'LOVE','Y',40,'2026-04-01 17:31:52',NULL,NULL),(14,25,42,'LIKE','Y',42,'2026-04-01 17:31:52',NULL,NULL),(15,35,31,'LIKE','Y',31,'2026-04-01 17:31:52',NULL,NULL),(16,35,35,'LIKE','Y',35,'2026-04-01 17:31:52',NULL,NULL),(17,35,37,'LIKE','Y',37,'2026-04-01 17:31:52',NULL,NULL),(18,35,1,'LIKE','Y',1,'2026-04-01 17:31:52',NULL,NULL),(19,38,31,'LIKE','Y',31,'2026-04-01 17:31:52',NULL,NULL),(20,38,34,'LIKE','Y',34,'2026-04-01 17:31:52',NULL,NULL),(21,38,35,'LIKE','Y',35,'2026-04-01 17:31:52',NULL,NULL),(22,38,42,'LIKE','Y',42,'2026-04-01 17:31:52',NULL,NULL),(23,38,1,'LIKE','Y',1,'2026-04-01 17:31:52',NULL,NULL),(24,40,36,'LIKE','Y',36,'2026-04-01 17:31:52',NULL,NULL),(25,40,42,'LIKE','Y',42,'2026-04-01 17:31:52',NULL,NULL),(26,40,43,'LIKE','Y',43,'2026-04-01 17:31:52',NULL,NULL),(27,40,1,'LIKE','Y',1,'2026-04-01 17:31:52',NULL,NULL);
+/*!40000 ALTER TABLE `tbl_comm_post_cmt_react` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `tbl_comm_post_like`
+--
+
+DROP TABLE IF EXISTS `tbl_comm_post_like`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `tbl_comm_post_like` (
+  `COMM_POST_LIKE_SN` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '좋아요 SN (PK)',
+  `COMM_POST_SN` bigint(20) NOT NULL COMMENT '커뮤니티 게시글 SN (TBL_COMM_POST FK)',
+  `USER_SN` bigint(20) NOT NULL COMMENT '사용자 SN (TBL_USER FK)',
+  `LIKE_TYP` varchar(4) NOT NULL DEFAULT 'UP' COMMENT 'UP / DOWN',
+  `ACTVTN_YN` char(1) NOT NULL DEFAULT 'Y' COMMENT '활성화 여부',
+  `CREATR_SN` bigint(20) NOT NULL COMMENT '생성자 SN',
+  `FRST_CRT_DT` datetime NOT NULL DEFAULT current_timestamp() COMMENT '최초 생성일시',
+  `MDFR_SN` bigint(20) DEFAULT NULL COMMENT '수정자 SN',
+  `MDFCN_DT` datetime DEFAULT NULL ON UPDATE current_timestamp() COMMENT '수정일시',
+  PRIMARY KEY (`COMM_POST_LIKE_SN`),
+  UNIQUE KEY `UK_COMM_POST_LIKE_USR` (`COMM_POST_SN`,`USER_SN`)
+) ENGINE=InnoDB AUTO_INCREMENT=68 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='커뮤니티 게시글 좋아요';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `tbl_comm_post_like`
+--
+
+LOCK TABLES `tbl_comm_post_like` WRITE;
+/*!40000 ALTER TABLE `tbl_comm_post_like` DISABLE KEYS */;
+INSERT INTO `tbl_comm_post_like` VALUES (1,3,4,'UP','Y',4,'2026-04-01 17:22:12',NULL,NULL),(2,3,12,'UP','Y',12,'2026-04-01 17:22:12',NULL,NULL),(3,3,13,'UP','Y',13,'2026-04-01 17:22:12',NULL,NULL),(4,3,16,'UP','Y',16,'2026-04-01 17:22:12',NULL,NULL),(5,3,23,'UP','Y',23,'2026-04-01 17:22:12',NULL,NULL),(6,5,2,'UP','Y',2,'2026-04-01 17:22:12',NULL,NULL),(7,5,4,'UP','Y',4,'2026-04-01 17:22:12',NULL,NULL),(8,5,13,'UP','Y',13,'2026-04-01 17:22:12',NULL,NULL),(9,5,15,'UP','Y',15,'2026-04-01 17:22:12',NULL,NULL),(10,5,16,'UP','Y',16,'2026-04-01 17:22:12',NULL,NULL),(11,10,4,'UP','Y',4,'2026-04-01 17:22:13',NULL,NULL),(12,10,16,'UP','Y',16,'2026-04-01 17:22:13',NULL,NULL),(13,10,15,'UP','Y',15,'2026-04-01 17:22:13',NULL,NULL),(14,10,23,'UP','Y',23,'2026-04-01 17:22:13',NULL,NULL),(15,10,9,'UP','Y',9,'2026-04-01 17:22:13',NULL,NULL),(16,15,9,'UP','Y',9,'2026-04-01 17:22:13',NULL,NULL),(17,15,30,'UP','Y',30,'2026-04-01 17:22:13',NULL,NULL),(18,15,21,'UP','Y',21,'2026-04-01 17:22:13',NULL,NULL),(19,15,3,'UP','Y',3,'2026-04-01 17:22:13',NULL,NULL),(20,15,1,'DOWN','Y',1,'2026-04-01 17:22:13',NULL,NULL),(21,15,2,'DOWN','Y',2,'2026-04-01 17:22:13',NULL,NULL),(22,16,5,'UP','Y',5,'2026-04-01 17:22:13',NULL,NULL),(23,16,9,'UP','Y',9,'2026-04-01 17:22:13',NULL,NULL),(24,16,21,'UP','Y',21,'2026-04-01 17:22:13',NULL,NULL),(25,16,1,'UP','Y',1,'2026-04-01 17:22:13',NULL,NULL),(26,16,2,'UP','Y',2,'2026-04-01 17:22:13',NULL,NULL),(27,21,3,'UP','Y',3,'2026-04-01 17:22:13',NULL,NULL),(28,21,2,'UP','Y',2,'2026-04-01 17:22:13',NULL,NULL),(29,21,13,'UP','Y',13,'2026-04-01 17:22:13',NULL,NULL),(30,21,15,'UP','Y',15,'2026-04-01 17:22:13',NULL,NULL),(31,28,8,'UP','Y',8,'2026-04-01 17:22:13',NULL,NULL),(32,28,22,'UP','Y',22,'2026-04-01 17:22:13',NULL,NULL),(33,28,25,'UP','Y',25,'2026-04-01 17:22:13',NULL,NULL),(34,28,7,'UP','Y',7,'2026-04-01 17:22:13',NULL,NULL),(35,34,9,'UP','Y',9,'2026-04-01 17:22:13',NULL,NULL),(36,34,21,'UP','Y',21,'2026-04-01 17:22:13',NULL,NULL),(37,34,1,'DOWN','Y',1,'2026-04-01 17:22:13',NULL,NULL),(38,34,3,'UP','Y',3,'2026-04-01 17:22:13',NULL,NULL),(39,34,2,'UP','Y',2,'2026-04-01 17:22:13',NULL,NULL),(40,74,2,'UP','Y',2,'2026-04-01 17:22:13',NULL,NULL),(41,74,3,'UP','Y',3,'2026-04-01 17:22:13',NULL,NULL),(42,74,13,'UP','Y',13,'2026-04-01 17:22:13',NULL,NULL),(43,74,15,'UP','Y',15,'2026-04-01 17:22:13',NULL,NULL),(44,74,29,'UP','Y',29,'2026-04-01 17:22:13',NULL,NULL),(45,80,9,'UP','Y',9,'2026-04-01 17:22:13',NULL,NULL),(46,80,5,'UP','Y',5,'2026-04-01 17:22:13',NULL,NULL),(47,80,20,'UP','Y',20,'2026-04-01 17:22:13',NULL,NULL),(48,80,3,'UP','Y',3,'2026-04-01 17:22:13',NULL,NULL),(49,80,1,'UP','Y',1,'2026-04-01 17:22:13',NULL,NULL),(51,31,1,'UP','Y',1,'2026-04-03 14:39:53',NULL,NULL),(53,7,1,'UP','Y',1,'2026-04-04 01:59:01',NULL,NULL),(54,85,1,'DOWN','Y',1,'2026-04-05 00:38:31',NULL,NULL),(55,90,1,'UP','Y',1,'2026-04-05 00:39:31',NULL,NULL),(57,37,1,'DOWN','Y',1,'2026-04-05 00:47:54',NULL,NULL),(61,47,52,'UP','Y',52,'2026-04-10 13:06:58',NULL,NULL),(65,21,52,'UP','Y',52,'2026-04-10 13:08:22',NULL,NULL),(66,36,52,'UP','Y',52,'2026-04-10 13:11:19',NULL,NULL),(67,74,1,'UP','Y',1,'2026-04-19 05:44:18',NULL,NULL);
+/*!40000 ALTER TABLE `tbl_comm_post_like` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `tbl_comm_post_tag`
+--
+
+DROP TABLE IF EXISTS `tbl_comm_post_tag`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `tbl_comm_post_tag` (
+  `COMM_POST_TAG_SN` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '커뮤니티 게시글-태그 SN (PK)',
+  `COMM_POST_SN` bigint(20) NOT NULL COMMENT '커뮤니티 게시글 SN (TBL_COMM_POST FK)',
+  `TAG_SN` bigint(20) NOT NULL COMMENT '태그 SN (TBL_TAG FK)',
+  `ACTVTN_YN` char(1) NOT NULL DEFAULT 'Y' COMMENT '활성화 여부',
+  `CREATR_SN` bigint(20) NOT NULL COMMENT '생성자 SN',
+  `FRST_CRT_DT` datetime NOT NULL DEFAULT current_timestamp() COMMENT '최초 생성일시',
+  `MDFR_SN` bigint(20) DEFAULT NULL COMMENT '수정자 SN',
+  `MDFCN_DT` datetime DEFAULT NULL ON UPDATE current_timestamp() COMMENT '수정일시',
+  PRIMARY KEY (`COMM_POST_TAG_SN`),
+  UNIQUE KEY `UK_COMM_POST_TAG` (`COMM_POST_SN`,`TAG_SN`)
+) ENGINE=InnoDB AUTO_INCREMENT=118 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='커뮤니티 게시글 태그 매핑';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `tbl_comm_post_tag`
+--
+
+LOCK TABLES `tbl_comm_post_tag` WRITE;
+/*!40000 ALTER TABLE `tbl_comm_post_tag` DISABLE KEYS */;
+INSERT INTO `tbl_comm_post_tag` VALUES (1,2,1,'Y',2,'2026-04-01 17:22:13',NULL,NULL),(2,2,17,'Y',2,'2026-04-01 17:22:13',NULL,NULL),(3,3,1,'Y',3,'2026-04-01 17:22:13',NULL,NULL),(4,3,6,'Y',3,'2026-04-01 17:22:13',NULL,NULL),(5,3,5,'Y',3,'2026-04-01 17:22:13',NULL,NULL),(6,4,1,'Y',4,'2026-04-01 17:22:13',NULL,NULL),(7,4,19,'Y',4,'2026-04-01 17:22:13',NULL,NULL),(8,5,1,'Y',12,'2026-04-01 17:22:13',NULL,NULL),(9,5,17,'Y',12,'2026-04-01 17:22:13',NULL,NULL),(10,5,18,'Y',12,'2026-04-01 17:22:13',NULL,NULL),(11,6,1,'Y',2,'2026-04-01 17:22:13',NULL,NULL),(12,6,17,'Y',2,'2026-04-01 17:22:13',NULL,NULL),(13,8,2,'Y',4,'2026-04-01 17:22:13',NULL,NULL),(14,8,19,'Y',4,'2026-04-01 17:22:13',NULL,NULL),(15,9,2,'Y',16,'2026-04-01 17:22:13',NULL,NULL),(16,9,20,'Y',16,'2026-04-01 17:22:13',NULL,NULL),(17,10,2,'Y',2,'2026-04-01 17:22:13',NULL,NULL),(18,10,19,'Y',2,'2026-04-01 17:22:13',NULL,NULL),(19,10,20,'Y',2,'2026-04-01 17:22:13',NULL,NULL),(20,11,2,'Y',4,'2026-04-01 17:22:13',NULL,NULL),(21,11,19,'Y',4,'2026-04-01 17:22:13',NULL,NULL),(22,12,2,'Y',23,'2026-04-01 17:22:13',NULL,NULL),(23,14,3,'Y',5,'2026-04-01 17:22:13',NULL,NULL),(24,14,11,'Y',5,'2026-04-01 17:22:13',NULL,NULL),(25,15,3,'Y',30,'2026-04-01 17:22:13',NULL,NULL),(26,15,11,'Y',30,'2026-04-01 17:22:13',NULL,NULL),(27,16,3,'Y',9,'2026-04-01 17:22:13',NULL,NULL),(28,16,4,'Y',9,'2026-04-01 17:22:13',NULL,NULL),(29,16,11,'Y',9,'2026-04-01 17:22:13',NULL,NULL),(30,17,3,'Y',5,'2026-04-01 17:22:13',NULL,NULL),(31,17,11,'Y',5,'2026-04-01 17:22:13',NULL,NULL),(32,18,3,'Y',30,'2026-04-01 17:22:13',NULL,NULL),(33,18,11,'Y',30,'2026-04-01 17:22:13',NULL,NULL),(34,20,5,'Y',3,'2026-04-01 17:22:13',NULL,NULL),(35,20,11,'Y',3,'2026-04-01 17:22:13',NULL,NULL),(36,21,5,'Y',29,'2026-04-01 17:22:13',NULL,NULL),(37,22,5,'Y',2,'2026-04-01 17:22:13',NULL,NULL),(38,22,17,'Y',2,'2026-04-01 17:22:13',NULL,NULL),(39,23,5,'Y',3,'2026-04-01 17:22:13',NULL,NULL),(40,23,6,'Y',3,'2026-04-01 17:22:13',NULL,NULL),(41,24,5,'Y',29,'2026-04-01 17:22:13',NULL,NULL),(42,24,6,'Y',29,'2026-04-01 17:22:13',NULL,NULL),(43,26,9,'Y',8,'2026-04-01 17:22:13',NULL,NULL),(44,26,10,'Y',8,'2026-04-01 17:22:13',NULL,NULL),(45,27,9,'Y',22,'2026-04-01 17:22:13',NULL,NULL),(46,28,9,'Y',24,'2026-04-01 17:22:13',NULL,NULL),(47,28,10,'Y',24,'2026-04-01 17:22:13',NULL,NULL),(48,29,9,'Y',8,'2026-04-01 17:22:13',NULL,NULL),(49,30,10,'Y',22,'2026-04-01 17:22:13',NULL,NULL),(50,32,12,'Y',20,'2026-04-01 17:22:13',NULL,NULL),(51,32,11,'Y',20,'2026-04-01 17:22:13',NULL,NULL),(52,33,12,'Y',9,'2026-04-01 17:22:13',NULL,NULL),(53,34,12,'Y',20,'2026-04-01 17:22:13',NULL,NULL),(54,35,12,'Y',21,'2026-04-01 17:22:13',NULL,NULL),(55,35,11,'Y',21,'2026-04-01 17:22:13',NULL,NULL),(56,36,12,'Y',1,'2026-04-01 17:22:13',NULL,NULL),(57,36,11,'Y',1,'2026-04-01 17:22:13',NULL,NULL),(58,38,15,'Y',19,'2026-04-01 17:22:13',NULL,NULL),(59,39,15,'Y',2,'2026-04-01 17:22:13',NULL,NULL),(60,40,15,'Y',16,'2026-04-01 17:22:13',NULL,NULL),(61,41,15,'Y',19,'2026-04-01 17:22:13',NULL,NULL),(62,42,15,'Y',23,'2026-04-01 17:22:13',NULL,NULL),(63,44,16,'Y',18,'2026-04-01 17:22:13',NULL,NULL),(64,44,23,'Y',18,'2026-04-01 17:22:13',NULL,NULL),(65,45,16,'Y',17,'2026-04-01 17:22:13',NULL,NULL),(66,46,16,'Y',18,'2026-04-01 17:22:13',NULL,NULL),(67,47,16,'Y',1,'2026-04-01 17:22:13',NULL,NULL),(68,48,16,'Y',17,'2026-04-01 17:22:13',NULL,NULL),(69,48,23,'Y',17,'2026-04-01 17:22:13',NULL,NULL),(70,50,7,'Y',7,'2026-04-01 17:22:13',NULL,NULL),(71,51,7,'Y',25,'2026-04-01 17:22:13',NULL,NULL),(72,51,25,'Y',25,'2026-04-01 17:22:13',NULL,NULL),(73,52,7,'Y',7,'2026-04-01 17:22:13',NULL,NULL),(74,53,7,'Y',6,'2026-04-01 17:22:13',NULL,NULL),(75,54,7,'Y',24,'2026-04-01 17:22:13',NULL,NULL),(76,56,14,'Y',11,'2026-04-01 17:22:13',NULL,NULL),(77,57,14,'Y',27,'2026-04-01 17:22:13',NULL,NULL),(78,58,14,'Y',11,'2026-04-01 17:22:13',NULL,NULL),(79,59,14,'Y',27,'2026-04-01 17:22:13',NULL,NULL),(80,60,14,'Y',17,'2026-04-01 17:22:13',NULL,NULL),(81,62,13,'Y',6,'2026-04-01 17:22:13',NULL,NULL),(82,63,13,'Y',28,'2026-04-01 17:22:13',NULL,NULL),(83,64,13,'Y',6,'2026-04-01 17:22:13',NULL,NULL),(84,65,13,'Y',28,'2026-04-01 17:22:13',NULL,NULL),(85,66,13,'Y',23,'2026-04-01 17:22:13',NULL,NULL),(86,68,21,'Y',10,'2026-04-01 17:22:13',NULL,NULL),(87,68,8,'Y',10,'2026-04-01 17:22:13',NULL,NULL),(88,69,21,'Y',26,'2026-04-01 17:22:13',NULL,NULL),(89,70,21,'Y',10,'2026-04-01 17:22:13',NULL,NULL),(90,71,21,'Y',9,'2026-04-01 17:22:13',NULL,NULL),(91,72,21,'Y',26,'2026-04-01 17:22:13',NULL,NULL),(92,72,8,'Y',26,'2026-04-01 17:22:13',NULL,NULL),(93,74,17,'Y',12,'2026-04-01 17:22:13',NULL,NULL),(94,74,18,'Y',12,'2026-04-01 17:22:13',NULL,NULL),(95,75,17,'Y',3,'2026-04-01 17:22:13',NULL,NULL),(96,76,17,'Y',13,'2026-04-01 17:22:13',NULL,NULL),(97,77,17,'Y',12,'2026-04-01 17:22:13',NULL,NULL),(98,78,17,'Y',2,'2026-04-01 17:22:13',NULL,NULL),(99,78,1,'Y',2,'2026-04-01 17:22:13',NULL,NULL),(100,80,22,'Y',21,'2026-04-01 17:22:13',NULL,NULL),(101,80,11,'Y',21,'2026-04-01 17:22:13',NULL,NULL),(102,81,4,'Y',9,'2026-04-01 17:22:13',NULL,NULL),(103,81,12,'Y',9,'2026-04-01 17:22:13',NULL,NULL),(104,81,11,'Y',9,'2026-04-01 17:22:13',NULL,NULL),(105,82,22,'Y',21,'2026-04-01 17:22:13',NULL,NULL),(106,82,11,'Y',21,'2026-04-01 17:22:13',NULL,NULL),(107,83,3,'Y',5,'2026-04-01 17:22:13',NULL,NULL),(108,83,11,'Y',5,'2026-04-01 17:22:13',NULL,NULL),(109,84,22,'Y',20,'2026-04-01 17:22:13',NULL,NULL),(110,86,23,'Y',1,'2026-04-01 17:22:13',NULL,NULL),(111,86,9,'Y',1,'2026-04-01 17:22:13',NULL,NULL),(112,87,23,'Y',18,'2026-04-01 17:22:13',NULL,NULL),(113,87,16,'Y',18,'2026-04-01 17:22:13',NULL,NULL),(114,88,23,'Y',22,'2026-04-01 17:22:13',NULL,NULL),(115,89,23,'Y',1,'2026-04-01 17:22:13',NULL,NULL),(116,90,23,'Y',17,'2026-04-01 17:22:13',NULL,NULL),(117,90,16,'Y',17,'2026-04-01 17:22:13',NULL,NULL);
+/*!40000 ALTER TABLE `tbl_comm_post_tag` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `tbl_post_cmt_react`
+--
+
+DROP TABLE IF EXISTS `tbl_post_cmt_react`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `tbl_post_cmt_react` (
+  `CMT_REACT_SN` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '반응 SN (PK)',
+  `POST_CMT_SN` bigint(20) NOT NULL COMMENT '댓글 SN (TBL_POST_CMT FK)',
+  `USER_SN` bigint(20) NOT NULL COMMENT '사용자 SN (TBL_USER FK)',
+  `REACT_TYP` varchar(10) NOT NULL COMMENT 'LIKE / LOVE / HAHA / WOW / SAD / ANGRY',
+  `ACTVTN_YN` char(1) NOT NULL DEFAULT 'Y' COMMENT '활성화 여부',
+  `CREATR_SN` bigint(20) NOT NULL COMMENT '생성자 SN',
+  `FRST_CRT_DT` datetime NOT NULL DEFAULT current_timestamp() COMMENT '최초 생성일시',
+  `MDFR_SN` bigint(20) DEFAULT NULL COMMENT '수정자 SN',
+  `MDFCN_DT` datetime DEFAULT NULL ON UPDATE current_timestamp() COMMENT '수정일시',
+  PRIMARY KEY (`CMT_REACT_SN`),
+  UNIQUE KEY `UK_POST_CMT_REACT` (`POST_CMT_SN`,`USER_SN`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='일반 게시글 댓글 반응';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `tbl_post_cmt_react`
+--
+
+LOCK TABLES `tbl_post_cmt_react` WRITE;
+/*!40000 ALTER TABLE `tbl_post_cmt_react` DISABLE KEYS */;
+/*!40000 ALTER TABLE `tbl_post_cmt_react` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Current Database: `knowra_post`
+--
+
+CREATE DATABASE /*!32312 IF NOT EXISTS*/ `knowra_post` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci */;
+
+USE `knowra_post`;
+
+--
+-- Table structure for table `tbl_post`
+--
+
+DROP TABLE IF EXISTS `tbl_post`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `tbl_post` (
+  `POST_SN` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '게시글 SN (PK)',
+  `POST_TYP` varchar(10) NOT NULL DEFAULT 'NORMAL' COMMENT 'NORMAL / NOTICE',
+  `USER_SN` bigint(20) NOT NULL COMMENT '작성자 SN (TBL_USER FK)',
+  `POST_TTL` varchar(300) NOT NULL COMMENT '제목',
+  `POST_CNTNT` text NOT NULL COMMENT '본문',
+  `VIEW_CNT` int(11) NOT NULL DEFAULT 0 COMMENT '조회수 (캐시)',
+  `LIKE_CNT` int(11) NOT NULL DEFAULT 0 COMMENT '순 추천수 (UP - DOWN 캐시)',
+  `CMT_CNT` int(11) NOT NULL DEFAULT 0 COMMENT '댓글수 (캐시)',
+  `STAT` varchar(20) NOT NULL DEFAULT 'ACTIVE' COMMENT 'ACTIVE / DELETED / BLOCKED',
+  `ACTVTN_YN` char(1) NOT NULL DEFAULT 'Y' COMMENT '활성화 여부',
+  `CREATR_SN` bigint(20) NOT NULL COMMENT '생성자 SN',
+  `FRST_CRT_DT` datetime NOT NULL DEFAULT current_timestamp() COMMENT '최초 생성일시',
+  `MDFR_SN` bigint(20) DEFAULT NULL COMMENT '수정자 SN',
+  `MDFCN_DT` datetime DEFAULT NULL ON UPDATE current_timestamp() COMMENT '수정일시',
+  PRIMARY KEY (`POST_SN`),
+  KEY `IDX_POST_USER` (`USER_SN`),
+  KEY `IDX_POST_FRST_CRT_DT` (`FRST_CRT_DT`)
+) ENGINE=InnoDB AUTO_INCREMENT=22 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='일반 게시글';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `tbl_post`
+--
+
+LOCK TABLES `tbl_post` WRITE;
+/*!40000 ALTER TABLE `tbl_post` DISABLE KEYS */;
+INSERT INTO `tbl_post` VALUES (1,'NOTICE',1,'[공지] Knowra 일반 게시판 이용 안내','광고·비방·무분별한 홍보는 삭제됩니다. 지식과 경험을 자유롭게 나눠요.',900,12,3,'ACTIVE','Y',1,'2026-04-01 17:31:51',NULL,NULL),(2,'NORMAL',1,'개발자로 살면서 가장 잘한 결정 3가지','커리어·학습·워라밸. 10년 차 개발자로서 돌아보면 이 세 가지 결정이 가장 큰 차이를 만들었습니다.',4259,312,47,'ACTIVE','Y',1,'2026-04-01 17:31:51',NULL,NULL),(3,'NORMAL',1,'매일 30분 글쓰기가 개발자 커리어에 미친 영향','TIL 블로그를 1년간 운영하면서 면접에서 받은 혜택, 채용 담당자한테 연락 온 횟수, 실제 이직 성공까지 공유합니다.',5686,446,89,'ACTIVE','Y',1,'2026-04-01 17:31:51',NULL,'2026-04-09 17:30:12'),(4,'NORMAL',1,'오픈소스 기여 처음 시작하는 방법 (완전 초보 가이드)','Good First Issue 찾는 법, PR 올리는 절차, 리뷰 받는 요령. 첫 머지까지 걸린 시간과 배운 점 공유합니다.',3452,267,54,'ACTIVE','Y',1,'2026-04-01 17:31:51',NULL,NULL),(5,'NORMAL',1,'기술 면접 200번 보고 나서 느낀 것들','합격·불합격 다 경험한 기술 면접 200번. 어떤 회사가 좋은 면접을 하는지, 어떤 준비가 실제로 통했는지 솔직하게.',6804,535,112,'ACTIVE','Y',1,'2026-04-01 17:31:51',NULL,'2026-04-09 16:35:00'),(6,'NORMAL',1,'내가 쓰는 개발 도구 스택 2026 버전','IDE·터미널·노트·브라우저·AI 보조 도구까지. 매년 바뀌는 스택 중 진짜 생산성에 도움된 것들만 골랐습니다.',2906,198,38,'ACTIVE','Y',1,'2026-04-01 17:31:51',NULL,NULL),(7,'NORMAL',31,'풀스택 혼자 개발해서 월 200 버는 방법','Next.js + Spring Boot + AWS. 사이드프로젝트 3개 운영하면서 쌓은 아키텍처 결정들을 공유합니다.',3129,243,56,'ACTIVE','Y',31,'2026-04-01 17:31:51',NULL,NULL),(8,'NORMAL',32,'ChatGPT API로 나만의 AI 도구 만드는 법 (비용 월 3천원)','OpenAI API 호출 최적화, 프롬프트 캐싱, 스트리밍 응답. 토큰 절약하면서 쓸만한 AI 앱 만드는 법.',4564,367,78,'ACTIVE','Y',32,'2026-04-01 17:31:51',NULL,NULL),(9,'NORMAL',34,'그로스 해킹으로 앱 MAU 0→10만 만든 방법','SEO·바이럴 루프·리텐션 개선. 광고비 0원으로 10만 MAU까지 간 실제 전략을 공개합니다.',5340,423,94,'ACTIVE','Y',34,'2026-04-01 17:31:51',NULL,NULL),(10,'NORMAL',35,'프리랜서 5년차가 말하는 장단점 총정리','수입·자유·외로움·세금·건강보험. 회사 다니다 프리랜서 된 사람이 경험한 현실을 솔직하게.',4121,334,72,'ACTIVE','Y',35,'2026-04-01 17:31:51',NULL,NULL),(11,'NORMAL',36,'이더리움 스마트 컨트랙트 개발 입문 가이드','Solidity 기초부터 Hardhat 테스트까지. 백엔드 개발자가 Web3 입문하면서 헤맸던 것들 정리.',2780,189,43,'ACTIVE','Y',36,'2026-04-01 17:31:51',NULL,NULL),(12,'NORMAL',37,'영어 공부 3년, 말하기 두렵지 않게 된 방법','문법보다 입 훈련이 먼저였어요. 매일 15분 쉐도잉으로 어떻게 달라졌는지 데이터와 함께 공유합니다.',3890,312,67,'ACTIVE','Y',37,'2026-04-01 17:31:51',NULL,NULL),(13,'NORMAL',39,'의료 AI가 실제 병원에서 사용되는 방법','영상 판독·처방 보조·환자 분류. 현직 의료 AI 연구자가 말하는 현실과 한계.',5120,421,94,'ACTIVE','Y',39,'2026-04-01 17:31:51',NULL,NULL),(14,'NORMAL',40,'유튜브 구독자 10만 가기까지 실제로 한 것들','콘텐츠 기획·썸네일·알고리즘·협업. 2년간 올린 영상 300개에서 배운 것들을 압축합니다.',4892,389,83,'ACTIVE','Y',40,'2026-04-01 17:31:51',NULL,NULL),(15,'NORMAL',42,'스타트업 CFO가 말하는 런웨이 관리 실전','캐시플로우 예측, 번 레이트 관리, 투자 라운드 타이밍. 실제 숫자로 보는 스타트업 재무 생존법.',3560,278,61,'ACTIVE','Y',42,'2026-04-01 17:31:51',NULL,NULL),(16,'NORMAL',43,'홈서버 구축으로 월 클라우드 비용 10만원 절약한 방법','Proxmox + Docker + Nginx. 중고 미니PC 하나로 NAS·CI/CD·개인 서비스 돌리는 셋업 공유.',4120,334,72,'ACTIVE','Y',43,'2026-04-01 17:31:51',NULL,NULL),(17,'NORMAL',44,'집에서 식당 수준의 파스타 만드는 3가지 비밀','면수·버터 마운팅·치즈의 비율. 레스토랑 셰프한테 직접 배운 것들을 가정 주방에 맞게 정리했습니다.',5670,456,98,'ACTIVE','Y',44,'2026-04-01 17:31:51',NULL,NULL),(18,'NORMAL',45,'비건 도시락 7일 챌린지 실제 비용과 포만감 후기','고기 없이 하루 세 끼. 영양소 충족·맛·비용 모두 잡은 일주일 메뉴 전체 공개합니다.',2560,178,38,'ACTIVE','Y',45,'2026-04-01 17:31:51',NULL,NULL),(19,'NORMAL',41,'컴공 학부생이 인턴 합격하기까지 한 것들','코딩 테스트·포트폴리오·자소서. 대기업 인턴 붙기 전에 실패한 것들도 솔직하게 씁니다.',3450,267,55,'ACTIVE','Y',41,'2026-04-01 17:31:51',NULL,NULL),(20,'NORMAL',38,'반려동물과 함께하는 국내 여행지 TOP 10','펫 동반 가능한 숙소·카페·트레킹 코스. 직접 다 가봤어요. 강아지와 2년간 여행한 기록 공유합니다.',3120,245,52,'ACTIVE','Y',38,'2026-04-01 17:31:51',NULL,NULL),(21,'NORMAL',1,'test','<img src=\"http://127.0.0.1:8080/upload/editor/2026/04/03/20260403012808468_0.png\"><p></p>',6,1,0,'ACTIVE','Y',1,'2026-04-03 13:28:17',NULL,'2026-04-19 05:55:17');
+/*!40000 ALTER TABLE `tbl_post` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `tbl_post_cmt`
+--
+
+DROP TABLE IF EXISTS `tbl_post_cmt`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `tbl_post_cmt` (
+  `POST_CMT_SN` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '댓글 SN (PK)',
+  `POST_SN` bigint(20) NOT NULL COMMENT '게시글 SN (TBL_POST FK)',
+  `USER_SN` bigint(20) NOT NULL COMMENT '작성자 SN (TBL_USER FK)',
+  `PRNT_CMT_SN` bigint(20) DEFAULT NULL COMMENT '부모 댓글 SN — NULL이면 최상위',
+  `CMT_CNTNT` text NOT NULL COMMENT '댓글 내용',
+  `LIKE_CNT` int(11) NOT NULL DEFAULT 0 COMMENT '좋아요수 (캐시)',
+  `STAT` varchar(20) NOT NULL DEFAULT 'ACTIVE' COMMENT 'ACTIVE / DELETED / BLOCKED',
+  `ACTVTN_YN` char(1) NOT NULL DEFAULT 'Y' COMMENT '활성화 여부',
+  `CREATR_SN` bigint(20) NOT NULL COMMENT '생성자 SN',
+  `FRST_CRT_DT` datetime NOT NULL DEFAULT current_timestamp() COMMENT '최초 생성일시',
+  `MDFR_SN` bigint(20) DEFAULT NULL COMMENT '수정자 SN',
+  `MDFCN_DT` datetime DEFAULT NULL ON UPDATE current_timestamp() COMMENT '수정일시',
+  PRIMARY KEY (`POST_CMT_SN`),
+  KEY `IDX_POST_CMT_POST` (`POST_SN`),
+  KEY `IDX_POST_CMT_PRNT` (`PRNT_CMT_SN`)
+) ENGINE=InnoDB AUTO_INCREMENT=36 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='일반 게시글 댓글';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `tbl_post_cmt`
+--
+
+LOCK TABLES `tbl_post_cmt` WRITE;
+/*!40000 ALTER TABLE `tbl_post_cmt` DISABLE KEYS */;
+INSERT INTO `tbl_post_cmt` VALUES (1,2,31,NULL,'워라밸 고르는 결정이 생산성에도 결국 플러스더라고요. 야근 많은 팀은 번아웃 이탈률이 높아요.',34,'ACTIVE','Y',31,'2026-04-01 17:31:51',NULL,NULL),(2,2,32,1,'맞아요. 번아웃 후 회복 시간까지 합치면 장기적으로 무조건 손해예요.',21,'ACTIVE','Y',32,'2026-04-01 17:31:51',NULL,NULL),(3,2,41,NULL,'10년차 관점에서 학습 방식에 대해 더 자세히 알 수 있을까요? 어떻게 공부하셨는지 궁금합니다.',28,'ACTIVE','Y',41,'2026-04-01 17:31:51',NULL,NULL),(4,2,1,3,'책보다는 실제 코드 읽기, 공식 문서 우선, 그리고 작은 것이라도 직접 만들기를 반복했어요.',45,'ACTIVE','Y',1,'2026-04-01 17:31:51',NULL,NULL),(5,3,31,NULL,'저도 TIL 블로그 6개월째 하는데 링크드인 채용 DM이 실제로 늘었어요. 효과 확실합니다.',45,'ACTIVE','Y',31,'2026-04-01 17:31:51',NULL,NULL),(6,3,37,5,'어떤 주제 위주로 쓰세요? 기술인지 커리어인지 둘 다인지 궁금해요.',22,'ACTIVE','Y',37,'2026-04-01 17:31:51',NULL,NULL),(7,3,1,6,'주로 그날 배운 기술 TIL이랑 월간 회고 글이요. 꾸준함이 제일 중요한 것 같아요.',18,'ACTIVE','Y',1,'2026-04-01 17:31:51',NULL,NULL),(8,3,34,NULL,'블로그 플랫폼은 어디 쓰세요? 벨로그 vs 티스토리 고민 중입니다.',31,'ACTIVE','Y',34,'2026-04-01 17:31:51',NULL,NULL),(9,3,1,8,'벨로그 추천해요. 개발자 커뮤니티 있어서 초기 유입이 훨씬 잘 돼요.',27,'ACTIVE','Y',1,'2026-04-01 17:31:51',NULL,NULL),(10,4,41,NULL,'Good First Issue 이 키워드 처음 알았어요. 어떻게 찾으면 되나요?',38,'ACTIVE','Y',41,'2026-04-01 17:31:51',NULL,NULL),(11,4,1,10,'github.com 에서 label:good-first-issue 검색하거나 goodfirstissue.dev 쓰면 돼요.',45,'ACTIVE','Y',1,'2026-04-01 17:31:51',NULL,NULL),(12,4,31,NULL,'PR 올리고 리뷰 받는 경험이 실제 협업 문화 적응에 정말 도움됐어요.',29,'ACTIVE','Y',31,'2026-04-01 17:31:51',NULL,NULL),(13,4,32,NULL,'어떤 프로젝트부터 시작하면 좋을까요? 규모 작은 게 첫 머지 받기 쉽나요?',23,'ACTIVE','Y',32,'2026-04-01 17:31:51',NULL,NULL),(14,5,35,NULL,'어떤 회사 면접 문화가 제일 인상 깊었나요?',67,'ACTIVE','Y',35,'2026-04-01 17:31:51',NULL,NULL),(15,5,1,14,'당락 여부와 관계없이 상세한 피드백을 주는 회사들이요. 문화도 좋더라고요.',52,'ACTIVE','Y',1,'2026-04-01 17:31:51',NULL,NULL),(16,5,42,NULL,'200번 중 합격률이 어느 정도인지 궁금해요.',34,'ACTIVE','Y',42,'2026-04-01 17:31:51',NULL,NULL),(17,5,1,16,'약 30% 정도였어요. 준비 덜 된 상태에서 지원한 게 많아서요.',28,'ACTIVE','Y',1,'2026-04-01 17:31:51',NULL,NULL),(18,5,41,NULL,'코딩 테스트랑 시스템 설계 중 어떤 게 더 준비하기 어려웠나요?',41,'ACTIVE','Y',41,'2026-04-01 17:31:51',NULL,NULL),(19,7,1,NULL,'Next.js + Spring 조합이 사이드프로젝트에 딱이더라고요. AWS 비용 어떻게 관리하시나요?',56,'ACTIVE','Y',1,'2026-04-01 17:31:51',NULL,NULL),(20,7,31,19,'초반엔 EC2 프리 티어, 트래픽 붙으면 Lambda + CloudFront로 바꿨어요. 고정비 거의 없어요.',34,'ACTIVE','Y',31,'2026-04-01 17:31:51',NULL,NULL),(21,7,35,NULL,'사이드프로젝트 3개를 혼자 운영하면 유지보수가 벅차지 않나요?',28,'ACTIVE','Y',35,'2026-04-01 17:31:51',NULL,NULL),(22,7,31,21,'자동화를 많이 해뒀어요. 모니터링·배포·정기 작업 전부 자동화하니까 주 2~3시간으로 돌아가요.',23,'ACTIVE','Y',31,'2026-04-01 17:31:51',NULL,NULL),(23,8,1,NULL,'프롬프트 캐싱 쓰면 비용이 실제로 얼마나 줄어요? 비율이 궁금합니다.',45,'ACTIVE','Y',1,'2026-04-01 17:31:52',NULL,NULL),(24,8,32,23,'동일 프롬프트 재사용 기준으로 최대 90% 가까이 줄더라고요. 캐시 히트율이 핵심이에요.',38,'ACTIVE','Y',32,'2026-04-01 17:31:52',NULL,NULL),(25,8,39,NULL,'의료 쪽에서 GPT API 쓸 때 개인정보 이슈는 어떻게 처리하셨나요?',31,'ACTIVE','Y',39,'2026-04-01 17:31:52',NULL,NULL),(26,8,32,25,'온프레미스 LLM 쓰거나 Azure OpenAI 계약하면 데이터 격리 보장돼요.',27,'ACTIVE','Y',32,'2026-04-01 17:31:52',NULL,NULL),(27,12,1,NULL,'영상 판독 AI의 실제 정확도가 의사 수준에 도달했나요? 오진율이 궁금합니다.',52,'ACTIVE','Y',1,'2026-04-01 17:31:52',NULL,NULL),(28,12,39,27,'특정 질환(폐암 CT 등)에서는 이미 전문의 수준이에요. 단, 일반화는 아직 갈 길이 멀어요.',45,'ACTIVE','Y',39,'2026-04-01 17:31:52',NULL,NULL),(29,12,32,NULL,'의료 AI 데이터셋 구하는 게 제일 어렵다고 들었는데, 실제로 어떤가요?',38,'ACTIVE','Y',32,'2026-04-01 17:31:52',NULL,NULL),(30,12,39,29,'맞아요. 라벨링 된 의료 데이터가 절대적으로 부족해요. 병원 협력이 없으면 거의 불가능합니다.',34,'ACTIVE','Y',39,'2026-04-01 17:31:52',NULL,NULL),(31,12,44,NULL,'비의료인 입장에서 AI 진단 보조가 실제로 도움이 될 것 같아서 기대가 커요.',22,'ACTIVE','Y',44,'2026-04-01 17:31:52',NULL,NULL),(32,13,1,NULL,'썸네일 A/B 테스트는 어떻게 하셨나요? 유튜브 스튜디오에서 가능한가요?',48,'ACTIVE','Y',1,'2026-04-01 17:31:52',NULL,NULL),(33,13,40,32,'유튜브 스튜디오 실험 기능 쓰거나, 커뮤니티 탭 투표로 먼저 반응 봤어요.',36,'ACTIVE','Y',40,'2026-04-01 17:31:52',NULL,NULL),(34,13,34,NULL,'알고리즘보다 리텐션이 결국 핵심이라는 걸 어느 순간 깨달았어요. 비슷한 경험이에요.',41,'ACTIVE','Y',34,'2026-04-01 17:31:52',NULL,NULL),(35,13,41,NULL,'크리에이터 수익 구조가 어떻게 되는지 궁금해요. 유튜브 광고만으로는 힘들다고 하던데.',29,'ACTIVE','Y',41,'2026-04-01 17:31:52',NULL,NULL);
+/*!40000 ALTER TABLE `tbl_post_cmt` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `tbl_post_cmt_react`
+--
+
+DROP TABLE IF EXISTS `tbl_post_cmt_react`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `tbl_post_cmt_react` (
+  `CMT_REACT_SN` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '반응 SN (PK)',
+  `POST_CMT_SN` bigint(20) NOT NULL COMMENT '댓글 SN (TBL_POST_CMT FK)',
+  `USER_SN` bigint(20) NOT NULL COMMENT '사용자 SN (TBL_USER FK)',
+  `REACT_TYP` varchar(10) NOT NULL COMMENT 'LIKE / LOVE / HAHA / WOW / SAD / ANGRY',
+  `ACTVTN_YN` char(1) NOT NULL DEFAULT 'Y' COMMENT '활성화 여부',
+  `CREATR_SN` bigint(20) NOT NULL COMMENT '생성자 SN',
+  `FRST_CRT_DT` datetime NOT NULL DEFAULT current_timestamp() COMMENT '최초 생성일시',
+  `MDFR_SN` bigint(20) DEFAULT NULL COMMENT '수정자 SN',
+  `MDFCN_DT` datetime DEFAULT NULL ON UPDATE current_timestamp() COMMENT '수정일시',
+  PRIMARY KEY (`CMT_REACT_SN`),
+  UNIQUE KEY `UK_POST_CMT_REACT` (`POST_CMT_SN`,`USER_SN`)
+) ENGINE=InnoDB AUTO_INCREMENT=31 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='일반 게시글 댓글 반응';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `tbl_post_cmt_react`
+--
+
+LOCK TABLES `tbl_post_cmt_react` WRITE;
+/*!40000 ALTER TABLE `tbl_post_cmt_react` DISABLE KEYS */;
+INSERT INTO `tbl_post_cmt_react` VALUES (1,4,31,'LIKE','Y',31,'2026-04-01 17:31:52',NULL,NULL),(2,4,32,'LIKE','Y',32,'2026-04-01 17:31:52',NULL,NULL),(3,4,41,'LIKE','Y',41,'2026-04-01 17:31:52',NULL,NULL),(4,5,1,'LIKE','Y',1,'2026-04-01 17:31:52',NULL,NULL),(5,5,34,'LIKE','Y',34,'2026-04-01 17:31:52',NULL,NULL),(6,5,37,'LIKE','Y',37,'2026-04-01 17:31:52',NULL,NULL),(7,5,42,'LIKE','Y',42,'2026-04-01 17:31:52',NULL,NULL),(8,9,31,'LIKE','Y',31,'2026-04-01 17:31:52',NULL,NULL),(9,9,34,'LIKE','Y',34,'2026-04-01 17:31:52',NULL,NULL),(10,9,41,'LIKE','Y',41,'2026-04-01 17:31:52',NULL,NULL),(11,11,31,'LIKE','Y',31,'2026-04-01 17:31:52',NULL,NULL),(12,11,32,'LIKE','Y',32,'2026-04-01 17:31:52',NULL,NULL),(13,11,34,'LIKE','Y',34,'2026-04-01 17:31:52',NULL,NULL),(14,11,41,'LIKE','Y',41,'2026-04-01 17:31:52',NULL,NULL),(15,15,35,'LIKE','Y',35,'2026-04-01 17:31:52',NULL,NULL),(16,15,42,'LIKE','Y',42,'2026-04-01 17:31:52',NULL,NULL),(17,15,41,'LIKE','Y',41,'2026-04-01 17:31:52',NULL,NULL),(19,20,32,'LIKE','Y',32,'2026-04-01 17:31:52',NULL,NULL),(20,20,35,'LIKE','Y',35,'2026-04-01 17:31:52',NULL,NULL),(21,20,43,'LIKE','Y',43,'2026-04-01 17:31:52',NULL,NULL),(22,24,1,'LIKE','Y',1,'2026-04-01 17:31:52',NULL,NULL),(23,24,31,'LIKE','Y',31,'2026-04-01 17:31:52',NULL,NULL),(24,24,39,'LIKE','Y',39,'2026-04-01 17:31:52',NULL,NULL),(25,24,43,'LIKE','Y',43,'2026-04-01 17:31:52',NULL,NULL),(26,28,1,'LIKE','Y',1,'2026-04-01 17:31:52',NULL,NULL),(27,28,32,'LIKE','Y',32,'2026-04-01 17:31:52',NULL,NULL),(28,28,44,'LIKE','Y',44,'2026-04-01 17:31:52',NULL,NULL),(29,28,45,'LIKE','Y',45,'2026-04-01 17:31:52',NULL,NULL),(30,20,1,'LIKE','Y',1,'2026-04-03 10:02:17',NULL,NULL);
+/*!40000 ALTER TABLE `tbl_post_cmt_react` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `tbl_post_like`
+--
+
+DROP TABLE IF EXISTS `tbl_post_like`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `tbl_post_like` (
+  `POST_LIKE_SN` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '좋아요 SN (PK)',
+  `POST_SN` bigint(20) NOT NULL COMMENT '게시글 SN (TBL_POST FK)',
+  `USER_SN` bigint(20) NOT NULL COMMENT '사용자 SN (TBL_USER FK)',
+  `LIKE_TYP` varchar(4) NOT NULL DEFAULT 'UP' COMMENT 'UP / DOWN',
+  `ACTVTN_YN` char(1) NOT NULL DEFAULT 'Y' COMMENT '활성화 여부',
+  `CREATR_SN` bigint(20) NOT NULL COMMENT '생성자 SN',
+  `FRST_CRT_DT` datetime NOT NULL DEFAULT current_timestamp() COMMENT '최초 생성일시',
+  `MDFR_SN` bigint(20) DEFAULT NULL COMMENT '수정자 SN',
+  `MDFCN_DT` datetime DEFAULT NULL ON UPDATE current_timestamp() COMMENT '수정일시',
+  PRIMARY KEY (`POST_LIKE_SN`),
+  UNIQUE KEY `UK_POST_LIKE_USR` (`POST_SN`,`USER_SN`)
+) ENGINE=InnoDB AUTO_INCREMENT=79 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='일반 게시글 좋아요';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `tbl_post_like`
+--
+
+LOCK TABLES `tbl_post_like` WRITE;
+/*!40000 ALTER TABLE `tbl_post_like` DISABLE KEYS */;
+INSERT INTO `tbl_post_like` VALUES (1,2,31,'UP','Y',31,'2026-04-01 17:31:52',NULL,NULL),(2,2,32,'UP','Y',32,'2026-04-01 17:31:52',NULL,NULL),(3,2,37,'UP','Y',37,'2026-04-01 17:31:52',NULL,NULL),(4,2,41,'UP','Y',41,'2026-04-01 17:31:52',NULL,NULL),(5,2,35,'UP','Y',35,'2026-04-01 17:31:52',NULL,NULL),(6,3,31,'UP','Y',31,'2026-04-01 17:31:52',NULL,NULL),(7,3,32,'UP','Y',32,'2026-04-01 17:31:52',NULL,NULL),(8,3,34,'UP','Y',34,'2026-04-01 17:31:52',NULL,NULL),(9,3,37,'UP','Y',37,'2026-04-01 17:31:52',NULL,NULL),(10,3,41,'UP','Y',41,'2026-04-01 17:31:52',NULL,NULL),(11,3,42,'UP','Y',42,'2026-04-01 17:31:52',NULL,NULL),(12,4,31,'UP','Y',31,'2026-04-01 17:31:52',NULL,NULL),(13,4,32,'UP','Y',32,'2026-04-01 17:31:52',NULL,NULL),(14,4,35,'UP','Y',35,'2026-04-01 17:31:52',NULL,NULL),(15,4,41,'UP','Y',41,'2026-04-01 17:31:52',NULL,NULL),(16,5,31,'UP','Y',31,'2026-04-01 17:31:52',NULL,NULL),(17,5,35,'UP','Y',35,'2026-04-01 17:31:52',NULL,NULL),(18,5,41,'UP','Y',41,'2026-04-01 17:31:52',NULL,NULL),(19,5,42,'UP','Y',42,'2026-04-01 17:31:52',NULL,NULL),(20,5,34,'UP','Y',34,'2026-04-01 17:31:52',NULL,NULL),(21,5,37,'UP','Y',37,'2026-04-01 17:31:52',NULL,NULL),(22,7,1,'UP','Y',1,'2026-04-01 17:31:52',NULL,NULL),(23,7,32,'UP','Y',32,'2026-04-01 17:31:52',NULL,NULL),(24,7,34,'UP','Y',34,'2026-04-01 17:31:52',NULL,NULL),(25,7,35,'UP','Y',35,'2026-04-01 17:31:52',NULL,NULL),(26,7,43,'UP','Y',43,'2026-04-01 17:31:52',NULL,NULL),(27,8,1,'UP','Y',1,'2026-04-01 17:31:52',NULL,NULL),(28,8,31,'UP','Y',31,'2026-04-01 17:31:52',NULL,NULL),(29,8,36,'UP','Y',36,'2026-04-01 17:31:52',NULL,NULL),(30,8,39,'UP','Y',39,'2026-04-01 17:31:52',NULL,NULL),(31,8,43,'UP','Y',43,'2026-04-01 17:31:52',NULL,NULL),(32,9,1,'UP','Y',1,'2026-04-01 17:31:52',NULL,NULL),(33,9,31,'UP','Y',31,'2026-04-01 17:31:52',NULL,NULL),(34,9,40,'UP','Y',40,'2026-04-01 17:31:52',NULL,NULL),(35,9,42,'UP','Y',42,'2026-04-01 17:31:52',NULL,NULL),(36,10,1,'UP','Y',1,'2026-04-01 17:31:52',NULL,NULL),(37,10,31,'UP','Y',31,'2026-04-01 17:31:52',NULL,NULL),(38,10,41,'UP','Y',41,'2026-04-01 17:31:52',NULL,NULL),(39,10,34,'UP','Y',34,'2026-04-01 17:31:52',NULL,NULL),(40,12,1,'UP','Y',1,'2026-04-01 17:31:52',NULL,NULL),(41,12,32,'UP','Y',32,'2026-04-01 17:31:52',NULL,NULL),(42,12,36,'UP','Y',36,'2026-04-01 17:31:52',NULL,NULL),(43,12,44,'UP','Y',44,'2026-04-01 17:31:52',NULL,NULL),(44,12,45,'UP','Y',45,'2026-04-01 17:31:52',NULL,NULL),(45,13,1,'UP','Y',1,'2026-04-01 17:31:52',NULL,NULL),(46,13,34,'UP','Y',34,'2026-04-01 17:31:52',NULL,NULL),(47,13,37,'UP','Y',37,'2026-04-01 17:31:52',NULL,NULL),(48,13,41,'UP','Y',41,'2026-04-01 17:31:52',NULL,NULL),(49,13,42,'UP','Y',42,'2026-04-01 17:31:52',NULL,NULL),(50,15,1,'UP','Y',1,'2026-04-01 17:31:52',NULL,NULL),(51,15,31,'UP','Y',31,'2026-04-01 17:31:52',NULL,NULL),(52,15,32,'UP','Y',32,'2026-04-01 17:31:52',NULL,NULL),(53,15,35,'UP','Y',35,'2026-04-01 17:31:52',NULL,NULL),(54,15,43,'UP','Y',43,'2026-04-01 17:31:52',NULL,NULL),(55,16,1,'UP','Y',1,'2026-04-01 17:31:52',NULL,NULL),(56,16,38,'UP','Y',38,'2026-04-01 17:31:52',NULL,NULL),(57,16,45,'UP','Y',45,'2026-04-01 17:31:52',NULL,NULL),(58,16,44,'UP','Y',44,'2026-04-01 17:31:52',NULL,NULL),(61,5,52,'UP','Y',52,'2026-04-09 16:35:00',NULL,NULL),(72,3,52,'UP','Y',52,'2026-04-09 17:30:12',NULL,NULL),(73,89,52,'UP','Y',52,'2026-04-10 13:06:15',NULL,NULL),(76,74,1,'UP','Y',1,'2026-04-19 05:43:07',NULL,NULL),(78,21,1,'UP','Y',1,'2026-04-19 05:55:17',NULL,NULL);
+/*!40000 ALTER TABLE `tbl_post_like` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `tbl_post_save`
+--
+
+DROP TABLE IF EXISTS `tbl_post_save`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `tbl_post_save` (
+  `POST_SAVE_SN` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '저장 SN (PK)',
+  `USER_SN` bigint(20) NOT NULL COMMENT '사용자 SN (TBL_USER FK)',
+  `POST_SN` bigint(20) NOT NULL COMMENT '게시글 SN (논리 참조)',
+  `POST_KIND` varchar(10) NOT NULL COMMENT '게시글 유형: POST / COMM',
+  `ACTVTN_YN` char(1) NOT NULL DEFAULT 'Y' COMMENT '활성화 여부',
+  `CREATR_SN` bigint(20) NOT NULL COMMENT '생성자 SN',
+  `FRST_CRT_DT` datetime NOT NULL DEFAULT current_timestamp() COMMENT '최초 생성일시',
+  `MDFR_SN` bigint(20) DEFAULT NULL COMMENT '수정자 SN',
+  `MDFCN_DT` datetime DEFAULT NULL ON UPDATE current_timestamp() COMMENT '수정일시',
+  PRIMARY KEY (`POST_SAVE_SN`),
+  UNIQUE KEY `UK_POST_SAVE_USR` (`USER_SN`,`POST_KIND`,`POST_SN`),
+  KEY `IDX_POST_SAVE_POST` (`POST_KIND`,`POST_SN`),
+  KEY `IDX_POST_SAVE_USER_DT` (`USER_SN`,`FRST_CRT_DT`)
+) ENGINE=InnoDB AUTO_INCREMENT=27 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='게시글 저장';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `tbl_post_save`
+--
+
+LOCK TABLES `tbl_post_save` WRITE;
+/*!40000 ALTER TABLE `tbl_post_save` DISABLE KEYS */;
+INSERT INTO `tbl_post_save` VALUES (2,1,8,'POST','Y',1,'2026-04-01 17:31:52',NULL,NULL),(3,1,12,'POST','Y',1,'2026-04-01 17:31:52',NULL,NULL),(4,1,15,'POST','Y',1,'2026-04-01 17:31:52',NULL,NULL),(5,1,3,'COMM','Y',1,'2026-04-01 17:31:52',NULL,NULL),(6,1,15,'COMM','Y',1,'2026-04-01 17:31:52',NULL,NULL),(7,1,34,'COMM','Y',1,'2026-04-01 17:31:52',NULL,NULL),(8,1,80,'COMM','Y',1,'2026-04-01 17:31:52',NULL,NULL),(9,31,3,'POST','Y',31,'2026-04-01 17:31:52',NULL,NULL),(10,31,5,'POST','Y',31,'2026-04-01 17:31:52',NULL,NULL),(11,32,8,'POST','Y',32,'2026-04-01 17:31:52',NULL,NULL),(12,32,12,'POST','Y',32,'2026-04-01 17:31:52',NULL,NULL),(13,34,9,'POST','Y',34,'2026-04-01 17:31:52',NULL,NULL),(14,35,10,'POST','Y',35,'2026-04-01 17:31:52',NULL,NULL),(15,35,5,'POST','Y',35,'2026-04-01 17:31:52',NULL,NULL),(16,37,3,'POST','Y',37,'2026-04-01 17:31:52',NULL,NULL),(17,41,4,'POST','Y',41,'2026-04-01 17:31:52',NULL,NULL),(18,41,5,'POST','Y',41,'2026-04-01 17:31:52',NULL,NULL),(19,42,14,'POST','Y',42,'2026-04-01 17:31:52',NULL,NULL),(20,31,5,'COMM','Y',31,'2026-04-01 17:31:52',NULL,NULL),(21,32,11,'COMM','Y',32,'2026-04-01 17:31:52',NULL,NULL),(22,36,15,'COMM','Y',36,'2026-04-01 17:31:52',NULL,NULL),(23,42,80,'COMM','Y',42,'2026-04-01 17:31:52',NULL,NULL),(24,43,10,'COMM','Y',43,'2026-04-01 17:31:52',NULL,NULL),(25,1,47,'COMM','Y',1,'2026-04-02 16:48:11',NULL,NULL),(26,1,37,'COMM','Y',1,'2026-04-05 00:45:53',NULL,NULL);
+/*!40000 ALTER TABLE `tbl_post_save` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `tbl_post_tag`
+--
+
+DROP TABLE IF EXISTS `tbl_post_tag`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `tbl_post_tag` (
+  `POST_TAG_SN` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '게시글-태그 SN (PK)',
+  `POST_SN` bigint(20) NOT NULL COMMENT '게시글 SN (TBL_POST FK)',
+  `TAG_SN` bigint(20) NOT NULL COMMENT '태그 SN (TBL_TAG FK)',
+  `ACTVTN_YN` char(1) NOT NULL DEFAULT 'Y' COMMENT '활성화 여부',
+  `CREATR_SN` bigint(20) NOT NULL COMMENT '생성자 SN',
+  `FRST_CRT_DT` datetime NOT NULL DEFAULT current_timestamp() COMMENT '최초 생성일시',
+  `MDFR_SN` bigint(20) DEFAULT NULL COMMENT '수정자 SN',
+  `MDFCN_DT` datetime DEFAULT NULL ON UPDATE current_timestamp() COMMENT '수정일시',
+  PRIMARY KEY (`POST_TAG_SN`),
+  UNIQUE KEY `UK_POST_TAG` (`POST_SN`,`TAG_SN`)
+) ENGINE=InnoDB AUTO_INCREMENT=39 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='일반 게시글 태그 매핑';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `tbl_post_tag`
+--
+
+LOCK TABLES `tbl_post_tag` WRITE;
+/*!40000 ALTER TABLE `tbl_post_tag` DISABLE KEYS */;
+INSERT INTO `tbl_post_tag` VALUES (1,2,1,'Y',1,'2026-04-01 17:31:52',NULL,NULL),(2,2,17,'Y',1,'2026-04-01 17:31:52',NULL,NULL),(3,3,1,'Y',1,'2026-04-01 17:31:52',NULL,NULL),(4,3,17,'Y',1,'2026-04-01 17:31:52',NULL,NULL),(5,3,6,'Y',1,'2026-04-01 17:31:52',NULL,NULL),(6,4,1,'Y',1,'2026-04-01 17:31:52',NULL,NULL),(7,5,1,'Y',1,'2026-04-01 17:31:52',NULL,NULL),(8,5,17,'Y',1,'2026-04-01 17:31:52',NULL,NULL),(9,5,18,'Y',1,'2026-04-01 17:31:52',NULL,NULL),(10,6,1,'Y',1,'2026-04-01 17:31:52',NULL,NULL),(11,6,2,'Y',1,'2026-04-01 17:31:52',NULL,NULL),(12,7,1,'Y',31,'2026-04-01 17:31:52',NULL,NULL),(13,7,6,'Y',31,'2026-04-01 17:31:52',NULL,NULL),(14,7,20,'Y',31,'2026-04-01 17:31:52',NULL,NULL),(15,8,2,'Y',32,'2026-04-01 17:31:52',NULL,NULL),(16,8,19,'Y',32,'2026-04-01 17:31:52',NULL,NULL),(17,8,20,'Y',32,'2026-04-01 17:31:52',NULL,NULL),(18,9,5,'Y',34,'2026-04-01 17:31:52',NULL,NULL),(19,9,6,'Y',34,'2026-04-01 17:31:52',NULL,NULL),(20,10,1,'Y',35,'2026-04-01 17:31:52',NULL,NULL),(21,10,17,'Y',35,'2026-04-01 17:31:52',NULL,NULL),(22,11,1,'Y',36,'2026-04-01 17:31:52',NULL,NULL),(23,11,3,'Y',36,'2026-04-01 17:31:52',NULL,NULL),(24,12,23,'Y',37,'2026-04-01 17:31:52',NULL,NULL),(25,13,5,'Y',40,'2026-04-01 17:31:52',NULL,NULL),(26,13,6,'Y',40,'2026-04-01 17:31:52',NULL,NULL),(27,14,5,'Y',42,'2026-04-01 17:31:52',NULL,NULL),(28,14,22,'Y',42,'2026-04-01 17:31:52',NULL,NULL),(29,14,11,'Y',42,'2026-04-01 17:31:52',NULL,NULL),(30,15,1,'Y',43,'2026-04-01 17:31:52',NULL,NULL),(31,15,20,'Y',43,'2026-04-01 17:31:52',NULL,NULL),(32,16,21,'Y',44,'2026-04-01 17:31:52',NULL,NULL),(33,17,21,'Y',45,'2026-04-01 17:31:52',NULL,NULL),(34,18,1,'Y',41,'2026-04-01 17:31:52',NULL,NULL),(35,18,17,'Y',41,'2026-04-01 17:31:52',NULL,NULL),(36,19,7,'Y',38,'2026-04-01 17:31:52',NULL,NULL),(37,20,2,'Y',39,'2026-04-01 17:31:52',NULL,NULL),(38,20,19,'Y',39,'2026-04-01 17:31:52',NULL,NULL);
+/*!40000 ALTER TABLE `tbl_post_tag` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Current Database: `knowra_user`
+--
+
+CREATE DATABASE /*!32312 IF NOT EXISTS*/ `knowra_user` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci */;
+
+USE `knowra_user`;
+
+--
+-- Table structure for table `tbl_user`
+--
+
+DROP TABLE IF EXISTS `tbl_user`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `tbl_user` (
+  `USER_SN` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '사용자일련번호',
+  `EMAIL` varchar(50) DEFAULT NULL COMMENT '사용자이메일',
+  `PHONE` varchar(20) DEFAULT NULL COMMENT '사용자 휴대폰 ',
+  `LOGIN_ID` varchar(100) NOT NULL COMMENT '로그인아이디',
+  `PASSWORD` varchar(200) NOT NULL COMMENT '비밀번호',
+  `NAME` varchar(100) NOT NULL COMMENT '이름',
+  `NICK_NAME` varchar(50) NOT NULL COMMENT '닉네임',
+  `BIO` varchar(800) DEFAULT NULL COMMENT '자기소개',
+  `INTEREST` varchar(100) DEFAULT NULL COMMENT '관심사( CATEGORY - CATEGORY_SN )',
+  `ATCH_FILE_SN` bigint(20) DEFAULT NULL COMMENT '프로필 사진 SN',
+  `JOIN_YMD` datetime NOT NULL DEFAULT current_timestamp() COMMENT '가입일시',
+  `LGN_FAIL_NMTM` bigint(20) NOT NULL DEFAULT 0 COMMENT '로그인실패횟수',
+  `STATUS` varchar(20) NOT NULL DEFAULT 'Y' COMMENT '상태',
+  `SNS_YN` varchar(1) NOT NULL DEFAULT 'N' COMMENT 'SNS 여부',
+  `SNS_NAME` varchar(20) DEFAULT NULL COMMENT 'SNS 명',
+  `SNS_ID` varchar(100) DEFAULT NULL COMMENT 'SNS 고유아이디',
+  `ACTVTN_YN` varchar(1) NOT NULL DEFAULT 'Y' COMMENT '활성여부',
+  `CREATR_SN` bigint(20) NOT NULL DEFAULT 1 COMMENT '생성자일련번호',
+  `FRST_CRT_DT` datetime NOT NULL DEFAULT current_timestamp() COMMENT '최초생성일시',
+  `MDFR_SN` bigint(20) DEFAULT NULL COMMENT '수정자일련번호',
+  `MDFCN_DT` datetime DEFAULT NULL ON UPDATE current_timestamp() COMMENT '수정일',
+  PRIMARY KEY (`USER_SN`),
+  KEY `tbl_user_NICK_NAME_index` (`NICK_NAME`)
+) ENGINE=InnoDB AUTO_INCREMENT=55 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='사용자';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `tbl_user`
+--
+
+LOCK TABLES `tbl_user` WRITE;
+/*!40000 ALTER TABLE `tbl_user` DISABLE KEYS */;
+INSERT INTO `tbl_user` VALUES (1,'deer',NULL,'deer','$2a$10$CvfYTe7B/4uOY/H0UScIq.CaUV1U20oeAtvO4KNzhr3GxJgGV7ksS','김륜광','deer','','1,10',NULL,'2026-04-01 17:17:21',0,'Y','N',NULL,NULL,'Y',1,'2026-04-01 17:17:21',NULL,'2026-04-04 01:42:49'),(2,'kimdev@gmail.com',NULL,'kimdev','$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lHHa','김개발','kimdev',NULL,NULL,NULL,'2026-04-01 17:22:12',0,'Y','N',NULL,NULL,'Y',1,'2026-04-01 17:22:12',NULL,'2026-04-04 01:42:49'),(3,'leestartup@naver.com',NULL,'leestartup','$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lHHa','이창업','leestartup',NULL,NULL,NULL,'2026-04-01 17:22:12',0,'Y','N',NULL,NULL,'Y',1,'2026-04-01 17:22:12',NULL,'2026-04-04 01:42:49'),(4,'parkai@kakao.com',NULL,'parkai','$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lHHa','박인공','parkai',NULL,NULL,NULL,'2026-04-01 17:22:12',0,'Y','N',NULL,NULL,'Y',1,'2026-04-01 17:22:12',NULL,'2026-04-04 01:42:49'),(5,'choicrypto@gmail.com',NULL,'choicrypto','$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lHHa','최코인','choicrypto',NULL,NULL,NULL,'2026-04-01 17:22:12',0,'Y','N',NULL,NULL,'Y',1,'2026-04-01 17:22:12',NULL,'2026-04-04 01:42:49'),(6,'jungphoto@naver.com',NULL,'jungphoto','$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lHHa','정사진','jungphoto',NULL,NULL,NULL,'2026-04-01 17:22:12',0,'Y','N',NULL,NULL,'Y',1,'2026-04-01 17:22:12',NULL,'2026-04-04 01:42:49'),(7,'hantravel@kakao.com',NULL,'hantravel','$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lHHa','한여행','hantravel',NULL,NULL,NULL,'2026-04-01 17:22:12',0,'Y','N',NULL,NULL,'Y',1,'2026-04-01 17:22:12',NULL,'2026-04-04 01:42:49'),(8,'yoonfitness@gmail.com',NULL,'yoonfitness','$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lHHa','윤헬스','yoonfitness',NULL,NULL,NULL,'2026-04-01 17:22:12',0,'Y','N',NULL,NULL,'Y',1,'2026-04-01 17:22:12',NULL,'2026-04-04 01:42:49'),(9,'ohinvest@naver.com',NULL,'ohinvest','$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lHHa','오투자','ohinvest',NULL,NULL,NULL,'2026-04-01 17:22:12',0,'Y','N',NULL,NULL,'Y',1,'2026-04-01 17:22:12',NULL,'2026-04-04 01:42:49'),(10,'shincook@kakao.com',NULL,'shincook','$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lHHa','신요리','shincook',NULL,NULL,NULL,'2026-04-01 17:22:12',0,'Y','N',NULL,NULL,'Y',1,'2026-04-01 17:22:12',NULL,'2026-04-04 01:42:49'),(11,'limmusic@gmail.com',NULL,'limmusic','$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lHHa','임음악','limmusic',NULL,NULL,NULL,'2026-04-01 17:22:12',0,'Y','N',NULL,NULL,'Y',1,'2026-04-01 17:22:12',NULL,'2026-04-04 01:42:49'),(12,'kangsenior@naver.com',NULL,'kangsenior','$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lHHa','강시니어','kangsenior',NULL,NULL,NULL,'2026-04-01 17:22:12',0,'Y','N',NULL,NULL,'Y',1,'2026-04-01 17:22:12',NULL,'2026-04-04 01:42:49'),(13,'baekpm@kakao.com',NULL,'baekpm','$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lHHa','백피엠','baekpm',NULL,NULL,NULL,'2026-04-01 17:22:12',0,'Y','N',NULL,NULL,'Y',1,'2026-04-01 17:22:12',NULL,'2026-04-04 01:42:49'),(14,'sondesign@gmail.com',NULL,'sondesign','$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lHHa','손디자인','sondesign',NULL,NULL,NULL,'2026-04-01 17:22:12',0,'Y','N',NULL,NULL,'Y',1,'2026-04-01 17:22:12',NULL,'2026-04-04 01:42:49'),(15,'anmarket@naver.com',NULL,'anmarket','$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lHHa','안마케터','anmarket',NULL,NULL,NULL,'2026-04-01 17:22:12',0,'Y','N',NULL,NULL,'Y',1,'2026-04-01 17:22:12',NULL,'2026-04-04 01:42:49'),(16,'hwangdata@kakao.com',NULL,'hwangdata','$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lHHa','황데이터','hwangdata',NULL,NULL,NULL,'2026-04-01 17:22:12',0,'Y','N',NULL,NULL,'Y',1,'2026-04-01 17:22:12',NULL,'2026-04-04 01:42:49'),(17,'namwriter@gmail.com',NULL,'namwriter','$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lHHa','남작가','namwriter',NULL,NULL,NULL,'2026-04-01 17:22:12',0,'Y','N',NULL,NULL,'Y',1,'2026-04-01 17:22:12',NULL,'2026-04-04 01:42:49'),(18,'ohreader@naver.com',NULL,'ohreader','$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lHHa','오독서','ohreader',NULL,NULL,NULL,'2026-04-01 17:22:12',0,'Y','N',NULL,NULL,'Y',1,'2026-04-01 17:22:12',NULL,'2026-04-04 01:42:49'),(19,'junggame@kakao.com',NULL,'junggame','$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lHHa','정게임','junggame',NULL,NULL,NULL,'2026-04-01 17:22:12',0,'Y','N',NULL,NULL,'Y',1,'2026-04-01 17:22:12',NULL,'2026-04-04 01:42:49'),(20,'kimrealty@gmail.com',NULL,'kimrealty','$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lHHa','김부동산','kimrealty',NULL,NULL,NULL,'2026-04-01 17:22:12',0,'Y','N',NULL,NULL,'Y',1,'2026-04-01 17:22:12',NULL,'2026-04-04 01:42:49'),(21,'parkfinance@naver.com',NULL,'parkfinance','$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lHHa','박재테크','parkfinance',NULL,NULL,NULL,'2026-04-01 17:22:12',0,'Y','N',NULL,NULL,'Y',1,'2026-04-01 17:22:12',NULL,'2026-04-04 01:42:49'),(22,'leeyoga@kakao.com',NULL,'leeyoga','$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lHHa','이요가','leeyoga',NULL,NULL,NULL,'2026-04-01 17:22:12',0,'Y','N',NULL,NULL,'Y',1,'2026-04-01 17:22:12',NULL,'2026-04-04 01:42:49'),(23,'choivideo@gmail.com',NULL,'choivideo','$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lHHa','최유튜버','choivideo',NULL,NULL,NULL,'2026-04-01 17:22:12',0,'Y','N',NULL,NULL,'Y',1,'2026-04-01 17:22:12',NULL,'2026-04-04 01:42:49'),(24,'jeonrunner@naver.com',NULL,'jeonrunner','$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lHHa','전러너','jeonrunner',NULL,NULL,NULL,'2026-04-01 17:22:12',0,'Y','N',NULL,NULL,'Y',1,'2026-04-01 17:22:12',NULL,'2026-04-04 01:42:49'),(25,'limhiker@kakao.com',NULL,'limhiker','$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lHHa','임등산','limhiker',NULL,NULL,NULL,'2026-04-01 17:22:12',0,'Y','N',NULL,NULL,'Y',1,'2026-04-01 17:22:12',NULL,'2026-04-04 01:42:49'),(26,'kangchef@gmail.com',NULL,'kangchef','$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lHHa','강셰프','kangchef',NULL,NULL,NULL,'2026-04-01 17:22:12',0,'Y','N',NULL,NULL,'Y',1,'2026-04-01 17:22:12',NULL,'2026-04-04 01:42:49'),(27,'baekguitar@naver.com',NULL,'baekguitar','$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lHHa','백기타','baekguitar',NULL,NULL,NULL,'2026-04-01 17:22:12',0,'Y','N',NULL,NULL,'Y',1,'2026-04-01 17:22:12',NULL,'2026-04-04 01:42:49'),(28,'sonphotog@kakao.com',NULL,'sonphotog','$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lHHa','손포토','sonphotog',NULL,NULL,NULL,'2026-04-01 17:22:12',0,'Y','N',NULL,NULL,'Y',1,'2026-04-01 17:22:12',NULL,'2026-04-04 01:42:49'),(29,'anstartup2@gmail.com',NULL,'anstartup2','$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lHHa','안스타트업','anstartup2',NULL,NULL,NULL,'2026-04-01 17:22:12',0,'Y','N',NULL,NULL,'Y',1,'2026-04-01 17:22:12',NULL,'2026-04-04 01:42:49'),(30,'hwangtrader@naver.com',NULL,'hwangtrader','$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lHHa','황트레이더','hwangtrader',NULL,NULL,NULL,'2026-04-01 17:22:12',0,'Y','N',NULL,NULL,'Y',1,'2026-04-01 17:22:12',NULL,'2026-04-04 01:42:49'),(31,'jungfullstack@gmail.com',NULL,'jungfullstack','$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lHHa','정풀스택','jungfullstack','프론트부터 백엔드까지 혼자 다 합니다. 사이드프로젝트 중독자.','개발',NULL,'2026-04-01 17:31:51',0,'Y','N',NULL,NULL,'Y',1,'2026-04-01 17:31:51',NULL,'2026-04-04 01:42:49'),(32,'kimdata@naver.com',NULL,'kimdata','$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lHHa','김데이터','kimdata','데이터 사이언티스트. 숫자로 세상을 읽습니다.','AI',NULL,'2026-04-01 17:31:51',0,'Y','N',NULL,NULL,'Y',1,'2026-04-01 17:31:51',NULL,'2026-04-04 01:42:49'),(33,'leedesign@kakao.com',NULL,'leedesign','$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lHHa','이디자인','leedesign','UX/UI 디자이너. 좋은 경험을 만드는 것이 목표입니다.','디자인',NULL,'2026-04-01 17:31:51',0,'Y','N',NULL,NULL,'Y',1,'2026-04-01 17:31:51',NULL,'2026-04-04 01:42:49'),(34,'parkmarketer@gmail.com',NULL,'parkmarketer','$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lHHa','박마케터','parkmarketer','그로스 해커 출신 마케터. 데이터 기반 마케팅이 전문입니다.','창업',NULL,'2026-04-01 17:31:51',0,'Y','N',NULL,NULL,'Y',1,'2026-04-01 17:31:51',NULL,'2026-04-04 01:42:49'),(35,'choifreelance@naver.com',NULL,'choifreelance','$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lHHa','최프리','choifreelance','프리랜서 개발자 5년차. 재택근무와 자유가 최우선입니다.','개발',NULL,'2026-04-01 17:31:51',0,'Y','N',NULL,NULL,'Y',1,'2026-04-01 17:31:51',NULL,'2026-04-04 01:42:49'),(36,'hanblock@kakao.com',NULL,'hanblock','$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lHHa','한블록','hanblock','블록체인 개발자. Web3와 DeFi에 올인 중입니다.','AI',NULL,'2026-04-01 17:31:51',0,'Y','N',NULL,NULL,'Y',1,'2026-04-01 17:31:51',NULL,'2026-04-04 01:42:49'),(37,'yoonenglish@gmail.com',NULL,'yoonenglish','$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lHHa','윤영어','yoonenglish','영어 강사 출신 콘텐츠 크리에이터. 영어로 기회를 만듭니다.','자기계발',NULL,'2026-04-01 17:31:51',0,'Y','N',NULL,NULL,'Y',1,'2026-04-01 17:31:51',NULL,'2026-04-04 01:42:49'),(38,'ohpet@naver.com',NULL,'ohpet','$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lHHa','오펫','ohpet','반려동물과 함께하는 삶. 펫 여행 전문 블로거입니다.','여행',NULL,'2026-04-01 17:31:51',0,'Y','N',NULL,NULL,'Y',1,'2026-04-01 17:31:51',NULL,'2026-04-04 01:42:49'),(39,'shinmedical@kakao.com',NULL,'shinmedical','$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lHHa','신의사','shinmedical','의료 AI 연구자. 기술로 의료의 미래를 바꾸고 싶습니다.','AI',NULL,'2026-04-01 17:31:51',0,'Y','N',NULL,NULL,'Y',1,'2026-04-01 17:31:51',NULL,'2026-04-04 01:42:49'),(40,'limcontent@gmail.com',NULL,'limcontent','$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lHHa','임콘텐츠','limcontent','유튜브 구독자 10만 크리에이터. 영상으로 사업합니다.','창업',NULL,'2026-04-01 17:31:51',0,'Y','N',NULL,NULL,'Y',1,'2026-04-01 17:31:51',NULL,'2026-04-04 01:42:49'),(41,'kangenv@naver.com',NULL,'kangenv','$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lHHa','강환경','kangenv','환경 스타트업 대표. 지속가능한 비즈니스를 만듭니다.','자기계발',NULL,'2026-04-01 17:31:51',0,'Y','N',NULL,NULL,'Y',1,'2026-04-01 17:31:51',NULL,'2026-04-04 01:42:49'),(42,'baekstudent@kakao.com',NULL,'baekstudent','$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lHHa','백학생','baekstudent','CS 전공 대학생. 취업 준비 중이고 공부 기록 남깁니다.','개발',NULL,'2026-04-01 17:31:51',0,'Y','N',NULL,NULL,'Y',1,'2026-04-01 17:31:51',NULL,'2026-04-04 01:42:49'),(43,'soncfo@gmail.com',NULL,'soncfo','$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lHHa','손CFO','soncfo','스타트업 CFO. 재무·회계·투자 전략이 전문입니다.','재테크',NULL,'2026-04-01 17:31:51',0,'Y','N',NULL,NULL,'Y',1,'2026-04-01 17:31:51',NULL,'2026-04-04 01:42:49'),(44,'anhomelab@naver.com',NULL,'anhomelab','$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lHHa','안홈랩','anhomelab','홈서버·자동화·IoT 덕후. 집을 스마트홈으로 만드는 중입니다.','개발',NULL,'2026-04-01 17:31:51',0,'Y','N',NULL,NULL,'Y',1,'2026-04-01 17:31:51',NULL,'2026-04-04 01:42:49'),(45,'hwangvegan@kakao.com',NULL,'hwangvegan','$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lHHa','황비건','hwangvegan','비건 요리 연구가. 맛있고 건강한 식물성 식단을 연구합니다.','요리',NULL,'2026-04-01 17:31:51',0,'Y','N',NULL,NULL,'Y',1,'2026-04-01 17:31:51',NULL,'2026-04-04 01:42:49'),(46,'111@111.111','','111@111.111','$2a$10$oNekexzeUxV.UorcucX.TO6DILMzWJhQKG0GJWBYk54md9UHHp54m','1111','111','111','8,11',3,'2026-04-02 15:43:38',0,'Y','N',NULL,NULL,'Y',1,'2026-04-02 15:43:38',NULL,'2026-04-04 01:42:49'),(52,'deerkrg@gmail.com','','deerkrg@gmail.com','SNS 연동','디어','deerkrg','2131231','18,21',NULL,'2026-04-04 01:12:47',0,'Y','Y','GOOGLE','111667199072241872113','Y',1,'2026-04-04 01:12:47',NULL,NULL),(53,'qudtn9412@dev-jitsu.com','','qudtn9412@dev-jitsu.com','$2a$10$WW5.GnHNoeHDwxzFvkDUfepqoOlnAuIfgC7Sy3EpVN.ayUIO3CLM.','김병수','호이짜','아룡하세룡','20,6,10',NULL,'2026-04-21 04:32:16',0,'Y','N',NULL,NULL,'Y',1,'2026-04-21 04:32:16',NULL,NULL),(54,'qudtn9412@dev-jitsu.com','','qudtn9412@dev-jitsu.com','$2a$10$.RvwPK3tek6SEG/w/d3my.yO.lgSfWMQ5rHrv9.rqwjYDxVkKuEX6','김병수','하하호호','11','22',NULL,'2026-04-21 04:34:35',0,'Y','N',NULL,NULL,'Y',1,'2026-04-21 04:34:35',NULL,NULL);
+/*!40000 ALTER TABLE `tbl_user` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `tbl_user_action_log`
+--
+
+DROP TABLE IF EXISTS `tbl_user_action_log`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `tbl_user_action_log` (
+  `ACTION_SN` bigint(20) NOT NULL AUTO_INCREMENT,
+  `USER_SN` bigint(20) NOT NULL,
+  `TARGET_TYPE` varchar(20) NOT NULL,
+  `TARGET_SN` bigint(20) NOT NULL,
+  `ACTION_TYPE` varchar(20) NOT NULL,
+  `REG_DT` datetime NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`ACTION_SN`),
+  KEY `idx_user_target` (`USER_SN`,`TARGET_TYPE`,`TARGET_SN`),
+  KEY `idx_reg_dt` (`REG_DT`)
+) ENGINE=InnoDB AUTO_INCREMENT=224 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='유저 행동 로그';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `tbl_user_action_log`
+--
+
+LOCK TABLES `tbl_user_action_log` WRITE;
+/*!40000 ALTER TABLE `tbl_user_action_log` DISABLE KEYS */;
+INSERT INTO `tbl_user_action_log` VALUES (1,1,'COMM_POST',31,'LIKE','2026-04-03 14:39:53'),(2,1,'POST',21,'VIEW','2026-04-04 01:43:51'),(3,1,'POST',21,'VIEW','2026-04-04 01:43:51'),(4,1,'POST',1,'VIEW','2026-04-04 01:43:58'),(5,1,'POST',1,'VIEW','2026-04-04 01:43:58'),(6,1,'POST',2,'VIEW','2026-04-04 01:44:01'),(7,1,'POST',2,'VIEW','2026-04-04 01:44:01'),(8,1,'COMM_POST',7,'LIKE','2026-04-04 01:58:58'),(9,1,'COMM_POST',7,'LIKE','2026-04-04 01:59:01'),(10,1,'POST',8,'VIEW','2026-04-04 01:59:13'),(11,1,'POST',8,'VIEW','2026-04-04 01:59:13'),(12,1,'POST',8,'VIEW','2026-04-04 01:59:40'),(13,1,'POST',8,'VIEW','2026-04-04 01:59:40'),(14,1,'POST',1,'VIEW','2026-04-04 02:02:58'),(15,1,'POST',1,'VIEW','2026-04-04 02:02:59'),(16,1,'POST',3,'VIEW','2026-04-04 02:03:04'),(17,1,'POST',3,'VIEW','2026-04-04 02:03:04'),(18,1,'POST',3,'VIEW','2026-04-04 02:03:32'),(19,1,'POST',3,'VIEW','2026-04-04 02:03:45'),(20,1,'POST',3,'VIEW','2026-04-04 02:09:07'),(21,1,'POST',3,'VIEW','2026-04-04 02:09:27'),(22,1,'POST',3,'VIEW','2026-04-04 02:10:37'),(23,1,'POST',3,'VIEW','2026-04-04 02:11:32'),(24,1,'POST',3,'VIEW','2026-04-04 02:11:55'),(25,1,'POST',3,'VIEW','2026-04-04 02:13:02'),(26,1,'POST',2,'VIEW','2026-04-04 02:14:05'),(27,1,'POST',2,'VIEW','2026-04-04 02:14:05'),(28,1,'POST',3,'VIEW','2026-04-04 02:14:13'),(29,1,'POST',3,'VIEW','2026-04-04 02:14:13'),(30,1,'POST',2,'VIEW','2026-04-04 02:14:27'),(31,1,'POST',2,'VIEW','2026-04-04 02:14:27'),(32,1,'POST',2,'VIEW','2026-04-04 02:15:45'),(33,1,'POST',7,'VIEW','2026-04-04 02:15:58'),(34,1,'POST',21,'VIEW','2026-04-04 02:16:12'),(35,1,'POST',21,'VIEW','2026-04-04 02:16:12'),(36,1,'POST',2,'VIEW','2026-04-04 02:16:16'),(37,1,'POST',2,'VIEW','2026-04-04 02:16:16'),(38,1,'POST',2,'VIEW','2026-04-04 02:22:33'),(39,1,'POST',2,'VIEW','2026-04-04 02:22:33'),(40,1,'USER',21,'FOLLOW','2026-04-04 02:22:47'),(41,1,'USER',20,'FOLLOW','2026-04-04 02:22:57'),(42,1,'USER',21,'FOLLOW','2026-04-04 02:23:49'),(43,1,'COMM_POST',84,'VIEW','2026-04-04 20:38:14'),(44,1,'COMM_POST',84,'VIEW','2026-04-04 20:38:14'),(45,1,'COMM',14,'JOIN','2026-04-04 20:49:57'),(46,1,'COMM_POST',48,'VIEW','2026-04-04 21:06:14'),(47,1,'COMM_POST',48,'VIEW','2026-04-04 21:06:14'),(48,1,'COMM_POST',48,'VIEW','2026-04-04 21:06:17'),(49,1,'COMM_POST',48,'VIEW','2026-04-04 21:06:17'),(50,1,'COMM_POST',72,'VIEW','2026-04-05 00:22:29'),(51,1,'COMM_POST',72,'VIEW','2026-04-05 00:22:29'),(52,1,'COMM_POST',67,'VIEW','2026-04-05 00:22:57'),(53,1,'COMM_POST',67,'VIEW','2026-04-05 00:22:57'),(54,1,'COMM_POST',85,'LIKE','2026-04-05 00:38:31'),(55,1,'COMM_POST',90,'LIKE','2026-04-05 00:39:31'),(56,1,'COMM_POST',85,'VIEW','2026-04-05 00:43:05'),(57,1,'COMM_POST',85,'VIEW','2026-04-05 00:43:05'),(58,1,'COMM_POST',31,'VIEW','2026-04-05 00:45:21'),(59,1,'COMM_POST',31,'VIEW','2026-04-05 00:45:21'),(60,1,'COMM_POST',37,'LIKE','2026-04-05 00:45:35'),(61,1,'COMM_POST',37,'SCRAP','2026-04-05 00:45:53'),(62,1,'COMM_POST',37,'LIKE','2026-04-05 00:47:54'),(63,1,'COMM_POST',75,'VIEW','2026-04-05 01:01:41'),(64,1,'COMM_POST',75,'VIEW','2026-04-05 01:01:41'),(65,1,'COMM_POST',36,'VIEW','2026-04-05 01:17:08'),(66,1,'COMM_POST',36,'VIEW','2026-04-05 01:17:08'),(67,1,'COMM_POST',80,'VIEW','2026-04-05 21:49:42'),(68,1,'COMM_POST',80,'VIEW','2026-04-05 21:49:42'),(69,1,'COMM_POST',80,'VIEW','2026-04-05 21:49:45'),(70,1,'COMM_POST',80,'VIEW','2026-04-05 21:49:45'),(71,1,'COMM_POST',80,'VIEW','2026-04-05 21:49:48'),(72,1,'COMM_POST',80,'VIEW','2026-04-05 21:49:48'),(73,1,'USER',21,'FOLLOW','2026-04-05 21:50:00'),(74,1,'USER',21,'FOLLOW','2026-04-05 21:50:16'),(75,1,'COMM_POST',80,'VIEW','2026-04-05 22:21:31'),(76,1,'COMM_POST',80,'VIEW','2026-04-05 22:21:31'),(77,1,'POST',5,'VIEW','2026-04-09 10:07:42'),(78,1,'POST',5,'VIEW','2026-04-09 10:07:42'),(79,52,'POST',5,'LIKE','2026-04-09 15:57:35'),(80,52,'POST',5,'LIKE','2026-04-09 15:59:02'),(81,1,'COMM_POST',80,'VIEW','2026-04-09 16:19:32'),(82,1,'COMM_POST',80,'VIEW','2026-04-09 16:19:32'),(83,1,'COMM_POST',80,'VIEW','2026-04-09 16:19:33'),(84,52,'POST',5,'LIKE','2026-04-09 16:35:00'),(85,52,'POST',89,'LIKE','2026-04-09 16:35:57'),(86,52,'POST',3,'LIKE','2026-04-09 16:35:59'),(87,52,'USER',1,'FOLLOW','2026-04-09 16:45:06'),(88,52,'POST',89,'LIKE','2026-04-09 17:25:01'),(89,52,'POST',89,'LIKE','2026-04-09 17:25:03'),(90,52,'POST',3,'LIKE','2026-04-09 17:25:25'),(91,52,'POST',3,'LIKE','2026-04-09 17:26:25'),(92,52,'POST',3,'LIKE','2026-04-09 17:26:30'),(93,52,'POST',3,'LIKE','2026-04-09 17:26:32'),(94,52,'POST',3,'LIKE','2026-04-09 17:26:55'),(95,52,'POST',3,'LIKE','2026-04-09 17:28:00'),(96,52,'POST',3,'LIKE','2026-04-09 17:30:12'),(97,1,'COMM',6,'VIEW','2026-04-10 13:04:10'),(98,1,'COMM_POST',31,'VIEW','2026-04-10 13:04:11'),(99,1,'COMM_POST',31,'VIEW','2026-04-10 13:04:11'),(100,1,'COMM_POST',15,'VIEW','2026-04-10 13:04:28'),(101,1,'COMM_POST',15,'VIEW','2026-04-10 13:04:28'),(102,1,'COMM_POST',15,'VIEW','2026-04-10 13:04:31'),(103,1,'COMM_POST',15,'VIEW','2026-04-10 13:04:31'),(104,1,'COMM_POST',34,'VIEW','2026-04-10 13:04:34'),(105,1,'COMM_POST',34,'VIEW','2026-04-10 13:04:34'),(106,1,'POST',5,'VIEW','2026-04-10 13:05:54'),(107,1,'POST',5,'VIEW','2026-04-10 13:05:54'),(108,52,'POST',5,'VIEW','2026-04-10 13:06:05'),(109,52,'POST',5,'VIEW','2026-04-10 13:06:05'),(110,52,'POST',89,'LIKE','2026-04-10 13:06:15'),(111,1,'POST',5,'VIEW','2026-04-10 13:06:20'),(112,52,'COMM_POST',21,'LIKE','2026-04-10 13:06:35'),(113,52,'COMM_POST',21,'LIKE','2026-04-10 13:06:43'),(114,52,'COMM_POST',21,'LIKE','2026-04-10 13:06:43'),(115,52,'COMM_POST',47,'LIKE','2026-04-10 13:06:58'),(116,52,'COMM_POST',21,'LIKE','2026-04-10 13:07:16'),(117,52,'COMM_POST',21,'LIKE','2026-04-10 13:07:38'),(118,52,'COMM_POST',21,'LIKE','2026-04-10 13:08:21'),(119,52,'COMM_POST',21,'LIKE','2026-04-10 13:08:22'),(120,52,'POST',3,'VIEW','2026-04-10 13:11:12'),(121,52,'POST',3,'VIEW','2026-04-10 13:11:12'),(122,52,'COMM_POST',36,'LIKE','2026-04-10 13:11:19'),(123,1,'COMM',14,'VIEW','2026-04-14 17:18:01'),(124,1,'COMM',15,'VIEW','2026-04-14 17:18:03'),(125,1,'COMM',6,'VIEW','2026-04-14 17:18:03'),(126,1,'COMM',16,'VIEW','2026-04-14 17:18:04'),(127,1,'COMM',6,'VIEW','2026-04-14 17:18:06'),(128,1,'COMM_POST',91,'POST','2026-04-14 17:18:27'),(129,1,'COMM',8,'VIEW','2026-04-19 05:24:11'),(130,1,'COMM',15,'VIEW','2026-04-19 05:24:12'),(131,1,'COMM',6,'VIEW','2026-04-19 05:24:12'),(132,1,'COMM',14,'VIEW','2026-04-19 05:24:13'),(133,1,'COMM',16,'VIEW','2026-04-19 05:24:14'),(134,1,'COMM',15,'VIEW','2026-04-19 05:24:15'),(135,1,'COMM',6,'VIEW','2026-04-19 05:24:16'),(136,1,'COMM',14,'VIEW','2026-04-19 05:24:16'),(137,1,'COMM',16,'VIEW','2026-04-19 05:24:18'),(138,1,'COMM',16,'VIEW','2026-04-19 05:24:58'),(139,1,'COMM',16,'VIEW','2026-04-19 05:25:52'),(140,1,'COMM',16,'VIEW','2026-04-19 05:25:53'),(141,1,'COMM',16,'VIEW','2026-04-19 05:28:02'),(142,1,'COMM',16,'VIEW','2026-04-19 05:28:05'),(143,1,'COMM',16,'VIEW','2026-04-19 05:28:21'),(144,1,'COMM',16,'VIEW','2026-04-19 05:29:17'),(145,1,'COMM',17,'VIEW','2026-04-19 05:30:01'),(146,1,'COMM',17,'VIEW','2026-04-19 05:39:06'),(147,1,'COMM',17,'VIEW','2026-04-19 05:39:09'),(148,1,'COMM',17,'VIEW','2026-04-19 05:40:07'),(149,1,'COMM',17,'VIEW','2026-04-19 05:40:11'),(150,1,'COMM',16,'VIEW','2026-04-19 05:40:16'),(151,1,'COMM',8,'VIEW','2026-04-19 05:40:34'),(152,1,'COMM',14,'VIEW','2026-04-19 05:40:34'),(153,1,'COMM',15,'VIEW','2026-04-19 05:41:37'),(154,1,'COMM',8,'VIEW','2026-04-19 05:41:37'),(155,1,'POST',74,'LIKE','2026-04-19 05:42:47'),(156,1,'POST',74,'LIKE','2026-04-19 05:43:03'),(157,1,'POST',74,'LIKE','2026-04-19 05:43:07'),(158,1,'COMM_POST',74,'VIEW','2026-04-19 05:44:12'),(159,1,'COMM_POST',74,'LIKE','2026-04-19 05:44:18'),(160,1,'COMM_POST',74,'VIEW','2026-04-19 05:44:25'),(161,1,'POST',21,'LIKE','2026-04-19 05:44:33'),(162,1,'COMM',6,'VIEW','2026-04-19 05:44:44'),(163,1,'COMM',14,'VIEW','2026-04-19 05:44:45'),(164,1,'COMM',15,'VIEW','2026-04-19 05:44:46'),(165,1,'COMM',14,'VIEW','2026-04-19 05:44:46'),(166,1,'COMM',6,'VIEW','2026-04-19 05:44:47'),(167,1,'COMM_POST',21,'VIEW','2026-04-19 05:45:25'),(168,1,'COMM_POST',21,'VIEW','2026-04-19 05:45:27'),(169,1,'POST',21,'LIKE','2026-04-19 05:55:17'),(170,1,'COMM_POST',21,'VIEW','2026-04-19 05:55:20'),(171,1,'COMM',8,'VIEW','2026-04-20 07:39:28'),(172,1,'COMM',15,'VIEW','2026-04-20 07:39:29'),(173,1,'COMM',8,'VIEW','2026-04-21 13:38:52'),(174,1,'COMM',15,'VIEW','2026-04-21 13:38:54'),(175,1,'COMM',6,'VIEW','2026-04-21 13:38:54'),(176,1,'COMM_POST',34,'VIEW','2026-04-21 13:39:04'),(177,1,'COMM_POST',34,'COMMENT','2026-04-21 13:39:06'),(178,1,'COMM_POST',34,'COMMENT','2026-04-21 13:39:12'),(179,1,'COMM_POST',85,'VIEW','2026-04-21 14:01:09'),(180,1,'COMM',14,'VIEW','2026-04-21 14:01:10'),(181,1,'COMM_POST',79,'VIEW','2026-04-21 14:01:11'),(182,1,'COMM',14,'VIEW','2026-04-21 14:01:13'),(183,1,'COMM_POST',79,'VIEW','2026-04-21 14:01:15'),(184,1,'COMM',8,'VIEW','2026-04-21 14:01:19'),(185,1,'COMM',15,'VIEW','2026-04-21 14:01:19'),(186,1,'COMM',15,'VIEW','2026-04-21 14:02:35'),(187,1,'COMM',14,'VIEW','2026-04-21 14:02:51'),(188,1,'COMM',14,'VIEW','2026-04-21 14:03:36'),(189,1,'COMM',14,'VIEW','2026-04-21 14:03:41'),(190,1,'COMM',14,'VIEW','2026-04-21 14:09:07'),(191,1,'COMM',14,'VIEW','2026-04-21 14:32:55'),(192,1,'COMM',14,'VIEW','2026-04-21 14:38:56'),(193,1,'COMM',14,'VIEW','2026-04-21 14:39:08'),(194,1,'COMM',14,'VIEW','2026-04-21 14:39:18'),(195,1,'COMM',14,'VIEW','2026-04-21 14:40:12'),(196,1,'COMM',14,'VIEW','2026-04-21 14:40:47'),(197,1,'COMM',14,'VIEW','2026-04-21 14:40:48'),(198,1,'COMM',14,'VIEW','2026-04-21 14:40:49'),(199,1,'COMM',14,'VIEW','2026-04-21 14:40:49'),(200,1,'COMM',14,'VIEW','2026-04-21 14:40:50'),(201,1,'COMM',14,'VIEW','2026-04-21 14:40:51'),(202,1,'COMM',14,'VIEW','2026-04-21 14:40:52'),(203,1,'COMM',14,'VIEW','2026-04-21 14:40:52'),(204,1,'COMM',14,'VIEW','2026-04-21 14:40:53'),(205,1,'COMM',14,'VIEW','2026-04-21 14:40:56'),(206,1,'COMM',14,'VIEW','2026-04-21 14:40:58'),(207,1,'COMM',14,'VIEW','2026-04-21 14:40:58'),(208,1,'COMM',14,'VIEW','2026-04-21 14:40:59'),(209,1,'COMM',14,'VIEW','2026-04-21 14:40:59'),(210,1,'COMM',14,'VIEW','2026-04-21 14:40:59'),(211,1,'COMM',14,'VIEW','2026-04-21 14:41:00'),(212,1,'COMM',14,'VIEW','2026-04-21 14:41:01'),(213,1,'COMM',8,'VIEW','2026-04-22 07:25:39'),(214,1,'COMM_POST',43,'VIEW','2026-04-22 07:25:41'),(215,1,'COMM',8,'VIEW','2026-04-22 07:25:59'),(216,1,'COMM',14,'VIEW','2026-04-22 07:26:50'),(217,1,'COMM',17,'VIEW','2026-04-22 07:26:52'),(218,1,'COMM',6,'VIEW','2026-04-22 07:26:53'),(219,1,'COMM_POST',31,'VIEW','2026-04-22 07:26:55'),(220,1,'USER',20,'FOLLOW','2026-04-22 07:26:59'),(221,1,'COMM_POST',15,'VIEW','2026-04-22 07:27:09'),(222,1,'COMM_POST',15,'COMMENT','2026-04-22 07:27:13'),(223,1,'COMM',8,'VIEW','2026-04-22 07:28:03');
+/*!40000 ALTER TABLE `tbl_user_action_log` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `tbl_user_flwr`
+--
+
+DROP TABLE IF EXISTS `tbl_user_flwr`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `tbl_user_flwr` (
+  `FLWR_SN` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '팔로우 SN (PK)',
+  `FLWR_USER_SN` bigint(20) NOT NULL COMMENT '팔로우 하는 사용자 SN (follower)',
+  `FLWNG_USER_SN` bigint(20) NOT NULL COMMENT '팔로우 받는 사용자 SN (followee)',
+  `ACTVTN_YN` char(1) NOT NULL DEFAULT 'Y' COMMENT '활성화 여부 (Y: 팔로우 중 / N: 언팔로우)',
+  `CREATR_SN` bigint(20) NOT NULL COMMENT '생성자 SN',
+  `FRST_CRT_DT` datetime NOT NULL DEFAULT current_timestamp() COMMENT '최초 생성일시',
+  `MDFR_SN` bigint(20) DEFAULT NULL COMMENT '수정자 SN',
+  `MDFCN_DT` datetime DEFAULT NULL ON UPDATE current_timestamp() COMMENT '수정일시',
+  PRIMARY KEY (`FLWR_SN`),
+  UNIQUE KEY `UK_USR_FLWR_REL` (`FLWR_USER_SN`,`FLWNG_USER_SN`)
+) ENGINE=InnoDB AUTO_INCREMENT=70 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='팔로우';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `tbl_user_flwr`
+--
+
+LOCK TABLES `tbl_user_flwr` WRITE;
+/*!40000 ALTER TABLE `tbl_user_flwr` DISABLE KEYS */;
+INSERT INTO `tbl_user_flwr` VALUES (1,2,1,'Y',2,'2026-01-05 09:10:00',NULL,NULL),(2,3,1,'Y',3,'2026-01-06 11:20:00',NULL,NULL),(3,4,1,'Y',4,'2026-01-07 13:30:00',NULL,NULL),(4,5,1,'Y',5,'2026-01-08 15:00:00',NULL,NULL),(5,6,1,'Y',6,'2026-01-10 08:45:00',NULL,NULL),(6,7,1,'Y',7,'2026-01-12 10:00:00',NULL,NULL),(7,8,1,'Y',8,'2026-01-14 14:20:00',NULL,NULL),(8,9,1,'Y',9,'2026-01-15 09:30:00',NULL,NULL),(9,10,1,'Y',10,'2026-01-17 16:10:00',NULL,NULL),(10,11,1,'Y',11,'2026-01-18 11:00:00',NULL,NULL),(11,12,1,'Y',12,'2026-01-20 08:00:00',NULL,NULL),(12,13,1,'Y',13,'2026-01-22 13:50:00',NULL,NULL),(13,14,1,'Y',14,'2026-01-24 17:30:00',NULL,NULL),(14,15,1,'Y',15,'2026-01-25 10:10:00',NULL,NULL),(15,16,1,'Y',16,'2026-01-27 12:00:00',NULL,NULL),(16,17,1,'Y',17,'2026-01-28 09:00:00',NULL,NULL),(17,18,1,'Y',18,'2026-02-01 14:00:00',NULL,NULL),(18,19,1,'Y',19,'2026-02-03 11:30:00',NULL,NULL),(19,20,1,'Y',20,'2026-02-05 08:20:00',NULL,NULL),(20,21,1,'Y',21,'2026-02-07 15:40:00',NULL,NULL),(21,1,2,'Y',1,'2026-01-06 10:00:00',NULL,NULL),(22,1,3,'Y',1,'2026-01-07 12:00:00',NULL,NULL),(23,1,4,'Y',1,'2026-01-09 09:00:00',NULL,NULL),(24,1,5,'Y',1,'2026-01-10 10:30:00',NULL,NULL),(25,1,6,'Y',1,'2026-01-11 11:00:00',NULL,NULL),(26,1,8,'Y',1,'2026-01-15 13:00:00',NULL,NULL),(27,1,10,'Y',1,'2026-01-18 09:30:00',NULL,NULL),(28,1,12,'Y',1,'2026-01-21 10:00:00',NULL,NULL),(29,1,15,'Y',1,'2026-01-26 14:00:00',NULL,NULL),(30,1,18,'Y',1,'2026-02-02 09:00:00',NULL,NULL),(31,1,22,'Y',1,'2026-02-10 11:00:00',NULL,NULL),(32,1,25,'Y',1,'2026-02-15 16:00:00',NULL,NULL),(33,2,3,'Y',2,'2026-01-10 09:00:00',NULL,NULL),(34,3,2,'Y',3,'2026-01-11 10:00:00',NULL,NULL),(35,4,5,'Y',4,'2026-01-12 11:00:00',NULL,NULL),(36,5,4,'Y',5,'2026-01-13 12:00:00',NULL,NULL),(37,6,7,'Y',6,'2026-01-14 13:00:00',NULL,NULL),(38,7,6,'Y',7,'2026-01-15 14:00:00',NULL,NULL),(39,8,9,'Y',8,'2026-01-16 09:00:00',NULL,NULL),(40,9,10,'Y',9,'2026-01-17 10:00:00',NULL,NULL),(41,10,11,'Y',10,'2026-01-18 11:00:00',NULL,NULL),(42,11,12,'Y',11,'2026-01-19 12:00:00',NULL,NULL),(43,12,13,'Y',12,'2026-01-20 13:00:00',NULL,NULL),(44,13,14,'Y',13,'2026-01-21 09:00:00',NULL,NULL),(45,14,15,'Y',14,'2026-01-22 10:00:00',NULL,NULL),(46,15,16,'Y',15,'2026-01-23 11:00:00',NULL,NULL),(47,16,17,'Y',16,'2026-01-24 12:00:00',NULL,NULL),(48,17,18,'Y',17,'2026-01-25 09:00:00',NULL,NULL),(49,18,19,'Y',18,'2026-01-26 10:00:00',NULL,NULL),(50,19,20,'Y',19,'2026-01-27 11:00:00',NULL,NULL),(51,20,21,'Y',20,'2026-01-28 12:00:00',NULL,NULL),(52,21,22,'Y',21,'2026-01-29 09:00:00',NULL,NULL),(53,22,23,'Y',22,'2026-01-30 10:00:00',NULL,NULL),(54,23,24,'Y',23,'2026-01-31 11:00:00',NULL,NULL),(55,24,25,'Y',24,'2026-02-01 12:00:00',NULL,NULL),(56,25,26,'Y',25,'2026-02-02 09:00:00',NULL,NULL),(57,26,27,'Y',26,'2026-02-03 10:00:00',NULL,NULL),(58,27,28,'Y',27,'2026-02-04 11:00:00',NULL,NULL),(59,28,29,'Y',28,'2026-02-05 12:00:00',NULL,NULL),(60,29,30,'Y',29,'2026-02-06 09:00:00',NULL,NULL),(61,30,2,'Y',30,'2026-02-07 10:00:00',NULL,NULL),(62,2,10,'Y',2,'2026-02-08 11:00:00',NULL,NULL),(63,5,15,'Y',5,'2026-02-09 12:00:00',NULL,NULL),(64,8,20,'Y',8,'2026-02-10 09:00:00',NULL,NULL),(65,11,25,'Y',11,'2026-02-11 10:00:00',NULL,NULL),(66,14,30,'Y',14,'2026-02-12 11:00:00',NULL,NULL),(67,1,21,'N',1,'2026-04-04 02:22:47',NULL,NULL),(68,1,20,'Y',1,'2026-04-04 02:22:57',NULL,NULL),(69,52,1,'N',52,'2026-04-09 16:45:06',NULL,NULL);
+/*!40000 ALTER TABLE `tbl_user_flwr` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `tbl_user_interest_score`
+--
+
+DROP TABLE IF EXISTS `tbl_user_interest_score`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `tbl_user_interest_score` (
+  `SCORE_SN` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '관심도 점수 SN (PK)',
+  `USER_SN` bigint(20) NOT NULL COMMENT '유저 SN',
+  `TARGET_TYPE` varchar(20) NOT NULL COMMENT 'COMM | COMM_POST | POST | USER',
+  `TARGET_SN` bigint(20) NOT NULL COMMENT '대상 SN',
+  `SCORE` decimal(10,4) NOT NULL DEFAULT 0.0000 COMMENT '누적 관심도 점수 (0 이상)',
+  `UPDT_DT` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp() COMMENT '최종 업데이트 일시',
+  PRIMARY KEY (`SCORE_SN`),
+  UNIQUE KEY `UK_INTEREST_USER_TARGET` (`USER_SN`,`TARGET_TYPE`,`TARGET_SN`)
+) ENGINE=InnoDB AUTO_INCREMENT=33 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='유저 관심도 점수 (현재 상태 스냅샷)';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `tbl_user_interest_score`
+--
+
+LOCK TABLES `tbl_user_interest_score` WRITE;
+/*!40000 ALTER TABLE `tbl_user_interest_score` DISABLE KEYS */;
+INSERT INTO `tbl_user_interest_score` VALUES (1,1,'USER',20,6.0000,'2026-04-04 02:23:39'),(2,1,'USER',21,0.0000,'2026-04-04 02:23:41'),(3,1,'COMM',14,8.0000,'2026-04-04 20:49:57'),(4,1,'COMM_POST',85,0.0000,'2026-04-05 00:38:31'),(5,1,'COMM_POST',90,3.0000,'2026-04-05 00:39:31'),(6,1,'TAG',16,3.0000,'2026-04-05 00:39:31'),(7,1,'TAG',23,3.0000,'2026-04-05 00:39:31'),(8,1,'COMM_POST',37,0.0000,'2026-04-05 00:45:35'),(9,52,'TAG',1,6.0000,'2026-04-09 15:57:35'),(10,52,'POST',5,3.0000,'2026-04-09 15:57:35'),(11,52,'TAG',17,6.0000,'2026-04-09 15:57:35'),(12,52,'TAG',18,3.0000,'2026-04-09 15:57:35'),(13,52,'POST',89,3.0000,'2026-04-09 16:35:57'),(14,52,'POST',3,3.0000,'2026-04-09 16:35:59'),(15,52,'TAG',6,3.0000,'2026-04-09 16:35:59'),(16,52,'USER',1,0.0000,'2026-04-09 16:45:06'),(17,52,'COMM_POST',21,3.0000,'2026-04-10 13:06:35'),(18,52,'TAG',5,3.0000,'2026-04-10 13:06:35'),(19,52,'COMM_POST',47,3.0000,'2026-04-10 13:06:58'),(20,52,'TAG',16,3.0000,'2026-04-10 13:06:58'),(21,52,'COMM_POST',36,3.0000,'2026-04-10 13:11:19'),(22,52,'TAG',11,3.0000,'2026-04-10 13:11:19'),(23,52,'TAG',12,3.0000,'2026-04-10 13:11:19'),(24,1,'POST',74,3.0000,'2026-04-19 05:42:47'),(25,1,'COMM_POST',74,3.0000,'2026-04-19 05:44:18'),(26,1,'TAG',17,3.0000,'2026-04-19 05:44:18'),(27,1,'TAG',18,3.0000,'2026-04-19 05:44:18'),(28,1,'POST',21,3.0000,'2026-04-19 05:44:33'),(29,1,'COMM_POST',34,0.0000,'2026-04-21 13:39:03'),(30,1,'TAG',12,8.0000,'2026-04-21 13:39:03'),(31,1,'TAG',3,4.0000,'2026-04-22 07:27:13'),(32,1,'TAG',11,4.0000,'2026-04-22 07:27:13');
+/*!40000 ALTER TABLE `tbl_user_interest_score` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `tbl_user_lgn_hstry`
+--
+
+DROP TABLE IF EXISTS `tbl_user_lgn_hstry`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `tbl_user_lgn_hstry` (
+  `LGN_HSTRY_SN` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '로그인이력 SN (PK)',
+  `USER_SN` bigint(20) NOT NULL COMMENT '사용자일련번호',
+  `LGN_DT` datetime NOT NULL DEFAULT current_timestamp() COMMENT '로그인일시',
+  `LGN_IP` varchar(45) NOT NULL COMMENT '로그인 IP',
+  `ACTVTN_YN` char(1) NOT NULL DEFAULT 'Y' COMMENT '활성여부',
+  `CREATR_SN` bigint(20) NOT NULL DEFAULT 1 COMMENT '생성자일련번호',
+  `FRST_CRT_DT` datetime NOT NULL DEFAULT current_timestamp() COMMENT '최초생성일시',
+  PRIMARY KEY (`LGN_HSTRY_SN`)
+) ENGINE=InnoDB AUTO_INCREMENT=86 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='로그인 이력';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `tbl_user_lgn_hstry`
+--
+
+LOCK TABLES `tbl_user_lgn_hstry` WRITE;
+/*!40000 ALTER TABLE `tbl_user_lgn_hstry` DISABLE KEYS */;
+INSERT INTO `tbl_user_lgn_hstry` VALUES (1,1,'2026-04-01 17:17:30','127.0.0.1','Y',1,'2026-04-01 17:17:30'),(2,1,'2026-03-31 08:05:00','112.188.0.1','Y',1,'2026-04-01 17:31:51'),(3,1,'2026-03-30 09:22:00','112.188.0.1','Y',1,'2026-04-01 17:31:51'),(4,1,'2026-03-29 21:44:00','210.94.0.50','Y',1,'2026-04-01 17:31:51'),(5,31,'2026-03-31 10:15:00','59.11.0.33','Y',31,'2026-04-01 17:31:51'),(6,31,'2026-03-30 11:00:00','59.11.0.33','Y',31,'2026-04-01 17:31:51'),(7,32,'2026-03-31 09:30:00','1.233.0.7','Y',32,'2026-04-01 17:31:51'),(8,33,'2026-03-30 14:00:00','125.180.0.12','Y',33,'2026-04-01 17:31:51'),(9,34,'2026-03-31 08:45:00','211.207.0.4','Y',34,'2026-04-01 17:31:51'),(10,35,'2026-03-29 17:20:00','58.140.0.21','Y',35,'2026-04-01 17:31:51'),(11,36,'2026-03-31 11:55:00','175.200.0.9','Y',36,'2026-04-01 17:31:51'),(12,37,'2026-03-30 07:30:00','61.78.0.5','Y',37,'2026-04-01 17:31:51'),(13,39,'2026-03-31 13:10:00','203.229.0.16','Y',39,'2026-04-01 17:31:51'),(14,40,'2026-03-30 18:00:00','180.92.0.3','Y',40,'2026-04-01 17:31:51'),(15,42,'2026-03-31 09:00:00','121.130.0.22','Y',42,'2026-04-01 17:31:51'),(16,45,'2026-03-29 20:30:00','110.8.0.14','Y',45,'2026-04-01 17:31:51'),(17,1,'2026-04-02 14:23:33','127.0.0.1','Y',1,'2026-04-02 14:23:33'),(18,1,'2026-04-02 14:24:09','127.0.0.1','Y',1,'2026-04-02 14:24:09'),(19,1,'2026-04-02 15:02:58','127.0.0.1','Y',1,'2026-04-02 15:02:58'),(20,1,'2026-04-02 15:16:44','127.0.0.1','Y',1,'2026-04-02 15:16:44'),(21,1,'2026-04-02 15:26:22','127.0.0.1','Y',1,'2026-04-02 15:26:22'),(22,46,'2026-04-02 15:43:38','127.0.0.1','Y',1,'2026-04-02 15:43:38'),(23,46,'2026-04-02 16:01:07','127.0.0.1','Y',1,'2026-04-02 16:01:07'),(24,46,'2026-04-02 16:02:11','127.0.0.1','Y',1,'2026-04-02 16:02:11'),(25,1,'2026-04-02 16:06:21','127.0.0.1','Y',1,'2026-04-02 16:06:21'),(26,46,'2026-04-02 16:11:22','127.0.0.1','Y',1,'2026-04-02 16:11:22'),(27,1,'2026-04-02 16:21:59','127.0.0.1','Y',1,'2026-04-02 16:21:59'),(28,1,'2026-04-02 19:11:07','127.0.0.1','Y',1,'2026-04-02 19:11:07'),(29,1,'2026-04-02 19:19:34','127.0.0.1','Y',1,'2026-04-02 19:19:34'),(30,1,'2026-04-03 09:22:38','127.0.0.1','Y',1,'2026-04-03 09:22:38'),(31,1,'2026-04-03 09:23:58','127.0.0.1','Y',1,'2026-04-03 09:23:58'),(32,1,'2026-04-03 10:02:03','127.0.0.1','Y',1,'2026-04-03 10:02:03'),(33,47,'2026-04-03 17:52:59','127.0.0.1','Y',1,'2026-04-03 17:52:59'),(34,47,'2026-04-03 17:52:59','127.0.0.1','Y',1,'2026-04-03 17:52:59'),(35,48,'2026-04-03 17:54:47','127.0.0.1','Y',1,'2026-04-03 17:54:47'),(36,48,'2026-04-03 17:54:56','127.0.0.1','Y',1,'2026-04-03 17:54:56'),(37,49,'2026-04-03 17:56:25','127.0.0.1','Y',1,'2026-04-03 17:56:25'),(38,49,'2026-04-03 17:56:25','127.0.0.1','Y',1,'2026-04-03 17:56:25'),(39,50,'2026-04-03 17:57:28','127.0.0.1','Y',1,'2026-04-03 17:57:28'),(40,50,'2026-04-03 17:57:28','127.0.0.1','Y',1,'2026-04-03 17:57:28'),(41,1,'2026-04-04 00:25:48','127.0.0.1','Y',1,'2026-04-04 00:25:48'),(42,1,'2026-04-04 01:01:23','127.0.0.1','Y',1,'2026-04-04 01:01:23'),(43,52,'2026-04-04 01:12:47','127.0.0.1','Y',1,'2026-04-04 01:12:47'),(44,52,'2026-04-04 01:18:08','127.0.0.1','Y',1,'2026-04-04 01:18:08'),(45,52,'2026-04-04 01:18:08','127.0.0.1','Y',1,'2026-04-04 01:18:08'),(46,52,'2026-04-04 01:30:21','127.0.0.1','Y',1,'2026-04-04 01:30:21'),(47,52,'2026-04-04 01:30:21','127.0.0.1','Y',1,'2026-04-04 01:30:21'),(48,52,'2026-04-04 01:30:21','127.0.0.1','Y',1,'2026-04-04 01:30:21'),(49,52,'2026-04-04 01:30:21','127.0.0.1','Y',1,'2026-04-04 01:30:21'),(50,52,'2026-04-04 01:30:32','127.0.0.1','Y',1,'2026-04-04 01:30:32'),(51,52,'2026-04-04 01:30:32','127.0.0.1','Y',1,'2026-04-04 01:30:32'),(52,1,'2026-04-04 01:42:53','127.0.0.1','Y',1,'2026-04-04 01:42:53'),(53,1,'2026-04-04 01:58:50','127.0.0.1','Y',1,'2026-04-04 01:58:50'),(54,1,'2026-04-04 02:22:27','127.0.0.1','Y',1,'2026-04-04 02:22:27'),(55,1,'2026-04-04 20:36:53','127.0.0.1','Y',1,'2026-04-04 20:36:53'),(56,52,'2026-04-04 20:37:25','127.0.0.1','Y',1,'2026-04-04 20:37:25'),(57,52,'2026-04-04 20:37:25','127.0.0.1','Y',1,'2026-04-04 20:37:25'),(58,52,'2026-04-05 21:51:49','127.0.0.1','Y',1,'2026-04-05 21:51:49'),(59,52,'2026-04-05 21:51:49','127.0.0.1','Y',1,'2026-04-05 21:51:49'),(60,1,'2026-04-05 21:55:49','127.0.0.1','Y',1,'2026-04-05 21:55:49'),(61,52,'2026-04-05 22:14:56','127.0.0.1','Y',1,'2026-04-05 22:14:56'),(62,52,'2026-04-05 22:14:56','127.0.0.1','Y',1,'2026-04-05 22:14:56'),(63,1,'2026-04-05 22:15:18','127.0.0.1','Y',1,'2026-04-05 22:15:18'),(64,1,'2026-04-05 22:21:19','127.0.0.1','Y',1,'2026-04-05 22:21:19'),(65,1,'2026-04-05 22:23:41','127.0.0.1','Y',1,'2026-04-05 22:23:41'),(66,1,'2026-04-09 09:09:29','127.0.0.1','Y',1,'2026-04-09 09:09:29'),(67,1,'2026-04-09 10:06:33','127.0.0.1','Y',1,'2026-04-09 10:06:33'),(68,52,'2026-04-09 15:57:26','127.0.0.1','Y',1,'2026-04-09 15:57:26'),(69,52,'2026-04-09 15:57:26','127.0.0.1','Y',1,'2026-04-09 15:57:26'),(70,52,'2026-04-09 16:11:17','127.0.0.1','Y',1,'2026-04-09 16:11:17'),(71,52,'2026-04-09 16:11:17','127.0.0.1','Y',1,'2026-04-09 16:11:17'),(72,1,'2026-04-09 16:11:28','127.0.0.1','Y',1,'2026-04-09 16:11:28'),(73,1,'2026-04-09 16:36:03','127.0.0.1','Y',1,'2026-04-09 16:36:03'),(74,1,'2026-04-09 16:45:10','127.0.0.1','Y',1,'2026-04-09 16:45:10'),(75,1,'2026-04-10 13:01:48','127.0.0.1','Y',1,'2026-04-10 13:01:48'),(76,52,'2026-04-10 13:05:15','127.0.0.1','Y',1,'2026-04-10 13:05:15'),(77,52,'2026-04-10 13:05:15','127.0.0.1','Y',1,'2026-04-10 13:05:15'),(78,52,'2026-04-14 17:17:22','127.0.0.1','Y',1,'2026-04-14 17:17:22'),(79,52,'2026-04-14 17:17:22','127.0.0.1','Y',1,'2026-04-14 17:17:22'),(80,1,'2026-04-14 17:17:58','127.0.0.1','Y',1,'2026-04-14 17:17:58'),(81,1,'2026-04-19 05:24:08','192.168.0.46','Y',1,'2026-04-19 05:24:08'),(82,1,'2026-04-20 07:39:15','192.168.0.1','Y',1,'2026-04-20 07:39:15'),(83,1,'2026-04-21 13:38:50','220.82.133.69','Y',1,'2026-04-21 13:38:50'),(84,1,'2026-04-22 07:25:37','192.168.0.1','Y',1,'2026-04-22 07:25:37'),(85,1,'2026-05-10 10:26:30','192.168.0.1','Y',1,'2026-05-10 10:26:30');
+/*!40000 ALTER TABLE `tbl_user_lgn_hstry` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `tbl_user_notif`
+--
+
+DROP TABLE IF EXISTS `tbl_user_notif`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `tbl_user_notif` (
+  `NOTIF_SN` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '알림일련번호',
+  `USER_SN` bigint(20) NOT NULL COMMENT '수신자 SN',
+  `SENDER_SN` bigint(20) DEFAULT NULL COMMENT '발신자 SN (SYSTEM 공지는 NULL)',
+  `NOTIF_TYP` varchar(20) NOT NULL COMMENT '알림유형 COMMENT|LIKE|FOLLOW|SYSTEM',
+  `MESSAGE` varchar(255) NOT NULL COMMENT '알림메시지',
+  `TARGET_SN` bigint(20) DEFAULT NULL COMMENT '대상 게시글/유저 SN',
+  `TARGET_KIND` varchar(20) DEFAULT NULL COMMENT '대상종류 POST|COMM_POST',
+  `IS_READ` char(1) NOT NULL DEFAULT 'N' COMMENT '읽음여부',
+  `IS_DISPLAY` char(1) NOT NULL DEFAULT 'Y' COMMENT '표시여부 (N = X 버튼으로 숨김)',
+  `FRST_CRT_DT` datetime NOT NULL DEFAULT current_timestamp() COMMENT '생성일시',
+  PRIMARY KEY (`NOTIF_SN`),
+  KEY `FK_NOTIF_SENDER` (`SENDER_SN`),
+  KEY `IDX_NOTIF_USER_SN` (`USER_SN`,`FRST_CRT_DT`),
+  CONSTRAINT `FK_NOTIF_SENDER` FOREIGN KEY (`SENDER_SN`) REFERENCES `tbl_user` (`USER_SN`),
+  CONSTRAINT `FK_NOTIF_USER` FOREIGN KEY (`USER_SN`) REFERENCES `tbl_user` (`USER_SN`)
+) ENGINE=InnoDB AUTO_INCREMENT=25 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='유저 알림';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `tbl_user_notif`
+--
+
+LOCK TABLES `tbl_user_notif` WRITE;
+/*!40000 ALTER TABLE `tbl_user_notif` DISABLE KEYS */;
+INSERT INTO `tbl_user_notif` VALUES (1,1,52,'LIKE','deerkrg님이 내 게시글을 좋아합니다.',5,'POST','Y','N','2026-04-09 16:35:00'),(2,1,52,'LIKE','deerkrg님이 내 게시글을 좋아합니다.',3,'POST','Y','N','2026-04-09 16:35:59'),(3,1,52,'FOLLOW','deerkrg님이 팔로우를 시작했습니다.',NULL,NULL,'Y','N','2026-04-09 16:45:06'),(4,1,52,'LIKE','deerkrg님이 내 게시글을 좋아합니다.',3,'POST','N','N','2026-04-09 17:25:25'),(5,1,52,'LIKE','deerkrg님이 내 게시글을 좋아합니다.',3,'POST','N','N','2026-04-09 17:26:25'),(6,1,52,'LIKE','deerkrg님이 내 게시글을 좋아합니다.',3,'POST','N','N','2026-04-09 17:26:30'),(7,1,52,'LIKE','deerkrg님이 내 게시글을 좋아합니다.',3,'POST','N','N','2026-04-09 17:26:32'),(8,1,52,'LIKE','deerkrg님이 내 게시글을 좋아합니다.',3,'POST','N','N','2026-04-09 17:27:34'),(9,1,52,'LIKE','deerkrg님이 내 게시글을 좋아합니다.',3,'POST','N','N','2026-04-09 17:28:00'),(10,1,52,'LIKE','deerkrg님이 내 게시글을 좋아합니다.',3,'POST','Y','N','2026-04-09 17:30:12'),(11,29,52,'LIKE','deerkrg님이 내 게시글을 좋아합니다.',21,'COMM_POST','N','Y','2026-04-10 13:06:35'),(12,29,52,'LIKE','deerkrg님이 내 게시글을 좋아합니다.',21,'COMM_POST','N','Y','2026-04-10 13:06:43'),(13,29,52,'LIKE','deerkrg님이 내 게시글을 좋아합니다.',21,'COMM_POST','N','Y','2026-04-10 13:06:43'),(14,1,52,'LIKE','deerkrg님이 내 게시글을 좋아합니다.',47,'COMM_POST','Y','N','2026-04-10 13:06:58'),(15,29,52,'LIKE','deerkrg님이 내 게시글을 좋아합니다.',21,'COMM_POST','N','Y','2026-04-10 13:07:16'),(16,29,52,'LIKE','deerkrg님이 내 게시글을 좋아합니다.',21,'COMM_POST','N','Y','2026-04-10 13:07:38'),(17,29,52,'LIKE','deerkrg님이 내 게시글을 좋아합니다.',21,'COMM_POST','N','Y','2026-04-10 13:08:21'),(18,29,52,'LIKE','deerkrg님이 내 게시글을 좋아합니다.',21,'COMM_POST','N','Y','2026-04-10 13:08:22'),(19,1,52,'LIKE','deerkrg님이 내 게시글을 좋아합니다.',36,'COMM_POST','N','N','2026-04-10 13:11:19'),(20,12,1,'LIKE','deer님이 내 게시글을 좋아합니다.',74,'COMM_POST','N','Y','2026-04-19 05:44:18'),(21,20,1,'COMMENT','deer님이 내 게시글에 댓글을 달았습니다.',34,'COMM_POST','N','Y','2026-04-21 13:39:06'),(22,20,1,'COMMENT','deer님이 내 게시글에 댓글을 달았습니다.',34,'COMM_POST','N','Y','2026-04-21 13:39:12'),(23,20,1,'FOLLOW','deer님이 팔로우를 시작했습니다.',NULL,NULL,'N','Y','2026-04-22 07:26:59'),(24,30,1,'COMMENT','deer님이 내 게시글에 댓글을 달았습니다.',15,'COMM_POST','N','Y','2026-04-22 07:27:13');
+/*!40000 ALTER TABLE `tbl_user_notif` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `tbl_user_stng`
+--
+
+DROP TABLE IF EXISTS `tbl_user_stng`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `tbl_user_stng` (
+  `USER_STNG_SN` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '개인 설정 SN (PK)',
+  `USER_SN` bigint(20) NOT NULL COMMENT '사용자일련번호',
+  `THEME_TYP` varchar(20) NOT NULL DEFAULT 'system' COMMENT '테마 유형 (light / dark / system)',
+  `CMT_NTFCTN_YN` char(1) NOT NULL DEFAULT 'Y' COMMENT '댓글 알림 여부 (Y / N)',
+  `FLWR_NTFCTN_YN` char(1) NOT NULL DEFAULT 'Y' COMMENT '팔로우 알림 여부 (Y / N)',
+  `LIKE_NTFCTN_YN` char(1) NOT NULL DEFAULT 'N' COMMENT '좋아요 알림 여부 (Y / N)',
+  `SYS_NTFCTN_YN` char(1) NOT NULL DEFAULT 'Y' COMMENT '시스템 알림 여부 (Y / N)',
+  `ACTVTN_YN` varchar(1) NOT NULL DEFAULT 'Y' COMMENT '활성여부',
+  `CREATR_SN` bigint(20) NOT NULL DEFAULT 1 COMMENT '생성자일련번호',
+  `FRST_CRT_DT` datetime NOT NULL DEFAULT current_timestamp() COMMENT '최초생성일시',
+  `MDFR_SN` bigint(20) DEFAULT NULL COMMENT '수정자일련번호',
+  `MDFCN_DT` datetime DEFAULT NULL ON UPDATE current_timestamp() COMMENT '수정일',
+  PRIMARY KEY (`USER_STNG_SN`)
+) ENGINE=InnoDB AUTO_INCREMENT=22 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='사용자 개인 설정';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `tbl_user_stng`
+--
+
+LOCK TABLES `tbl_user_stng` WRITE;
+/*!40000 ALTER TABLE `tbl_user_stng` DISABLE KEYS */;
+INSERT INTO `tbl_user_stng` VALUES (1,1,'dark','Y','N','N','N','Y',1,'2026-04-01 17:31:51',1,'2026-04-22 07:27:34'),(2,31,'dark','Y','Y','N','Y','Y',31,'2026-04-01 17:31:51',NULL,NULL),(3,32,'light','Y','Y','Y','Y','Y',32,'2026-04-01 17:31:51',NULL,NULL),(4,33,'system','Y','N','N','Y','Y',33,'2026-04-01 17:31:51',NULL,NULL),(5,34,'light','Y','Y','Y','Y','Y',34,'2026-04-01 17:31:51',NULL,NULL),(6,35,'dark','N','Y','N','Y','Y',35,'2026-04-01 17:31:51',NULL,NULL),(7,36,'system','Y','Y','Y','N','Y',36,'2026-04-01 17:31:51',NULL,NULL),(8,37,'light','Y','Y','N','Y','Y',37,'2026-04-01 17:31:51',NULL,NULL),(9,38,'dark','Y','Y','Y','Y','Y',38,'2026-04-01 17:31:51',NULL,NULL),(10,39,'system','Y','N','N','Y','Y',39,'2026-04-01 17:31:51',NULL,NULL),(11,40,'light','Y','Y','Y','Y','Y',40,'2026-04-01 17:31:51',NULL,NULL),(12,41,'dark','Y','Y','N','N','Y',41,'2026-04-01 17:31:51',NULL,NULL),(13,42,'system','Y','Y','Y','Y','Y',42,'2026-04-01 17:31:51',NULL,NULL),(14,43,'light','N','Y','N','Y','Y',43,'2026-04-01 17:31:51',NULL,NULL),(15,44,'dark','Y','Y','Y','Y','Y',44,'2026-04-01 17:31:51',NULL,NULL),(16,45,'system','Y','Y','N','Y','Y',45,'2026-04-01 17:31:51',NULL,NULL),(17,46,'system','Y','Y','N','Y','Y',46,'2026-04-02 15:43:38',NULL,NULL),(18,51,'system','Y','Y','N','Y','Y',51,'2026-04-04 00:54:50',NULL,NULL),(19,52,'system','Y','Y','N','Y','Y',52,'2026-04-04 01:12:47',NULL,NULL),(20,53,'system','Y','Y','N','Y','Y',53,'2026-04-21 04:32:16',NULL,NULL),(21,54,'system','Y','Y','N','Y','Y',54,'2026-04-21 04:34:35',NULL,NULL);
+/*!40000 ALTER TABLE `tbl_user_stng` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `tbl_user_tag`
+--
+
+DROP TABLE IF EXISTS `tbl_user_tag`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `tbl_user_tag` (
+  `USER_TAG_SN` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '사용자 태그 SN (PK)',
+  `USER_SN` bigint(20) NOT NULL COMMENT '사용자일련번호',
+  `TAG_SN` bigint(20) NOT NULL COMMENT '태그 SN (TBL_TAG FK)',
+  `USE_COUNT` bigint(20) NOT NULL COMMENT '사용횟수',
+  `ACTVTN_YN` char(1) NOT NULL DEFAULT 'Y' COMMENT '활성여부',
+  `CREATR_SN` bigint(20) NOT NULL DEFAULT 1 COMMENT '생성자일련번호',
+  `FRST_CRT_DT` datetime NOT NULL DEFAULT current_timestamp() COMMENT '최초생성일시',
+  PRIMARY KEY (`USER_TAG_SN`)
+) ENGINE=InnoDB AUTO_INCREMENT=42 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='사용자 태그';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `tbl_user_tag`
+--
+
+LOCK TABLES `tbl_user_tag` WRITE;
+/*!40000 ALTER TABLE `tbl_user_tag` DISABLE KEYS */;
+INSERT INTO `tbl_user_tag` VALUES (1,1,1,12,'Y',1,'2026-04-01 17:31:51'),(2,1,2,8,'Y',1,'2026-04-01 17:31:51'),(3,1,17,6,'Y',1,'2026-04-01 17:31:51'),(4,1,22,5,'Y',1,'2026-04-01 17:31:51'),(5,31,1,14,'Y',31,'2026-04-01 17:31:51'),(6,31,6,11,'Y',31,'2026-04-01 17:31:51'),(7,31,20,8,'Y',31,'2026-04-01 17:31:51'),(8,32,2,17,'Y',32,'2026-04-01 17:31:51'),(9,32,1,12,'Y',32,'2026-04-01 17:31:51'),(10,32,19,14,'Y',32,'2026-04-01 17:31:51'),(11,32,20,9,'Y',32,'2026-04-01 17:31:51'),(12,33,6,9,'Y',33,'2026-04-01 17:31:51'),(13,34,5,13,'Y',34,'2026-04-01 17:31:51'),(14,34,6,10,'Y',34,'2026-04-01 17:31:51'),(15,34,17,7,'Y',34,'2026-04-01 17:31:51'),(16,35,1,11,'Y',35,'2026-04-01 17:31:51'),(17,35,17,9,'Y',35,'2026-04-01 17:31:51'),(18,35,18,12,'Y',35,'2026-04-01 17:31:51'),(19,36,3,10,'Y',36,'2026-04-01 17:31:51'),(20,36,2,8,'Y',36,'2026-04-01 17:31:51'),(21,36,20,7,'Y',36,'2026-04-01 17:31:51'),(22,37,23,15,'Y',37,'2026-04-01 17:31:51'),(23,37,16,12,'Y',37,'2026-04-01 17:31:51'),(24,37,17,8,'Y',37,'2026-04-01 17:31:51'),(25,38,7,13,'Y',38,'2026-04-01 17:31:51'),(26,38,13,9,'Y',38,'2026-04-01 17:31:51'),(27,39,2,16,'Y',39,'2026-04-01 17:31:51'),(28,39,19,13,'Y',39,'2026-04-01 17:31:51'),(29,40,5,14,'Y',40,'2026-04-01 17:31:51'),(30,40,6,11,'Y',40,'2026-04-01 17:31:51'),(31,41,1,8,'Y',41,'2026-04-01 17:31:51'),(32,41,17,6,'Y',41,'2026-04-01 17:31:51'),(33,41,23,5,'Y',41,'2026-04-01 17:31:51'),(34,42,22,14,'Y',42,'2026-04-01 17:31:51'),(35,42,11,11,'Y',42,'2026-04-01 17:31:51'),(36,42,5,8,'Y',42,'2026-04-01 17:31:51'),(37,43,1,7,'Y',43,'2026-04-01 17:31:51'),(38,43,20,9,'Y',43,'2026-04-01 17:31:51'),(39,44,21,15,'Y',44,'2026-04-01 17:31:51'),(40,44,8,11,'Y',44,'2026-04-01 17:31:51'),(41,45,21,18,'Y',45,'2026-04-01 17:31:51');
+/*!40000 ALTER TABLE `tbl_user_tag` ENABLE KEYS */;
+UNLOCK TABLES;
+/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
+
+/*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
+/*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
+/*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+/*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
+
+-- Dump completed on 2026-09-23 13:43:33

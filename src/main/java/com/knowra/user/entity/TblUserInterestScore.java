@@ -1,6 +1,7 @@
 package com.knowra.user.entity;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.UpdateTimestamp;
 import lombok.*;
 import org.hibernate.annotations.Comment;
 
@@ -9,7 +10,7 @@ import java.time.LocalDateTime;
 @Entity
 @Table(
     name = "TBL_USER_INTEREST_SCORE",
-    catalog = "KNOWRA_USER",
+    schema = "KNOWRA_USER",
     uniqueConstraints = @UniqueConstraint(
         name = "UK_INTEREST_USER_TARGET",
         columnNames = {"USER_SN", "TARGET_TYPE", "TARGET_SN"}
@@ -45,7 +46,8 @@ public class TblUserInterestScore {
     @Builder.Default
     private double score = 0;
 
-    @Column(name = "UPDT_DT", columnDefinition = "DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP")
+    @UpdateTimestamp
+    @Column(name = "UPDT_DT")
     @Comment("최종 업데이트 일시")
     @Builder.Default
     private LocalDateTime updtDt = LocalDateTime.now();

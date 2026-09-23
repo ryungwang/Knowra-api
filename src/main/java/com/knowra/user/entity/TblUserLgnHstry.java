@@ -10,7 +10,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "TBL_USER_LGN_HSTRY", catalog = "KNOWRA_USER")
+@Table(name = "TBL_USER_LGN_HSTRY", schema = "KNOWRA_USER")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -27,7 +27,7 @@ public class TblUserLgnHstry {
     private long userSn;
 
     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-    @Column(name = "LGN_DT", columnDefinition = "DATETIME DEFAULT CURRENT_TIMESTAMP", updatable = false)
+    @Column(name = "LGN_DT", updatable = false)
     @Comment("로그인일시")
     private LocalDateTime lgnDt = LocalDateTime.now();
 
@@ -35,16 +35,16 @@ public class TblUserLgnHstry {
     @Comment("활성여부")
     private String lgnIp;
 
-    @Column(name = "ACTVTN_YN", columnDefinition = "CHAR(1) DEFAULT 'Y'")
+    @Column(name = "ACTVTN_YN")
     @Comment("활성여부")
     private String actvtnYn = "Y";
 
-    @Column(name = "CREATR_SN", columnDefinition = "INT(10)", updatable=false, nullable = false)
+    @Column(name = "CREATR_SN", updatable=false, nullable = false)
     @Comment("생성자일련번호")
     private long creatrSn = 1;
 
     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-    @Column(name = "FRST_CRT_DT", columnDefinition = "DATETIME DEFAULT CURRENT_TIMESTAMP", updatable = false)
+    @Column(name = "FRST_CRT_DT", updatable = false)
     @Comment("최초생성일시")
     private LocalDateTime frstCrtDt = LocalDateTime.now();
 }

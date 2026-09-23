@@ -1,6 +1,7 @@
 package com.knowra.common.entity;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.UpdateTimestamp;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -9,7 +10,7 @@ import org.hibernate.annotations.Comment;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "TBL_COM_FILE", catalog = "KNOWRA_COM")
+@Table(name = "TBL_COM_FILE", schema = "KNOWRA_COM")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -45,23 +46,24 @@ public class TblComFile {
     @Comment("소유테이블데이터기본키")
     private String psnTblSn;
 
-    @Column(name = "ACTVTN_YN", columnDefinition = "CHAR(1) DEFAULT 'Y'")
+    @Column(name = "ACTVTN_YN")
     @Comment("활성여부")
     private String actvtnYn = "Y";
 
-    @Column(name = "CREATR_SN", columnDefinition = "INT(10)", updatable=false, nullable = false)
+    @Column(name = "CREATR_SN", updatable=false, nullable = false)
     @Comment("생성자일련번호")
     private long creatrSn;
 
-    @Column(name = "FRST_CRT_DT", columnDefinition = "DATETIME DEFAULT CURRENT_TIMESTAMP")
+    @Column(name = "FRST_CRT_DT")
     @Comment("최초생성일시")
     private LocalDateTime frstCrtDt = LocalDateTime.now();
 
-    @Column(name = "MDFR_SN", columnDefinition = "INT(10)", insertable = false)
+    @Column(name = "MDFR_SN", insertable = false)
     @Comment("수정자일련번호")
     private Long mdfrSn;
 
-    @Column(name = "MDFCN_DT", columnDefinition = "DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP")
+    @UpdateTimestamp
+    @Column(name = "MDFCN_DT")
     @Comment("수정일")
     private LocalDateTime mdfcnDt;
 }

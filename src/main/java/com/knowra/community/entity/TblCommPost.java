@@ -13,7 +13,7 @@ import org.hibernate.annotations.Comment;
 @Entity
 @Table(
         name = "TBL_COMM_POST",
-        catalog = "KNOWRA_COMMUNITY",
+        schema = "KNOWRA_COMMUNITY",
         indexes = {
                 @Index(name = "IDX_COMM_POST_COMM",        columnList = "COMM_SN"),
                 @Index(name = "IDX_COMM_POST_USER",        columnList = "USER_SN"),

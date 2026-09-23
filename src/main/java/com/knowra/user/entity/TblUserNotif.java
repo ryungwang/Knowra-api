@@ -7,7 +7,7 @@ import org.hibernate.annotations.Comment;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "TBL_USER_NOTIF", catalog = "KNOWRA_USER")
+@Table(name = "TBL_USER_NOTIF", schema = "KNOWRA_USER")
 @Getter
 @Setter
 @Builder
@@ -46,17 +46,17 @@ public class TblUserNotif {
     private String targetKind;
 
     @Builder.Default
-    @Column(name = "IS_READ", columnDefinition = "CHAR(1) DEFAULT 'N'", nullable = false)
+    @Column(name = "IS_READ", nullable = false)
     @Comment("읽음여부")
     private String isRead = "N";
 
     @Builder.Default
-    @Column(name = "IS_DISPLAY", columnDefinition = "CHAR(1) DEFAULT 'Y'", nullable = false)
+    @Column(name = "IS_DISPLAY", nullable = false)
     @Comment("표시여부 (N = X 버튼으로 숨김)")
     private String isDisplay = "Y";
 
     @Builder.Default
-    @Column(name = "FRST_CRT_DT", columnDefinition = "DATETIME DEFAULT NOW()", updatable = false)
+    @Column(name = "FRST_CRT_DT", updatable = false)
     @Comment("생성일시")
     private LocalDateTime frstCrtDt = LocalDateTime.now();
 }
