@@ -40,6 +40,7 @@ public class FeedCacheService {
     private static final String FOLLOWING_PREFIX    = "feed:following:";
     private static final String PERSONALIZED_PREFIX = "feed:personalized:";
     private static final String POPULAR_KEY         = "feed:popular";
+    private static final String EXPLORE_SUFFIX      = ":explore";
     private static final String LATEST_KEY          = "feed:latest";
 
     private final GenericApplicationContext context;
@@ -57,6 +58,13 @@ public class FeedCacheService {
     public String followingKey(long userSn)    { return FOLLOWING_PREFIX    + userSn; }
     public String personalizedKey(long userSn) { return PERSONALIZED_PREFIX + userSn; }
     public String popularKey()                 { return POPULAR_KEY; }
+
+    /**
+     * 탐험 쿼터로 끌어올린 글의 목록(Set).
+     * 어떤 글이 쿼터로 올라왔는지는 근거 계산에 필요한데, 정렬 결과(ZSET)만으로는 알 수
+     * 없다. 캐시 히트 경로에서도 같은 근거가 나오려면 따로 남겨야 한다.
+     */
+    public String exploreSlotsKey(long userSn)  { return personalizedKey(userSn) + EXPLORE_SUFFIX; }
     public String latestKey()                  { return LATEST_KEY; }
 
     // ── 벌크 ZADD (캐시 미스 시 전체 populate) ──────────────────────────────
@@ -81,6 +89,21 @@ public class FeedCacheService {
         Set<Object> result = redis().opsForZSet().reverseRange(key, from, to);
         if (result == null) return List.of();
         return result.stream().map(Object::toString).toList();
+    }
+
+    // ── 탐험 슬롯 목록 ──────────────────────────────────────────────────────
+    public void putExploreSlots(String key, Set<String> members) {
+        RedisTemplate<String, Object> r = redis();
+        r.delete(key);
+        if (members.isEmpty()) return;
+        r.opsForSet().add(key, members.toArray());
+        r.expire(key, PERSONALIZED_TTL);
+    }
+
+    public Set<String> getExploreSlots(String key) {
+        Set<Object> members = redis().opsForSet().members(key);
+        if (members == null || members.isEmpty()) return Set.of();
+        return members.stream().map(Object::toString).collect(java.util.stream.Collectors.toSet());
     }
 
     // ── 개별 항목 제거 (게시글 삭제 시) ─────────────────────────────────────
@@ -121,9 +144,18 @@ public class FeedCacheService {
         invalidate(latestKey());
     }
 
+    /**
+     * PERSONALIZED 무효화 — 탐험 슬롯 목록도 함께 버린다.
+     * 순서가 다시 계산되면 어떤 글이 쿼터로 올라올지도 달라지므로 둘은 같이 움직여야 한다.
+     */
+    public void invalidatePersonalized(long userSn) {
+        invalidate(personalizedKey(userSn));
+        invalidate(exploreSlotsKey(userSn));
+    }
+
     // ── 유저의 모든 피드 캐시 무효화 ────────────────────────────────────────
     public void invalidateUserFeeds(long userSn) {
         invalidate(followingKey(userSn));
-        invalidate(personalizedKey(userSn));
+        invalidatePersonalized(userSn);
     }
 }

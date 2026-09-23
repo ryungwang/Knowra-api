@@ -54,8 +54,8 @@ public class FeedEventListener {
 
         // COMM_POST: 해당 커뮤니티 멤버들의 PERSONALIZED도 무효화
         if ("COMM".equals(event.postKind()) && event.commSn() != null) {
-            fetchCommMembers(event.commSn()).forEach(memberSn ->
-                    feedCacheService.invalidate(feedCacheService.personalizedKey(memberSn)));
+            fetchCommMembers(event.commSn())
+                    .forEach(feedCacheService::invalidatePersonalized);
         }
     }
 
@@ -80,7 +80,7 @@ public class FeedEventListener {
     @Async
     @EventListener
     public void onCommunityMemberChanged(CommunityMemberChangedEvent event) {
-        feedCacheService.invalidate(feedCacheService.personalizedKey(event.userSn()));
+        feedCacheService.invalidatePersonalized(event.userSn());
     }
 
     // ── DB 헬퍼: 팔로워 목록 ─────────────────────────────────────────────

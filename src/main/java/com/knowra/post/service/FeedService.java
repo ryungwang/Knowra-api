@@ -110,7 +110,10 @@ public class FeedService {
                 long           total    = feedCacheService.size(cacheKey);
                 List<FeedPost> items    = hydrateMembers(members, userSn);
                 List<PostDTO>  list     = buildPostDtoList(items, userSn);
-                applyFeedReasons(list, items, userSn);
+                Set<String> exploreSlots = "PERSONALIZED".equals(mode) && userSn != null
+                        ? feedCacheService.getExploreSlots(feedCacheService.exploreSlotsKey(userSn))
+                        : Set.of();
+                applyFeedReasons(list, items, userSn, exploreSlots);
 
                 resultVO.putResult("list",     list);
                 resultVO.putResult("totalCnt", total);
@@ -153,15 +156,34 @@ public class FeedService {
                     .sorted(Comparator.comparingDouble(p -> -memberScores.get(p.postKind() + ":" + p.postSn())))
                     .collect(Collectors.toList());
 
+            // ── 탐험 슬롯 쿼터 ───────────────────────────────────────────
+            // PERSONALIZED 에만 건다. 인기·최신은 "지금 뜨는 것/새로 올라온 것" 을 보러
+            // 오는 화면이고, 팔로잉은 정의상 전부 아는 사람이라 낯선 글을 끼워 넣으면
+            // 그 피드가 약속한 것을 어긴다.
+            Set<String> exploreSlots = "PERSONALIZED".equals(mode)
+                    ? applyExploreQuota(scored, ranking.getExploreSlotEvery(),
+                            authorScores, commScores, followedUserSns, joinedCommSns)
+                    : Set.of();
+
             // Redis 캐시 저장.
+            // score 는 최종 순위를 인코딩한다 — 쿼터가 순서를 바꾸므로 원점수를 그대로
+            // 넣으면 Redis 가 되읽을 때 쿼터 이전 순서로 돌아간다. 읽는 쪽은 순서만 쓴다.
             // TTL 은 전부 붙인다. 반응(좋아요·댓글)은 더 이상 캐시를 건드리지 않으므로
             // TTL 이 반응을 순위에 반영하는 유일한 수단이다.
             if (cacheKey != null) {
-                feedCacheService.populate(cacheKey, memberScores);
+                Map<String, Double> rankScores = new LinkedHashMap<>();
+                for (int i = 0; i < scored.size(); i++) {
+                    FeedPost p = scored.get(i);
+                    rankScores.put(p.postKind() + ":" + p.postSn(), (double) (scored.size() - i));
+                }
+                feedCacheService.populate(cacheKey, rankScores);
                 switch (mode) {
                     case "POPULAR", "LATEST"        -> feedCacheService.expireGlobal(cacheKey);
                     case "PERSONALIZED", "FOLLOWING" -> feedCacheService.expirePersonalized(cacheKey);
                     default -> { }
+                }
+                if ("PERSONALIZED".equals(mode) && userSn != null) {
+                    feedCacheService.putExploreSlots(feedCacheService.exploreSlotsKey(userSn), exploreSlots);
                 }
             }
 
@@ -171,7 +193,7 @@ public class FeedService {
             List<FeedPost> pageItems = from < scored.size() ? scored.subList(from, to) : List.of();
 
             List<PostDTO> pageList = buildPostDtoList(pageItems, userSn);
-            applyFeedReasons(pageList, pageItems, userSn);
+            applyFeedReasons(pageList, pageItems, userSn, exploreSlots);
             resultVO.putResult("list",     pageList);
             resultVO.putResult("totalCnt", scored.size());
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
@@ -277,7 +299,8 @@ public class FeedService {
     // 다시 계산해 가장 큰 축 하나를 근거로 붙인다. 화면에 표시할 용도라 현재 페이지
     // (최대 PAGE_SIZE 건)에 대해서만 계산한다 — 캐시 히트 경로에서도 같은 값이 나온다.
     // ─────────────────────────────────────────────────────────────────────
-    private void applyFeedReasons(List<PostDTO> list, List<FeedPost> items, Long userSn) {
+    private void applyFeedReasons(List<PostDTO> list, List<FeedPost> items, Long userSn,
+                                   Set<String> exploreSlots) {
         if (list.isEmpty() || items.isEmpty()) return;
 
         Set<Long> followedUserSns = userSn != null ? fetchFollowedUserSns(userSn) : Set.of();
@@ -312,6 +335,14 @@ public class FeedService {
             // 비교해도 된다.
             FeedAxes ax = computeAxes(p, ranking, userTagScores, authorScores, commScores,
                     followedUserSns, joinedCommSns, tagSns);
+
+            // 쿼터로 끌어올린 글은 점수로 올라온 게 아니므로 축을 볼 필요가 없다.
+            // 여기서만 EXPLORE 가 나온다 — 이제 "의도적으로 섞은 글" 이라는 진짜 근거다.
+            if (exploreSlots.contains(dto.getPostKind() + ":" + dto.getPostSn())) {
+                dto.setFeedReason("EXPLORE");
+                dto.setFeedReasonDetail(null);
+                continue;
+            }
 
             // 총점에 가장 많이 기여한 축이 곧 근거다. 축이 정규화되어 있으므로 가중
             // 기여도(W × 축)끼리 그대로 비교하면 된다.
@@ -480,6 +511,81 @@ public class FeedService {
             case "LATEST"    -> totalScore * 0.7 + ax.freshness() * 0.3;
             default          -> totalScore; // PERSONALIZED
         };
+    }
+
+    /**
+     * 한 번도 엮인 적 없는 글인가 — 탐험 쿼터의 대상.
+     *
+     * <p>팔로우도 가입도 안 했고, 행동으로 쌓인 친밀도도 0 인 작성자·커뮤니티의 글이다.
+     * 관계 축이 정확히 이 세 가지의 합이므로 {@code relation == 0} 과 같은 조건이지만,
+     * 부동소수 비교에 의미를 얹지 않으려고 따로 판단한다.
+     */
+    static boolean isUnfamiliar(FeedPost p,
+                                 Map<Long, Double> authorScores,
+                                 Map<Long, Double> commScores,
+                                 Set<Long> followedUserSns,
+                                 Set<Long> joinedCommSns) {
+        if (followedUserSns.contains(p.userSn())) return false;
+        if (p.commSn() != null && joinedCommSns.contains(p.commSn())) return false;
+        if (authorScores.getOrDefault(p.userSn(), 0.0) > 0) return false;
+        return p.commSn() == null || commScores.getOrDefault(p.commSn(), 0.0) <= 0;
+    }
+
+    /**
+     * 탐험 슬롯 쿼터 — {@code slotEvery} 건마다 최소 1건은 낯선 글이 오도록 끌어올린다.
+     *
+     * <p>탐험을 점수 축으로 두면 작동하지 않는다. 값이 고르면 순위를 안 바꾸고, 값이
+     * 갈리면 관련도와 정면으로 싸운다(docs/feed-ranking.md §2). 쿼터는 그 둘을 피한다 —
+     * 탐험량을 직접 정하면서 나머지 글의 점수는 건드리지 않는다.
+     *
+     * <p><b>하한이라 대개 아무 일도 하지 않는다.</b> 이미 낯선 글이 섞여 있는 블록은
+     * 그냥 넘어간다. 실측(49명)에서 상위 50건 중 익숙한 글은 중앙값 13건이라 3명에게만
+     * 걸렸다 — 그 3명이 40건 이상 익숙한 글로 채워져 닫혀 가던 사용자다.
+     *
+     * <p>끌어올리는 글은 무작위가 아니라 <b>낯선 글 중 점수가 가장 높은 것</b> 이다.
+     * 이미 매긴 순위를 따르므로 품질이 떨어지지 않는다. 나머지 글의 상대 순서는 그대로다.
+     *
+     * @return 쿼터로 끌어올린 글의 멤버 키. 근거를 EXPLORE 로 표시하는 데 쓴다.
+     */
+    static Set<String> applyExploreQuota(List<FeedPost> sorted,
+                                          int slotEvery,
+                                          Map<Long, Double> authorScores,
+                                          Map<Long, Double> commScores,
+                                          Set<Long> followedUserSns,
+                                          Set<Long> joinedCommSns) {
+        if (slotEvery <= 0 || sorted.size() <= slotEvery) return Set.of();
+
+        boolean[] unfamiliar = new boolean[sorted.size()];
+        for (int i = 0; i < sorted.size(); i++) {
+            unfamiliar[i] = isUnfamiliar(sorted.get(i), authorScores, commScores,
+                    followedUserSns, joinedCommSns);
+        }
+
+        Set<String> promoted = new LinkedHashSet<>();
+
+        for (int blockStart = 0; blockStart + slotEvery <= sorted.size(); blockStart += slotEvery) {
+            int blockEnd = blockStart + slotEvery;
+
+            boolean satisfied = false;
+            for (int i = blockStart; i < blockEnd && !satisfied; i++) satisfied = unfamiliar[i];
+            if (satisfied) continue;
+
+            // 블록 밖에서 가장 점수가 높은(= 가장 앞에 있는) 낯선 글을 찾는다.
+            int donor = -1;
+            for (int i = blockEnd; i < sorted.size(); i++) {
+                if (unfamiliar[i]) { donor = i; break; }
+            }
+            if (donor < 0) break;   // 남은 낯선 글이 없다. 더 볼 필요 없다.
+
+            // 블록의 마지막 자리로 옮기고, 사이의 글들을 한 칸씩 뒤로 민다.
+            FeedPost item = sorted.remove(donor);
+            sorted.add(blockEnd - 1, item);
+            System.arraycopy(unfamiliar, blockEnd - 1, unfamiliar, blockEnd, donor - blockEnd + 1);
+            unfamiliar[blockEnd - 1] = true;
+
+            promoted.add(item.postKind() + ":" + item.postSn());
+        }
+        return promoted;
     }
 
     /** 게시글 종류에 맞는 태그 목록. POST 와 COMM 이 서로 다른 맵에 담겨 있다. */

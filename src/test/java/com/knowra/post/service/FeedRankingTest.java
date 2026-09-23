@@ -7,6 +7,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -231,6 +232,118 @@ class FeedRankingTest {
         assertThat(cfg.getWeightInterest() + cfg.getWeightRelation()
                 + cfg.getWeightQuality() + cfg.getWeightFreshness()).isCloseTo(1.0, within(1e-9));
         cfg.validate();   // 예외 없이 통과해야 한다
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // 탐험 슬롯 쿼터 — 10건마다 1건은 낯선 글
+    // ─────────────────────────────────────────────────────────────────────
+
+    /** 익숙한 글(작성자 7번을 팔로우) */
+    private static FeedPost familiarPost(long sn) {
+        return new FeedPost("POST", "NORMAL", sn, 7L, "닉", "이름", "제목", "본문",
+                LocalDateTime.now().minusHours(5), 10, 1, 1, null, null, null, null);
+    }
+
+    /** 낯선 글 — 작성자도 커뮤니티도 엮인 적 없다. */
+    private static FeedPost strangePost(long sn) {
+        return new FeedPost("POST", "NORMAL", sn, 900L + sn, "낯", "낯선이", "제목", "본문",
+                LocalDateTime.now().minusHours(5), 10, 1, 1, null, null, null, null);
+    }
+
+    private static Set<String> quota(List<FeedPost> list, int every) {
+        return FeedService.applyExploreQuota(list, every, Map.of(), Map.of(),
+                Set.of(7L), Set.of());
+    }
+
+    @Test
+    @DisplayName("익숙한 글로만 찬 블록에는 낯선 글이 끌려 올라온다")
+    void quotaPromotesIntoASaturatedBlock() {
+        // 앞 20건은 전부 익숙, 그 뒤에 낯선 글.
+        List<FeedPost> feed = new ArrayList<>();
+        for (long i = 0; i < 20; i++) feed.add(familiarPost(i));
+        for (long i = 20; i < 30; i++) feed.add(strangePost(i));
+
+        Set<String> promoted = quota(feed, 10);
+
+        assertThat(promoted).hasSize(2);
+        // 블록의 마지막 자리(10번째, 20번째)에 들어간다.
+        assertThat(feed.get(9).userSn()).isNotEqualTo(7L);
+        assertThat(feed.get(19).userSn()).isNotEqualTo(7L);
+    }
+
+    @Test
+    @DisplayName("점수가 가장 높은 낯선 글부터 끌어올린다")
+    void quotaPromotesTheHighestScoringStranger() {
+        List<FeedPost> feed = new ArrayList<>();
+        for (long i = 0; i < 10; i++) feed.add(familiarPost(i));
+        feed.add(strangePost(100));   // 11번째 = 낯선 글 중 가장 앞 = 가장 높은 점수
+        feed.add(strangePost(101));
+
+        quota(feed, 10);
+
+        assertThat(feed.get(9).postSn()).isEqualTo(100L);
+    }
+
+    @Test
+    @DisplayName("이미 낯선 글이 있는 블록은 건드리지 않는다")
+    void quotaLeavesDiverseBlocksAlone() {
+        List<FeedPost> feed = new ArrayList<>();
+        for (long i = 0; i < 10; i++) feed.add(i == 3 ? strangePost(i) : familiarPost(i));
+        for (long i = 10; i < 20; i++) feed.add(strangePost(i));
+        List<Long> before = feed.stream().map(FeedPost::postSn).toList();
+
+        Set<String> promoted = quota(feed, 10);
+
+        assertThat(promoted).isEmpty();
+        assertThat(feed.stream().map(FeedPost::postSn).toList()).isEqualTo(before);
+    }
+
+    @Test
+    @DisplayName("끌어올린 글 말고는 서로의 순서가 그대로다")
+    void quotaPreservesRelativeOrderOfEveryoneElse() {
+        List<FeedPost> feed = new ArrayList<>();
+        for (long i = 0; i < 15; i++) feed.add(familiarPost(i));
+        for (long i = 15; i < 25; i++) feed.add(strangePost(i));
+
+        Set<String> promoted = quota(feed, 10);
+
+        List<Long> rest = feed.stream()
+                .filter(p -> !promoted.contains("POST:" + p.postSn()))
+                .map(FeedPost::postSn).toList();
+        assertThat(rest).isSorted();   // 원래 0,1,2... 순서였다
+    }
+
+    @Test
+    @DisplayName("낯선 글이 아예 없으면 아무 일도 하지 않는다")
+    void quotaIsANoOpWithoutStrangers() {
+        List<FeedPost> feed = new ArrayList<>();
+        for (long i = 0; i < 30; i++) feed.add(familiarPost(i));
+
+        assertThat(quota(feed, 10)).isEmpty();
+        assertThat(feed).hasSize(30);
+    }
+
+    @Test
+    @DisplayName("간격이 0 이하면 꺼진다")
+    void quotaCanBeDisabled() {
+        List<FeedPost> feed = new ArrayList<>();
+        for (long i = 0; i < 30; i++) feed.add(familiarPost(i));
+        feed.add(strangePost(99));
+
+        assertThat(quota(feed, 0)).isEmpty();
+        assertThat(feed.get(9).userSn()).isEqualTo(7L);
+    }
+
+    @Test
+    @DisplayName("낯섦 판정: 팔로우·가입·친밀도 중 하나라도 있으면 낯설지 않다")
+    void unfamiliarMeansNoTieAtAll() {
+        FeedPost p = post("COMM", 10, 1, 1, 5);   // 작성자 7, 커뮤니티 9
+
+        assertThat(FeedService.isUnfamiliar(p, Map.of(), Map.of(), Set.of(), Set.of())).isTrue();
+        assertThat(FeedService.isUnfamiliar(p, Map.of(), Map.of(), Set.of(7L), Set.of())).isFalse();
+        assertThat(FeedService.isUnfamiliar(p, Map.of(), Map.of(), Set.of(), Set.of(9L))).isFalse();
+        assertThat(FeedService.isUnfamiliar(p, Map.of(7L, 3.0), Map.of(), Set.of(), Set.of())).isFalse();
+        assertThat(FeedService.isUnfamiliar(p, Map.of(), Map.of(9L, 3.0), Set.of(), Set.of())).isFalse();
     }
 
     // ── 픽스처 ────────────────────────────────────────────────────────────

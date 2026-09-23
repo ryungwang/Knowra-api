@@ -44,6 +44,20 @@ public class FeedRankingProperties {
     private double freshHalfLifeHours = 24.0;
 
     /**
+     * 탐험 슬롯 간격 — 몇 건마다 1건을 "한 번도 엮인 적 없는" 글에 배정할지.
+     * 10 이면 50건짜리 한 페이지에 5건이다. 0 이하면 끈다.
+     *
+     * <p>개수보다 간격으로 두는 이유는 <b>배치</b> 다. "50건 중 5건" 으로 세면 5건이
+     * 46~50번에 몰려도 규칙을 만족하는데, 거기까지 내려가는 사람이 없어 없는 것과 같다.
+     * 간격으로 두면 10·20·30·40·50번에 흩어지고, 페이지 크기가 바뀌어도 규칙이 산다.
+     *
+     * <p>이 값은 <b>하한</b> 이다. 이미 낯선 글이 충분히 섞여 있으면 아무 일도 하지 않는다.
+     * 실측(49명 전원): 상위 50건 중 익숙한 글이 중앙값 13건이라 대부분에게 걸리지 않고,
+     * 46건인 사용자 같은 소수에게만 작동한다 — 정확히 그들이 닫혀 가는 사람들이다.
+     */
+    private int exploreSlotEvery = 10;
+
+    /**
      * 가중치 합이 1.0 이어야 총점이 [0,1] 에 들어온다.
      *
      * <p>이게 깨지면 정규화의 전제가 통째로 무너지는데, 겉으로는 멀쩡히 동작한다 —
@@ -76,6 +90,7 @@ public class FeedRankingProperties {
     public double getQualityRateRef()     { return qualityRateRef; }
     public double getQualityPriorHours()  { return qualityPriorHours; }
     public double getFreshHalfLifeHours() { return freshHalfLifeHours; }
+    public int    getExploreSlotEvery()   { return exploreSlotEvery; }
 
     public void setWeightInterest(double v)     { this.weightInterest = v; }
     public void setWeightRelation(double v)     { this.weightRelation = v; }
@@ -86,4 +101,5 @@ public class FeedRankingProperties {
     public void setQualityRateRef(double v)     { this.qualityRateRef = v; }
     public void setQualityPriorHours(double v)  { this.qualityPriorHours = v; }
     public void setFreshHalfLifeHours(double v) { this.freshHalfLifeHours = v; }
+    public void setExploreSlotEvery(int v)      { this.exploreSlotEvery = v; }
 }
