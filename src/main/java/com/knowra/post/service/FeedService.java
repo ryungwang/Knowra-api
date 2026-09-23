@@ -9,6 +9,7 @@ import com.knowra.common.service.TagService;
 import com.knowra.community.entity.*;
 import com.knowra.post.entity.*;
 import com.knowra.user.entity.*;
+import com.knowra.common.entity.TblTag;
 import com.knowra.user.repository.TblUserInterestScoreRepository;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
@@ -32,6 +33,7 @@ public class FeedService {
 
     private final JwtProvider jwtProvider;
     private final TblUserInterestScoreRepository interestScoreRepository;
+    private final com.knowra.common.repository.TblTagRepository tblTagRepository;
     private final TagService tagService;
     private final FeedCacheService feedCacheService;
 
@@ -99,6 +101,7 @@ public class FeedService {
                 long           total    = feedCacheService.size(cacheKey);
                 List<FeedPost> items    = hydrateMembers(members, userSn);
                 List<PostDTO>  list     = buildPostDtoList(items, userSn);
+                applyFeedReasons(list, items, userSn);
 
                 resultVO.putResult("list",     list);
                 resultVO.putResult("totalCnt", total);
@@ -154,7 +157,9 @@ public class FeedService {
             int to        = Math.min(from + PAGE_SIZE, scored.size());
             List<FeedPost> pageItems = from < scored.size() ? scored.subList(from, to) : List.of();
 
-            resultVO.putResult("list",     buildPostDtoList(pageItems, userSn));
+            List<PostDTO> pageList = buildPostDtoList(pageItems, userSn);
+            applyFeedReasons(pageList, pageItems, userSn);
+            resultVO.putResult("list",     pageList);
             resultVO.putResult("totalCnt", scored.size());
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
             resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
@@ -252,6 +257,94 @@ public class FeedService {
     // ─────────────────────────────────────────────────────────────────────
     // 점수 계산
     // ─────────────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────────
+    // 피드 근거 — "왜 이 글이 보이는가"
+    //
+    // 점수는 5개 축의 가중합이라 총점만으로는 이유를 알 수 없다. 여기서 축별 기여도를
+    // 다시 계산해 가장 큰 축 하나를 근거로 붙인다. 화면에 표시할 용도라 현재 페이지
+    // (최대 PAGE_SIZE 건)에 대해서만 계산한다 — 캐시 히트 경로에서도 같은 값이 나온다.
+    // ─────────────────────────────────────────────────────────────────────
+    private void applyFeedReasons(List<PostDTO> list, List<FeedPost> items, Long userSn) {
+        if (list.isEmpty() || items.isEmpty()) return;
+
+        Set<Long> followedUserSns = userSn != null ? fetchFollowedUserSns(userSn) : Set.of();
+        Set<Long> joinedCommSns   = userSn != null ? fetchJoinedCommSns(userSn)   : Set.of();
+        Map<Long, Double> userTagScores = userSn != null ? buildTagScoreMap(userSn)    : Map.of();
+        Map<Long, Double> authorScores  = userSn != null ? buildAuthorScoreMap(userSn) : Map.of();
+        Map<Long, Double> commScores    = userSn != null ? buildCommScoreMap(userSn)   : Map.of();
+
+        List<Long> postSns     = items.stream().filter(p -> "POST".equals(p.postKind())).map(FeedPost::postSn).toList();
+        List<Long> commPostSns = items.stream().filter(p -> "COMM".equals(p.postKind())).map(FeedPost::postSn).toList();
+        Map<Long, List<Long>> postTagSnMap     = fetchPostTagSnMap(postSns);
+        Map<Long, List<Long>> commPostTagSnMap = fetchCommPostTagSnMap(commPostSns);
+
+        // 맞은 태그의 이름을 보여주려면 SN -> 이름이 필요하다. 이 페이지에 나온 태그만 조회한다.
+        Set<Long> tagSnsOnPage = new HashSet<>();
+        postTagSnMap.values().forEach(tagSnsOnPage::addAll);
+        commPostTagSnMap.values().forEach(tagSnsOnPage::addAll);
+        Map<Long, String> tagNames = tagSnsOnPage.isEmpty() ? Map.of()
+                : tblTagRepository.findAllById(tagSnsOnPage).stream()
+                    .collect(Collectors.toMap(TblTag::getTagSn, TblTag::getTagNm, (a, b) -> a));
+
+        Map<String, FeedPost> byKey = items.stream()
+                .collect(Collectors.toMap(p -> p.postKind() + ":" + p.postSn(), p -> p, (a, b) -> a));
+
+        for (PostDTO dto : list) {
+            FeedPost p = byKey.get(dto.getPostKind() + ":" + dto.getPostSn());
+            if (p == null) continue;
+
+            List<Long> tagSns = "COMM".equals(p.postKind())
+                    ? commPostTagSnMap.getOrDefault(p.postSn(), List.of())
+                    : postTagSnMap.getOrDefault(p.postSn(), List.of());
+
+            double interest = tagSns.stream().mapToDouble(t -> userTagScores.getOrDefault(t, 0.0)).sum() * W1;
+
+            boolean followed = followedUserSns.contains(p.userSn());
+            boolean joined   = p.commSn() != null && joinedCommSns.contains(p.commSn());
+            double authorInterest = authorScores.getOrDefault(p.userSn(), 0.0);
+            double commInterest   = p.commSn() != null ? commScores.getOrDefault(p.commSn(), 0.0) : 0.0;
+            double relation = ((followed ? 15.0 : 0.0) + (joined ? 20.0 : 0.0)
+                    + authorInterest + commInterest * 1.2) * W3;
+
+            double quality = (p.likeCnt() * 2.0 + p.cmtCnt() * 4.0 + p.viewCnt() * 0.2) * W4;
+
+            long elapsed = ChronoUnit.HOURS.between(p.frstCrtDt(), LocalDateTime.now());
+            double fresh = (100 * (1.0 / Math.pow(Math.max(0, elapsed) + 2, 0.5))) * W5;
+
+            double familiarity = Math.min(1.0, (authorInterest + commInterest) / 20.0);
+            double novelty = tagSns.isEmpty() ? 1.0
+                    : tagSns.stream().mapToDouble(t -> userTagScores.getOrDefault(t, 0.0) == 0.0 ? 1.0 : 0.0)
+                        .average().orElse(0.0);
+            double explore = ((1.0 - familiarity) * novelty * 20) * W6;
+
+            // 축별 크기를 그대로 비교하면 안 된다. 품질은 좋아요·댓글·조회수의 절대량이라
+            // 수백 단위인데 나머지는 한 자릿수라, 최대값을 고르면 거의 항상 "인기"가 된다.
+            // 칩이 답해야 하는 질문은 "왜 하필 나에게 보이는가" 이므로, 나에게만 해당하는
+            // 신호(팔로우·가입·관심사)를 먼저 보고 없을 때만 일반 신호로 내려간다.
+            String reason; String detail = null;
+            if (followed) {
+                reason = "FOLLOWING";
+            } else if (joined) {
+                reason = "JOINED_COMM";
+                detail = dto.getCommDsplNm();
+            } else if (interest > 0) {
+                reason = "INTEREST";
+                detail = tagSns.stream()
+                        .filter(t -> userTagScores.getOrDefault(t, 0.0) > 0)
+                        .max(Comparator.comparingDouble(t -> userTagScores.getOrDefault(t, 0.0)))
+                        .map(tagNames::get).orElse(null);
+            } else if (fresh >= quality && fresh >= explore) {
+                reason = "FRESH";
+            } else if (explore > quality) {
+                reason = "EXPLORE";
+            } else {
+                reason = "POPULAR";
+            }
+            dto.setFeedReason(reason);
+            dto.setFeedReasonDetail(detail);
+        }
+    }
+
     private double computeScore(FeedPost p, String mode,
                                  Map<Long, Double> userTagScores,
                                  Map<Long, Double> authorScores,

@@ -36,6 +36,12 @@ public class PostDTO {
     private boolean mySaved;
     private String pfpUrl;           // atchFilePathNm/strgFileNm.atchFileExtnNm
 
+    // ── 피드 근거 ─────────────────────────────────────────────
+    // 이 글이 왜 이 자리에 있는지. 점수만 매기고 이유를 숨기면 사용자는 피드를 신뢰할 수 없다.
+    // INTEREST | FOLLOWING | JOINED_COMM | POPULAR | FRESH | EXPLORE
+    private String feedReason;
+    private String feedReasonDetail;   // INTEREST 면 맞은 태그명
+
     // ── COMM 전용 ──────────────────────────────────────────────
     private Long commSn;
     private String commNm;
