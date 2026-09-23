@@ -1,5 +1,6 @@
 package com.knowra.post.service;
 
+import com.knowra.post.config.FeedRankingProperties;
 import com.knowra.post.service.FeedService.FeedAxes;
 import com.knowra.post.service.FeedService.FeedPost;
 import org.junit.jupiter.api.DisplayName;
@@ -12,6 +13,7 @@ import java.util.Random;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.within;
 
 /**
@@ -25,7 +27,10 @@ import static org.assertj.core.api.Assertions.within;
  */
 class FeedRankingTest {
 
-    private static final double W1 = 0.15, W3 = 0.25, W4 = 0.25, W5 = 0.20, W6 = 0.15;
+    /** 기본값 그대로의 설정. 각 테스트가 필요하면 세터로 바꿔 쓴다. */
+    private static final FeedRankingProperties CFG = new FeedRankingProperties();
+
+    private static final double W1 = 0.18, W3 = 0.29, W4 = 0.29, W5 = 0.24;
 
     // ─────────────────────────────────────────────────────────────────────
     // saturate — 상한 없는 원점수를 [0,1] 로 누르는 변환
@@ -76,7 +81,7 @@ class FeedRankingTest {
                     rnd.nextInt(50_000),          // cmt
                     rnd.nextInt(52_560));         // 경과 시간(최대 6년)
 
-            FeedAxes ax = FeedService.computeAxes(p,
+            FeedAxes ax = FeedService.computeAxes(p, CFG,
                     Map.of(1L, rnd.nextDouble() * 500, 2L, rnd.nextDouble() * 500),
                     Map.of(7L, rnd.nextDouble() * 500),
                     Map.of(9L, rnd.nextDouble() * 500),
@@ -88,8 +93,7 @@ class FeedRankingTest {
             assertThat(ax.relation()).isBetween(0.0, 1.0);
             assertThat(ax.quality()).isBetween(0.0, 1.0);
             assertThat(ax.freshness()).isBetween(0.0, 1.0);
-            assertThat(ax.explore()).isBetween(0.0, 1.0);
-            assertThat(ax.total()).isBetween(0.0, 1.0);
+            assertThat(ax.total(CFG)).isBetween(0.0, 1.0);
         }
     }
 
@@ -99,7 +103,7 @@ class FeedRankingTest {
         // 모든 축을 최대로 밀어 올린 글. 정규화가 깨지면 여기서 즉시 드러난다.
         FeedPost p = post("COMM", 10_000_000, 10_000_000, 10_000_000, 0);
 
-        FeedAxes ax = FeedService.computeAxes(p,
+        FeedAxes ax = FeedService.computeAxes(p, CFG,
                 Map.of(1L, 1e9), Map.of(7L, 1e9), Map.of(9L, 1e9),
                 Set.of(7L), Set.of(9L), List.of(1L));
 
@@ -107,8 +111,7 @@ class FeedRankingTest {
         assertThat(ax.relation() * W3).isLessThanOrEqualTo(W3);
         assertThat(ax.quality() * W4).isLessThanOrEqualTo(W4);
         assertThat(ax.freshness() * W5).isLessThanOrEqualTo(W5);
-        assertThat(ax.explore() * W6).isLessThanOrEqualTo(W6);
-        assertThat(ax.total()).isLessThanOrEqualTo(1.0);
+        assertThat(ax.total(CFG)).isLessThanOrEqualTo(1.0);
     }
 
     // ─────────────────────────────────────────────────────────────────────
@@ -124,7 +127,7 @@ class FeedRankingTest {
         Map<Long, List<Long>> commTags = Map.of(p.postSn(), List.of(1L));
 
         for (String mode : List.of("PERSONALIZED", "FOLLOWING", "POPULAR", "LATEST")) {
-            double score = FeedService.computeScore(p, mode,
+            double score = FeedService.computeScore(p, mode, CFG,
                     Map.of(1L, 1e9), Map.of(7L, 1e9), Map.of(9L, 1e9),
                     Set.of(7L), Set.of(9L), Map.of(), commTags);
 
@@ -198,12 +201,36 @@ class FeedRankingTest {
         FeedPost hot  = post("POST", 3_000, 200, 80, 3);
         FeedPost cold = post("POST",    10,   0,  0, 3);
 
-        double hotScore  = FeedService.computeAxes(hot,  Map.of(), Map.of(), Map.of(),
-                Set.of(), Set.of(), List.of()).total();
-        double coldScore = FeedService.computeAxes(cold, Map.of(), Map.of(), Map.of(),
-                Set.of(), Set.of(), List.of()).total();
+        double hotScore  = FeedService.computeAxes(hot,  CFG, Map.of(), Map.of(), Map.of(),
+                Set.of(), Set.of(), List.of()).total(CFG);
+        double coldScore = FeedService.computeAxes(cold, CFG, Map.of(), Map.of(), Map.of(),
+                Set.of(), Set.of(), List.of()).total(CFG);
 
         assertThat(hotScore).isGreaterThan(coldScore);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // 가중치 합 검증 — 정규화의 전제
+    // ─────────────────────────────────────────────────────────────────────
+
+    @Test
+    @DisplayName("가중치 합이 1.0 이 아니면 기동을 막는다")
+    void weightsMustSumToOne() {
+        FeedRankingProperties bad = new FeedRankingProperties();
+        bad.setWeightQuality(0.50);   // 합 1.25
+
+        assertThatThrownBy(bad::validate)
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("가중치 합");
+    }
+
+    @Test
+    @DisplayName("기본 설정은 합이 정확히 1.0 이다")
+    void defaultWeightsAreValid() {
+        FeedRankingProperties cfg = new FeedRankingProperties();
+        assertThat(cfg.getWeightInterest() + cfg.getWeightRelation()
+                + cfg.getWeightQuality() + cfg.getWeightFreshness()).isCloseTo(1.0, within(1e-9));
+        cfg.validate();   // 예외 없이 통과해야 한다
     }
 
     // ── 픽스처 ────────────────────────────────────────────────────────────
@@ -216,12 +243,12 @@ class FeedRankingTest {
     }
 
     private static FeedAxes axes(FeedPost p) {
-        return FeedService.computeAxes(p, Map.of(), Map.of(), Map.of(),
+        return FeedService.computeAxes(p, CFG, Map.of(), Map.of(), Map.of(),
                 Set.of(), Set.of(), List.of());
     }
 
     private static double rel(FeedPost p, Set<Long> followed, Set<Long> joined) {
-        return FeedService.computeAxes(p, Map.of(), Map.of(), Map.of(),
+        return FeedService.computeAxes(p, CFG, Map.of(), Map.of(), Map.of(),
                 followed, joined, List.of()).relation();
     }
 }

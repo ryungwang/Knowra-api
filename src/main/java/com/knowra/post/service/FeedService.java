@@ -7,6 +7,7 @@ import com.knowra.common.CommunityQueryHelper;
 import com.knowra.common.entity.QTblComFile;
 import com.knowra.common.service.TagService;
 import com.knowra.community.entity.*;
+import com.knowra.post.config.FeedRankingProperties;
 import com.knowra.post.entity.*;
 import com.knowra.user.entity.*;
 import com.knowra.common.entity.TblTag;
@@ -36,42 +37,22 @@ public class FeedService {
     private final com.knowra.common.repository.TblTagRepository tblTagRepository;
     private final TagService tagService;
     private final FeedCacheService feedCacheService;
+    private final FeedRankingProperties ranking;
 
     private static final int PAGE_SIZE      = 50;
     private static final int MAX_CANDIDATES = 500;
 
-    // ── 알고리즘 가중치 ────────────────────────────────────────────────────
+    // ── 알고리즘 가중치·기준값 ────────────────────────────────────────────
+    // 값은 FeedRankingProperties(knowra.feed.ranking.*)가 들고 있다. 랭킹 상수는 반드시
+    // 여러 번 고치게 되므로 재배포 없이 조정할 수 있어야 한다.
+    //
     // 다섯 축을 모두 [0,1] 로 정규화한 뒤 곱하므로, 가중치는 그 축이 가져갈 수 있는
-    // **상한 지분** 이다. 합이 1.0 이라 총점도 [0,1] 에 들어온다.
+    // **상한 지분** 이다. 합이 1.0 이라 총점도 [0,1] 에 들어온다 (기동 시 검증한다).
     //
     // 정규화 전에는 그렇지 않았다. 원점수 범위가 관심사 0~12, 품질 0~3,598 로
     // 제각각이라 0.25 를 곱해도 지분이 되지 않았고, 실측 결과 품질 축이 순위 변동의
     // 97.8% 를 차지해 개인화 순서와 순수 인기순의 스피어만 상관이 0.9992 였다.
     // 근거와 측정 절차: docs/feed-ranking.md
-    private static final double W1 = 0.15; // 관심사일치
-    private static final double W3 = 0.25; // 관계
-    private static final double W4 = 0.25; // 품질
-    private static final double W5 = 0.20; // 신선도
-    private static final double W6 = 0.15; // 탐험
-
-    // ── 정규화 기준값 ──────────────────────────────────────────────────────
-    // 각 원점수가 1.0 에 수렴하기 시작하는 지점. 원칙적으로 해당 원점수의 p95 이며,
-    // 지금 값은 합성 시드(src/docs/seed_data.py) 기준의 출발점이다. 실트래픽이
-    // 쌓이면 docs/feed-ranking.md §7 의 쿼리로 다시 뽑는다.
-    private static final double INTEREST_REF         = 10.0;
-    private static final double RELATION_REF         = 20.0;
-    private static final double QUALITY_RATE_REF     = 20.0;
-    private static final double EXPLORE_REF          = 20.0;
-
-    /**
-     * 품질 반응률의 분모 바닥(시간).
-     * 품질은 누적 총량이 아니라 시간당 반응률이라 분모가 경과시간이다. 이 바닥이 없으면
-     * 갓 올라온 글의 좋아요 1개가 1/0 이 되어 신규 글이 영구히 1등을 한다.
-     */
-    private static final double QUALITY_PRIOR_HOURS  = 4.0;
-
-    /** 신선도 반감기(시간). 토론형 커뮤니티면 늘리고, 속보형이면 줄인다. */
-    private static final double FRESH_HALFLIFE_HOURS = 24.0;
 
     // ── 내부 DTO ──────────────────────────────────────────────────────────
     // package-private: 같은 패키지의 랭킹 불변식 테스트(FeedRankingTest)가 후보를
@@ -165,18 +146,22 @@ public class FeedService {
             Map<String, Double> memberScores = new LinkedHashMap<>();
             candidates.forEach(p -> memberScores.put(
                     p.postKind() + ":" + p.postSn(),
-                    computeScore(p, mode, userTagScores, authorScores, commScores,
+                    computeScore(p, mode, ranking, userTagScores, authorScores, commScores,
                             followedUserSns, joinedCommSns, postTagSnMap, commPostTagSnMap)));
 
             List<FeedPost> scored = candidates.stream()
                     .sorted(Comparator.comparingDouble(p -> -memberScores.get(p.postKind() + ":" + p.postSn())))
                     .collect(Collectors.toList());
 
-            // Redis 캐시 저장
+            // Redis 캐시 저장.
+            // TTL 은 전부 붙인다. 반응(좋아요·댓글)은 더 이상 캐시를 건드리지 않으므로
+            // TTL 이 반응을 순위에 반영하는 유일한 수단이다.
             if (cacheKey != null) {
                 feedCacheService.populate(cacheKey, memberScores);
-                if ("PERSONALIZED".equals(mode)) {
-                    feedCacheService.expirePersonalized(cacheKey);
+                switch (mode) {
+                    case "POPULAR", "LATEST"        -> feedCacheService.expireGlobal(cacheKey);
+                    case "PERSONALIZED", "FOLLOWING" -> feedCacheService.expirePersonalized(cacheKey);
+                    default -> { }
                 }
             }
 
@@ -325,38 +310,45 @@ public class FeedService {
 
             // 정렬에 쓴 것과 같은 축 값을 쓴다. 정규화되어 있으므로 W 를 곱한 기여도끼리
             // 비교해도 된다.
-            FeedAxes ax = computeAxes(p, userTagScores, authorScores, commScores,
+            FeedAxes ax = computeAxes(p, ranking, userTagScores, authorScores, commScores,
                     followedUserSns, joinedCommSns, tagSns);
 
-            boolean followed = followedUserSns.contains(p.userSn());
-            boolean joined   = p.commSn() != null && joinedCommSns.contains(p.commSn());
-
-            double interest = ax.interest() * W1;
-            double quality  = ax.quality()  * W4;
-            double fresh    = ax.freshness() * W5;
-            double explore  = ax.explore()  * W6;
-
-            // 칩이 답해야 하는 질문은 "왜 하필 나에게 보이는가" 이므로, 나에게만 해당하는
-            // 신호(팔로우·가입·관심사)를 먼저 보고 없을 때만 일반 신호로 내려간다.
+            // 총점에 가장 많이 기여한 축이 곧 근거다. 축이 정규화되어 있으므로 가중
+            // 기여도(W × 축)끼리 그대로 비교하면 된다.
             //
-            // 축이 정규화된 지금은 최대 기여 축을 그대로 고르는 방식으로 되돌릴 수 있다.
-            // 적용 순서 5단계(docs/feed-ranking.md §6.3)라 이번 변경 범위 밖이다.
+            // 정규화 전에는 이렇게 할 수 없었다. 품질이 수백 단위, 나머지가 한 자릿수라
+            // 최대값을 고르면 무조건 "인기" 가 나왔고, 그래서 팔로우·가입·관심사를 먼저
+            // 보는 우선순위 방식으로 우회했다. 이제 그 우회가 필요 없다.
+            double interest = ax.interest()  * ranking.getWeightInterest();
+            double relation = ax.relation()  * ranking.getWeightRelation();
+            double quality  = ax.quality()   * ranking.getWeightQuality();
+            double fresh    = ax.freshness() * ranking.getWeightFreshness();
+
+            double top = Math.max(Math.max(interest, relation), Math.max(quality, fresh));
+
             String reason; String detail = null;
-            if (followed) {
-                reason = "FOLLOWING";
-            } else if (joined) {
-                reason = "JOINED_COMM";
-                detail = dto.getCommDsplNm();
-            } else if (interest > 0) {
+            if (top == relation) {
+                // 관계 축은 세 가지를 함께 담는다 — 팔로우, 커뮤니티 가입, 그리고 명시적
+                // 관계 없이 행동으로 쌓인 친밀도. 어느 쪽이 근거인지 갈라 준다.
+                // 사람을 고른 쪽이 가장 구체적인 설명이라 먼저 본다.
+                if (followedUserSns.contains(p.userSn())) {
+                    reason = "FOLLOWING";
+                } else if (p.commSn() != null && joinedCommSns.contains(p.commSn())) {
+                    reason = "JOINED_COMM";
+                    detail = dto.getCommDsplNm();
+                } else {
+                    // 팔로우도 가입도 안 했는데 관계 축이 1위다 = 자주 보던 작성자·커뮤니티.
+                    reason = "AFFINITY";
+                    detail = p.commSn() != null ? dto.getCommDsplNm() : p.nickName();
+                }
+            } else if (top == interest) {
                 reason = "INTEREST";
                 detail = tagSns.stream()
                         .filter(t -> userTagScores.getOrDefault(t, 0.0) > 0)
                         .max(Comparator.comparingDouble(t -> userTagScores.getOrDefault(t, 0.0)))
                         .map(tagNames::get).orElse(null);
-            } else if (fresh >= quality && fresh >= explore) {
+            } else if (top == fresh) {
                 reason = "FRESH";
-            } else if (explore > quality) {
-                reason = "EXPLORE";
             } else {
                 reason = "POPULAR";
             }
@@ -371,13 +363,14 @@ public class FeedService {
      * <p>정렬용 총점(computeScore)과 근거 계산(applyFeedReasons)이 같은 값을 써야 하므로
      * 축 계산은 여기 한 곳에만 둔다. 예전에는 두 곳에 복사되어 있었다.
      */
-    record FeedAxes(double interest, double relation, double quality,
-                     double freshness, double explore) {
+    record FeedAxes(double interest, double relation, double quality, double freshness) {
 
         /** 가중합. 가중치 합이 1.0 이라 결과도 [0,1] 이다. */
-        double total() {
-            return W1 * interest + W3 * relation + W4 * quality
-                    + W5 * freshness + W6 * explore;
+        double total(FeedRankingProperties cfg) {
+            return cfg.getWeightInterest()  * interest
+                 + cfg.getWeightRelation()  * relation
+                 + cfg.getWeightQuality()   * quality
+                 + cfg.getWeightFreshness() * freshness;
         }
     }
 
@@ -399,6 +392,7 @@ public class FeedService {
     // 인스턴스 상태를 쓰지 않는 순수 함수라 static 이다. 덕분에 테스트가 서비스
     // 전체를 띄우지 않고 랭킹 수식만 검증할 수 있다.
     static FeedAxes computeAxes(FeedPost p,
+                                 FeedRankingProperties cfg,
                                  Map<Long, Double> userTagScores,
                                  Map<Long, Double> authorScores,
                                  Map<Long, Double> commScores,
@@ -411,7 +405,7 @@ public class FeedService {
         double interestRaw = tagSns.stream()
                 .mapToDouble(t -> userTagScores.getOrDefault(t, 0.0))
                 .sum();
-        double interest = saturate(interestRaw, INTEREST_REF);
+        double interest = saturate(interestRaw, cfg.getInterestRef());
 
         // ── 관계 (W3) ────────────────────────────────────────────────────
         // 구성 요소의 성격이 다르다. 팔로우·가입은 사용자가 명시적으로 선언한 관계이고,
@@ -422,7 +416,7 @@ public class FeedService {
         double  commInterest     = p.commSn() != null ? commScores.getOrDefault(p.commSn(), 0.0) : 0.0;
 
         double explicitBond = (isFollowedAuthor ? 0.5 : 0.0) + (isJoinedComm ? 0.4 : 0.0);
-        double affinity     = saturate(authorInterest + commInterest * 1.2, RELATION_REF);
+        double affinity     = saturate(authorInterest + commInterest * 1.2, cfg.getRelationRef());
         double relation     = Math.min(1.0, explicitBond + affinity * 0.5);
 
         // ── 품질 (W4) ────────────────────────────────────────────────────
@@ -431,32 +425,34 @@ public class FeedService {
         // 반응이 오고 있는가" 를 재므로 나이가 다른 글을 같은 자로 비교할 수 있다.
         long   elapsedHours = Math.max(0, ChronoUnit.HOURS.between(p.frstCrtDt(), LocalDateTime.now()));
         double qualityRaw   = p.likeCnt() * 2.0 + p.cmtCnt() * 4.0 + p.viewCnt() * 0.2;
-        double qualityRate  = qualityRaw / (elapsedHours + QUALITY_PRIOR_HOURS);
-        double quality      = saturate(qualityRate, QUALITY_RATE_REF);
+        double qualityRate  = qualityRaw / (elapsedHours + cfg.getQualityPriorHours());
+        double quality      = saturate(qualityRate, cfg.getQualityRateRef());
 
         // ── 신선도 (W5) ──────────────────────────────────────────────────
         // 반감기로 쓴다. 기존 100/√(t+2) 도 감쇠 곡선이지만 눈금이 읽히지 않았다.
-        double freshness = Math.pow(0.5, elapsedHours / FRESH_HALFLIFE_HOURS);
+        double freshness = Math.pow(0.5, elapsedHours / cfg.getFreshHalfLifeHours());
 
-        // ── 탐험 (W6) ────────────────────────────────────────────────────
-        // 기존의 × 20 은 다른 축과 크기를 맞추려던 흔적이라 제거했다. 두 항 모두 이미
-        // [0,1] 이므로 곱도 [0,1] 이다.
+        // ── 탐험 축은 없앴다 ─────────────────────────────────────────────
+        // 두 단계에 걸쳐 죽은 축이라는 게 드러났다.
         //
-        // TODO(docs/feed-ranking.md §2): novelty 는 "내 태그와 안 맞을수록 1" 이라
-        // 관심사 축의 부호만 뒤집은 값이다(실측 상관 -0.9226). W1 이 올린 글을 W6 이
-        // 같은 크기로 끌어내려 태그 개인화의 순효과가 0 에 수렴한다. 제거는 적용 순서
-        // 4단계라 이번 변경 범위 밖이다.
-        double familiarity = Math.min(1.0, (authorInterest + commInterest) / EXPLORE_REF);
-        double novelty     = tagSns.isEmpty() ? 1.0
-                : tagSns.stream()
-                    .mapToDouble(t -> userTagScores.getOrDefault(t, 0.0) == 0.0 ? 1.0 : 0.0)
-                    .average().orElse(0.0);
-        double explore = (1.0 - familiarity) * novelty;
+        // 원래 식은 (1 - 친숙도) × novelty × 20 이었다. novelty 는 "내 태그와 안 맞을수록
+        // 1" 이라 관심사 축의 부호만 뒤집은 값이었고(실측 상관 -0.9226), W1 이 올린 글을
+        // W6 이 같은 크기로 끌어내려 태그 개인화의 순효과가 0 이었다. novelty 를 빼자
+        // 남은 (1 - 친숙도) 는 112건 중 103건이 정확히 1.0, 서로 다른 값이 4개뿐이었다.
+        // 거의 모든 글에 같은 값을 더하므로 순위를 바꾸지 않으면서 예산 15% 를 쓰고,
+        // 근거 계산에서는 112건 중 96건의 최대 기여 축이 되어 칩을 무의미하게 만들었다.
+        //
+        // 탐험은 점수 축으로는 성립하지 않는다 — 값이 고르면 순위를 안 바꾸고, 값이
+        // 갈리면 관련도와 정면으로 싸운다. 제대로 하려면 슬롯 쿼터여야 한다:
+        // 한 페이지 50건 중 N건을 한 번도 엮인 적 없는 작성자·커뮤니티에 고정 배정한다.
+        // 탐험량을 직접 통제할 수 있고 관련도 점수를 훼손하지 않는다.
+        // 얼마나 섞을지는 제품 결정이라 여기서 정하지 않았다 (docs/feed-ranking.md §4.5).
 
-        return new FeedAxes(interest, relation, quality, freshness, explore);
+        return new FeedAxes(interest, relation, quality, freshness);
     }
 
     static double computeScore(FeedPost p, String mode,
+                                FeedRankingProperties cfg,
                                 Map<Long, Double> userTagScores,
                                 Map<Long, Double> authorScores,
                                 Map<Long, Double> commScores,
@@ -465,10 +461,10 @@ public class FeedService {
                                 Map<Long, List<Long>> postTagSnMap,
                                 Map<Long, List<Long>> commPostTagSnMap) {
 
-        FeedAxes ax = computeAxes(p, userTagScores, authorScores, commScores,
+        FeedAxes ax = computeAxes(p, cfg, userTagScores, authorScores, commScores,
                 followedUserSns, joinedCommSns, tagSnsOf(p, postTagSnMap, commPostTagSnMap));
 
-        double totalScore = ax.total();
+        double totalScore = ax.total(cfg);
 
         // 모드 보정도 정규화된 값으로만 한다. 보정항에 원점수를 섞으면 총점이 [0,1] 인
         // 지금 그 항 하나가 순위를 통째로 지배한다 — 정규화와 반드시 같이 가야 하는 변경.
