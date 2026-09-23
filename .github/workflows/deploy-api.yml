@@ -1,9 +1,33 @@
 name: Deploy API
 
 on:
-  push:
-    branches:
-      - main
+  # ⚠️ 자동 배포를 잠시 껐다 (2026-09-23).
+  #
+  # 이 워크플로는 secrets.SERVER_HOST 로 SSH 해서 /home/deer/knowra/ 에 올리고
+  # `docker compose restart api` 까지 간다. 승인 단계가 없어 main 푸시가 곧 배포다.
+  # verify 는 병렬로 돌기 때문에 실패해도 배포를 막지 못한다.
+  #
+  # 지금 껀 이유는 **배포 대상 서버를 옮기는 중** 이기 때문이다. 아래 값들이 전부
+  # 지금 서버를 가리키고 있어, 그대로 두면 옮겨 갈 서버가 아니라 떠나는 서버에
+  # 새 코드를 올린다.
+  #
+  # 옮긴 뒤 되돌리기 전에 맞춰야 할 것:
+  #   1. secrets.SERVER_HOST / SERVER_SSH_KEY 를 새 서버 값으로 교체
+  #   2. 포트 10022, 사용자 root, 경로 /home/deer/knowra/ 가 새 서버에도 맞는지
+  #   3. 새 서버의 compose 파일 — 저장소에 없다. db 서비스는 postgres 여야 하고
+  #      (main 에 MariaDB -> PostgreSQL 전환이 올라가 있다) redis 도 필요하다
+  #   4. application-prod.properties 의 Redis 호스트가 옛 서버 IP 로 박혀 있다.
+  #      DataSource 처럼 환경변수로 빼야 한다
+  #   5. 평문 시크릿 정리 — Gemini 키, JWT, Redis 비밀번호
+  #
+  # 되돌리는 법: 아래 push 블록의 주석을 푼다. workflow_dispatch 는 남겨 두는 게
+  # 낫다 — 급할 때 수동 배포 수단이 있는 편이 좋다.
+
+  workflow_dispatch:
+
+  # push:
+  #   branches:
+  #     - main
 
 jobs:
   deploy:
