@@ -55,6 +55,33 @@ public class ContentGenerationService {
     @Value("${gemini.model:gemini-2.0-flash-lite}")
     private String geminiModel;
 
+    /**
+     * 생성 대상에서 <b>제외할 커뮤니티</b>({@code commSn} 쉼표 구분).
+     *
+     * <p>⚠️ 이 서비스는 AI 로 가짜 유저·게시글·댓글·좋아요를 만든다. 씨앗 콘텐츠용이라
+     * 보통은 전 커뮤니티에 뿌려도 되지만, <b>사람의 제출물을 받아 심사하는 자리</b>
+     * (스킨 공모전 등)에는 절대 들어가면 안 된다 — 참가자 글에 봇 반응이 붙는 순간
+     * 채택 과정의 공정성 시비가 된다. 설정 한 줄로 빼둔다.
+     */
+    @Value("${knowra.content-generation.excluded-communities:}")
+    private String excludedCommunitiesRaw;
+
+    /** 제외 목록. 설정이 비어 있으면 빈 집합(= 아무것도 제외하지 않음). */
+    private Set<Long> excludedCommunities() {
+        if (excludedCommunitiesRaw == null || excludedCommunitiesRaw.isBlank()) return Set.of();
+        Set<Long> out = new HashSet<>();
+        for (String token : excludedCommunitiesRaw.split(",")) {
+            String t = token.trim();
+            if (t.isEmpty()) continue;
+            try {
+                out.add(Long.parseLong(t));
+            } catch (NumberFormatException e) {
+                log.warn("[ContentGen] 제외 커뮤니티 설정에 숫자가 아닌 값: {}", t);
+            }
+        }
+        return out;
+    }
+
     private String geminiUrl() {
         return "https://generativelanguage.googleapis.com/v1beta/models/"
                 + geminiModel + ":generateContent?key=";
@@ -352,9 +379,14 @@ public class ContentGenerationService {
         int userCount = generateUser();
         int commCount = generateCommunity();
 
+        Set<Long> excluded = excludedCommunities();
         List<TblComm> communities = tblCommRepository.findAll().stream()
                 .filter(c -> "Y".equals(c.getActvtnYn()))
+                .filter(c -> !excluded.contains(c.getCommSn()))
                 .toList();
+        if (!excluded.isEmpty()) {
+            log.info("[ContentGen] 제외 커뮤니티 {}개 — {}", excluded.size(), excluded);
+        }
 
         int postCount = 0, totalCmtCount = 0;
         List<RunEntry> entries = new ArrayList<>();
@@ -632,14 +664,27 @@ public class ContentGenerationService {
         QTblCommPost    qPost = QTblCommPost.tblCommPost;
         QTblCommPostCmt qCmt  = QTblCommPostCmt.tblCommPostCmt;
 
+        // ⚠️ 제외 커뮤니티의 글에는 반응도 달지 않는다. 글 생성만 막고 반응을 놔두면
+        // 사람이 쓴 공모전 글에 봇 좋아요가 붙는다 — 막으려던 바로 그 그림이다.
+        Set<Long> excluded = excludedCommunities();
         List<TblCommPost> posts = q.selectFrom(qPost)
                 .where(qPost.stat.eq("ACTIVE").and(qPost.actvtnYn.eq("Y")))
-                .fetch();
+                .fetch()
+                .stream()
+                .filter(p -> !excluded.contains(p.getCommSn()))
+                .toList();
         if (posts.isEmpty()) return 0;
 
+        // 댓글도 같은 이유로 거른다. 댓글엔 커뮤니티 컬럼이 없어 **허용된 글의 번호**로 맞춘다.
+        Set<Long> allowedPostSns = posts.stream()
+                .map(TblCommPost::getCommPostSn)
+                .collect(java.util.stream.Collectors.toSet());
         List<TblCommPostCmt> cmts = q.selectFrom(qCmt)
                 .where(qCmt.stat.eq("ACTIVE").and(qCmt.actvtnYn.eq("Y")))
-                .fetch();
+                .fetch()
+                .stream()
+                .filter(c -> allowedPostSns.contains(c.getCommPostSn()))
+                .toList();
 
         Random rnd   = new Random();
         int    count = 0;
