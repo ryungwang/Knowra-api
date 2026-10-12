@@ -42,6 +42,7 @@ public class FeedCacheService {
     private static final String POPULAR_KEY         = "feed:popular";
     private static final String EXPLORE_SUFFIX      = ":explore";
     private static final String LATEST_KEY          = "feed:latest";
+    private static final String TRENDING_KEY        = "feed:trending";
 
     private final GenericApplicationContext context;
 
@@ -66,6 +67,7 @@ public class FeedCacheService {
      */
     public String exploreSlotsKey(long userSn)  { return personalizedKey(userSn) + EXPLORE_SUFFIX; }
     public String latestKey()                  { return LATEST_KEY; }
+    public String trendingKey()                { return TRENDING_KEY; }
 
     // ── 벌크 ZADD (캐시 미스 시 전체 populate) ──────────────────────────────
     // 유일한 쓰기 경로다. 단건 add 와 incrementScore 는 랭킹 점수와 다른 척도를 넣던
@@ -142,6 +144,7 @@ public class FeedCacheService {
     public void invalidateGlobalFeeds() {
         invalidate(popularKey());
         invalidate(latestKey());
+        invalidate(trendingKey());
     }
 
     /**

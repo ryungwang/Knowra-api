@@ -92,6 +92,19 @@ public class FeedService {
     }
 
     // ─────────────────────────────────────────────────────────────────────
+    // 트렌딩 피드 — "지금 뜨는 글"
+    // ─────────────────────────────────────────────────────────────────────
+    /**
+     * 인기(누적 반응 상위)·최신(시간순)과 다른 세 번째 축이다. <b>최근 글 가운데 반응이
+     * 빠르게 붙는 글</b>을 올린다 — 반응 총량을 나이로 나눈 속도(Hacker News 식 중력 감쇠).
+     * 오래 쌓인 글은 총량이 커도 나이에 눌려 내려가고, 몇 시간 된 글이 반응 몇 개만 받아도
+     * 위로 올라온다. 개인화는 섞지 않는다 — 모두에게 같은 "지금"이다.
+     */
+    public ResultVO getTrendingFeed(Map<String, Object> params, Long me) {
+        return buildFeed(params, me, "TRENDING");
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
     // 공통 피드 빌더
     // ─────────────────────────────────────────────────────────────────────
     private ResultVO buildFeed(Map<String, Object> params, Long me, String mode) {
@@ -174,7 +187,7 @@ public class FeedService {
                 }
                 feedCacheService.populate(cacheKey, rankScores);
                 switch (mode) {
-                    case "POPULAR", "LATEST"        -> feedCacheService.expireGlobal(cacheKey);
+                    case "POPULAR", "LATEST", "TRENDING" -> feedCacheService.expireGlobal(cacheKey);
                     case "PERSONALIZED", "FOLLOWING" -> feedCacheService.expirePersonalized(cacheKey);
                     default -> { }
                 }
@@ -212,6 +225,7 @@ public class FeedService {
             case "PERSONALIZED" -> userSn != null ? feedCacheService.personalizedKey(userSn) : null;
             case "POPULAR"      -> feedCacheService.popularKey();
             case "LATEST"       -> feedCacheService.latestKey();
+            case "TRENDING"     -> feedCacheService.trendingKey();
             default             -> null;
         };
     }
@@ -471,8 +485,23 @@ public class FeedService {
                     + ((isFollowedAuthor ? 0.6 : 0.0) + (isJoinedComm ? 0.4 : 0.0)) * 0.3;
             case "POPULAR"   -> totalScore * 0.6 + ax.quality()   * 0.4;
             case "LATEST"    -> totalScore * 0.7 + ax.freshness() * 0.3;
+            case "TRENDING"  -> trendingScore(p);
             default          -> totalScore; // PERSONALIZED
         };
+    }
+
+    /**
+     * 트렌딩 점수 = 반응 / (나이시간 + 2)^1.3.
+     *
+     * <p>댓글이 좋아요보다, 좋아요가 조회보다 무겁다 — 조회는 노출만 있어도 쌓이지만
+     * 댓글은 손이 가야 한다. +2 는 막 올라온 글이 반응 하나로 1위가 되는 걸 막는 완충,
+     * 지수 1.3 은 "하루 지난 글은 같은 반응으로 새 글의 1/7" 쯤 되게 하는 값이다.
+     * 개인화 축을 전혀 섞지 않으므로 정규화할 필요가 없다(이 모드에서 단독으로 쓰인다).
+     */
+    static double trendingScore(FeedPost p) {
+        long   hours   = Math.max(0, ChronoUnit.HOURS.between(p.frstCrtDt(), LocalDateTime.now()));
+        double engaged = p.likeCnt() * 3.0 + p.cmtCnt() * 5.0 + p.viewCnt() * 0.05;
+        return engaged / Math.pow(hours + 2.0, 1.3);
     }
 
     /**
@@ -575,6 +604,21 @@ public class FeedService {
             fetchTopPostsByQuality(MAX_CANDIDATES, userSn).stream()
                     .filter(p -> dedup.add(p.postSn()))
                     .forEach(result::add);
+            return result.stream().limit(MAX_CANDIDATES).collect(Collectors.toList());
+        }
+
+        if ("TRENDING".equals(mode)) {
+            // 트렌딩: 최근 글 가운데 반응이 하나라도 있는 글. 창을 48시간 → 7일 → 30일 → 90일로
+            // 넓혀 가며 20건이 모이면 멈춘다 — 조용한 날에도 탭이 비지 않게, 바쁜 날엔 진짜 "지금"만.
+            // 마지막 36500일은 사실상 "전체" — 반응 있는 글이 90일 안에 하나도 없는 조용한 사이트에서도
+            // 탭이 비어 보이지 않게 한다.
+            for (int days : new int[]{2, 7, 30, 90, 36500}) {
+                result.clear(); dedup.clear();
+                fetchEngagedPostsSince(LocalDateTime.now().minusDays(days), MAX_CANDIDATES, userSn).stream()
+                        .filter(p -> dedup.add(p.postSn()))
+                        .forEach(result::add);
+                if (result.size() >= 20) break;
+            }
             return result.stream().limit(MAX_CANDIDATES).collect(Collectors.toList());
         }
 
@@ -692,6 +736,17 @@ public class FeedService {
         return toFeedPosts(postQuery.base()
                 .where(PostQuery.alive(), PostQuery.visibleTo(viewerSn))
                 .orderBy(POST.likeCnt.multiply(2).add(POST.cmtCnt.multiply(4)).desc())
+                .limit(limit)
+                .fetch());
+    }
+
+    /** since 이후 글 가운데 좋아요나 댓글이 하나라도 있는 글. 조회만 있는 글은 트렌딩 후보가 아니다. */
+    private List<FeedPost> fetchEngagedPostsSince(LocalDateTime since, int limit, Long viewerSn) {
+        return toFeedPosts(postQuery.base()
+                .where(PostQuery.alive(), PostQuery.visibleTo(viewerSn),
+                        POST.frstCrtDt.goe(since),
+                        POST.likeCnt.gt(0).or(POST.cmtCnt.gt(0)))
+                .orderBy(POST.frstCrtDt.desc())
                 .limit(limit)
                 .fetch());
     }

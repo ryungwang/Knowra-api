@@ -112,6 +112,9 @@ public class CommunityService {
                     .creatrSn(userSn)
                     .build();
             tblCommMbrRepository.save(ownerMember);
+            // 만든 사람이 첫 멤버다. 전엔 0 으로 두어 목록 카드가 "0명"으로 보였다(상세는 멤버 행을 세어 1).
+            tblComm.setMemberCnt(1);
+            tblCommRepository.save(tblComm);
 
             resultVO.putResult("commSn", tblComm.getCommSn());
             resultVO.setResultCode(ResponseCode.COMMUNITY_CREATE_SUCCESS.getCode());

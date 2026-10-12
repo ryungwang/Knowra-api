@@ -41,4 +41,10 @@ public class FeedController {
                                    @CurrentUser Long me) {
         return feedService.getLatestFeed(params, me);
     }
+
+    @GetMapping("/api/feed/trending")
+    public ResultVO getTrendingFeed(@RequestParam Map<String, Object> params,
+                                   @CurrentUser Long me) {
+        return feedService.getTrendingFeed(params, me);
+    }
 }
