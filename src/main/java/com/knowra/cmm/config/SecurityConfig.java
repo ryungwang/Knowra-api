@@ -73,15 +73,13 @@ public class SecurityConfig {
 
                         // 비로그인 열람 — 피드·글·댓글
                         .requestMatchers(HttpMethod.GET, "/api/feed/**", "/api/post/getPost").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/post/getPostCmtList", "/api/post/viewPost").permitAll()
+                        .requestMatchers(HttpMethod.POST,
+                                "/api/post/getPostCmtList", "/api/post/viewPost", "/api/post/getCommPostList").permitAll()
 
                         // 비로그인 열람 — 커뮤니티
                         .requestMatchers(HttpMethod.GET,
                                 "/api/community/getCommunity", "/api/community/getCommunityList",
-                                "/api/community/explore", "/api/community/explore/filter",
-                                "/api/community/getCommPost").permitAll()
-                        .requestMatchers(HttpMethod.POST,
-                                "/api/community/getCommPostList", "/api/community/getCommPostCmtList").permitAll()
+                                "/api/community/explore", "/api/community/explore/filter").permitAll()
 
                         // 비로그인 열람 — 공개 프로필
                         .requestMatchers(HttpMethod.POST,

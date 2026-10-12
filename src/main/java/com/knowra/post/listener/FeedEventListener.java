@@ -52,8 +52,8 @@ public class FeedEventListener {
         fetchFollowers(event.userSn())
                 .forEach(feedCacheService::invalidateUserFeeds);
 
-        // COMM_POST: 해당 커뮤니티 멤버들의 PERSONALIZED도 무효화
-        if ("COMM".equals(event.postKind()) && event.commSn() != null) {
+        // 커뮤니티 글: 해당 커뮤니티 멤버들의 PERSONALIZED도 무효화
+        if (event.commSn() != null) {
             fetchCommMembers(event.commSn())
                     .forEach(feedCacheService::invalidatePersonalized);
         }
@@ -63,7 +63,7 @@ public class FeedEventListener {
     @Async
     @EventListener
     public void onPostDeleted(PostDeletedEvent event) {
-        String member = event.postKind() + ":" + event.postSn();
+        String member = String.valueOf(event.postSn());
         feedCacheService.remove(feedCacheService.popularKey(), member);
         feedCacheService.remove(feedCacheService.latestKey(),  member);
         // per-user FOLLOWING 캐시는 TTL 또는 다음 재조회 시 자연 제거됨

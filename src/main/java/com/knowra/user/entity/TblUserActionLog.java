@@ -32,7 +32,7 @@ public class TblUserActionLog {
     private long userSn;
 
     @Column(name = "TARGET_TYPE", length = 20, nullable = false)
-    @Comment("COMM | COMM_POST | POST | USER")
+    @Comment("COMM | POST | USER | TAG")
     private String targetType;
 
     @Column(name = "TARGET_SN", nullable = false)
@@ -50,7 +50,6 @@ public class TblUserActionLog {
 
     // ── 타입 상수 ──────────────────────────────────────────────────
     public static final String TARGET_COMM      = "COMM";
-    public static final String TARGET_COMM_POST = "COMM_POST";
     public static final String TARGET_POST      = "POST";
     public static final String TARGET_USER      = "USER";
     public static final String TARGET_TAG       = "TAG";

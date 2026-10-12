@@ -11,6 +11,7 @@ import org.hibernate.annotations.Comment;
         schema = "KNOWRA_POST",
         indexes = {
                 @Index(name = "IDX_POST_USER",        columnList = "USER_SN"),
+                @Index(name = "IDX_POST_COMM",        columnList = "COMM_SN"),
                 @Index(name = "IDX_POST_FRST_CRT_DT", columnList = "FRST_CRT_DT")
         }
 )
@@ -31,4 +32,16 @@ public class TblPost extends BasePostEntity {
     @Comment("NORMAL / NOTICE")
     @Builder.Default
     private String postTyp = "NORMAL";
+
+    /**
+     * 커뮤니티 소속. NULL 이면 전체 공개 글.
+     *
+     * <p>예전엔 커뮤니티 글이 별도 테이블(tbl_comm_post 계열)이었고 컬럼은 이 하나만 달랐다.
+     * 그 차이 때문에 서비스·피드·저장·알림이 전부 두 갈래로 갈라져 있었다 — V2 에서 합쳤다.
+     * 커뮤니티 글의 노출 범위(비공개 커뮤니티)는 조회 쪽에서
+     * {@code CommunityQueryHelper.accessCondition} 으로 거른다.
+     */
+    @Column(name = "COMM_SN")
+    @Comment("커뮤니티 SN (tbl_comm 논리 참조) — NULL 이면 전체 공개 글")
+    private Long commSn;
 }

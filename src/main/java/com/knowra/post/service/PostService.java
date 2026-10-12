@@ -1,43 +1,68 @@
 package com.knowra.post.service;
 
-import com.knowra.cmm.jwt.JwtProvider;
+import com.knowra.cmm.event.NotifTriggerEvent;
 import com.knowra.cmm.model.ResponseCode;
 import com.knowra.cmm.model.ResultVO;
 import com.knowra.cmm.service.RedisApiService;
 import com.knowra.common.entity.QTblComFile;
-import com.knowra.common.entity.*;
 import com.knowra.common.service.TagService;
-import com.knowra.community.entity.*;
-import com.knowra.community.repository.TblCommPostRepository;
-import com.knowra.post.entity.*;
-import com.knowra.cmm.event.NotifTriggerEvent;
+import com.knowra.community.entity.TblComm;
+import com.knowra.community.entity.TblCommMbr;
+import com.knowra.community.repository.TblCommMbrRepository;
+import com.knowra.community.repository.TblCommRepository;
+import com.knowra.post.entity.CmtDTO;
+import com.knowra.post.entity.PostDTO;
+import com.knowra.post.entity.QTblPost;
+import com.knowra.post.entity.QTblPostCmt;
+import com.knowra.post.entity.QTblPostSave;
+import com.knowra.post.entity.QTblPostTag;
+import com.knowra.post.entity.TblPost;
+import com.knowra.post.entity.TblPostCmt;
+import com.knowra.post.entity.TblPostCmtReact;
+import com.knowra.post.entity.TblPostLike;
+import com.knowra.post.entity.TblPostSave;
 import com.knowra.post.event.PostCreatedEvent;
 import com.knowra.post.event.PostDeletedEvent;
 import com.knowra.post.event.PostReactedEvent;
-import com.knowra.post.repository.*;
-import com.knowra.post.entity.QTblPostSave;
+import com.knowra.post.repository.TblPostCmtReactRepository;
+import com.knowra.post.repository.TblPostCmtRepository;
+import com.knowra.post.repository.TblPostLikeRepository;
+import com.knowra.post.repository.TblPostRepository;
+import com.knowra.post.repository.TblPostSaveRepository;
 import com.knowra.user.entity.QTblUser;
 import com.knowra.user.entity.TblUserActionLog;
 import com.knowra.user.service.ActionLogService;
 import com.knowra.user.service.InterestScoreService;
-import org.springframework.context.ApplicationEventPublisher;
-import com.querydsl.core.types.Projections;
-import com.querydsl.core.types.dsl.CaseBuilder;
-import com.querydsl.core.types.dsl.Expressions;
+import com.querydsl.core.Tuple;
+import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.function.Function;
 
+import static com.knowra.post.service.PostQuery.POST;
+
+/**
+ * 게시글 — 전체 공개 글과 커뮤니티 글을 한 곳에서 다룬다.
+ *
+ * <p>글 모델을 합치기 전에는 {@code CommunityPostService} 가 이 클래스의 거의 완전한 복사본이었다
+ * (엔티티 이름만 다른 좋아요·댓글·반응·목록 로직). 이제 커뮤니티 글은 {@code commSn} 이 붙은
+ * 보통 글이고, 커뮤니티에만 있는 것은 게시판 목록({@link #getCommPostList})과 관리자 권한뿐이다.
+ */
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -46,53 +71,93 @@ public class PostService {
     @PersistenceContext
     private EntityManager em;
 
-    private final JwtProvider jwtProvider;
+    private final PostQuery postQuery;
     private final TagService tagService;
     private final TblPostRepository tblPostRepository;
     private final TblPostLikeRepository tblPostLikeRepository;
     private final TblPostCmtRepository tblPostCmtRepository;
     private final TblPostCmtReactRepository tblPostCmtReactRepository;
-
     private final TblPostSaveRepository tblPostSaveRepository;
-    private final TblCommPostRepository tblCommPostRepository;
+    private final TblCommRepository tblCommRepository;
+    private final TblCommMbrRepository tblCommMbrRepository;
     private final ModelMapper modelMapper;
     private final RedisApiService redisApiService;
     private final ActionLogService actionLogService;
     private final InterestScoreService interestScoreService;
     private final ApplicationEventPublisher eventPublisher;
-    private static final int REDIS_DB = 15;
 
+    private static final int REDIS_DB  = 15;
+    private static final int PAGE_SIZE = 50;
+
+    // ─────────────────────────────────────────────────────────────────────
+    // 권한
+    // ─────────────────────────────────────────────────────────────────────
+
+    /** 커뮤니티에서 viewer 의 역할(OWNER / ADMIN / MEMBER). 멤버가 아니면 null. */
+    private String roleIn(Long commSn, Long userSn) {
+        if (commSn == null || userSn == null) return null;
+        return tblCommMbrRepository.findByCommSnAndUserSn(commSn, userSn)
+                .filter(m -> "ACTIVE".equals(m.getStat()) && "Y".equals(m.getActvtnYn()))
+                .map(TblCommMbr::getRole)
+                .orElse(null);
+    }
+
+    private static boolean isManagerRole(String role) {
+        return "OWNER".equals(role) || "ADMIN".equals(role);
+    }
+
+    /**
+     * 글을 고치거나 지울 수 있는가 — 작성자 본인, 또는 그 커뮤니티의 OWNER/ADMIN.
+     *
+     * <p>예전 코드는 이 검사가 없어서 postSn 만 알면 남의 글을 고칠 수 있었다. 화면은
+     * 원래부터 이 규칙(canManage)으로 버튼을 숨기고 있었으니 서버가 그 규칙을 따라간다.
+     */
+    private boolean canManage(TblPost post, long userSn) {
+        return post.getUserSn() == userSn || isManagerRole(roleIn(post.getCommSn(), userSn));
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // 작성 · 수정
+    // ─────────────────────────────────────────────────────────────────────
+
+    /**
+     * params: postTtl, postCntnt, tagNms, [commSn] (커뮤니티 글), [postTyp] (NOTICE 는 커뮤니티
+     * 관리자만), [postSn] (있으면 수정).
+     */
     public ResultVO setPost(Map<String, Object> params, Long me) {
         ResultVO resultVO = new ResultVO();
-
         try {
             long userSn = me;
-
+            boolean isEdit = params.get("postSn") != null;
             TblPost tblPost;
-            if(params.get("commPostSn") != null){
-                // 수정 — updatable=false 컬럼(creatrSn, frstCrtDt, userSn)은 건드리지 않음
+            if (isEdit) {
                 tblPost = tblPostRepository.findById(Long.parseLong(params.get("postSn").toString()))
                         .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
+                if (!canManage(tblPost, userSn)) {
+                    resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
+                    resultVO.setResultMessage("수정 권한이 없습니다.");
+                    return resultVO;
+                }
+                // updatable=false 컬럼(creatrSn, frstCrtDt, userSn)은 건드리지 않는다. 소속 커뮤니티도 바꾸지 않는다.
                 tblPost.setPostTtl(params.get("postTtl").toString());
                 tblPost.setPostCntnt(params.get("postCntnt").toString());
+                tblPost.setPostTyp(resolvePostTyp(params, tblPost.getCommSn(), userSn, tblPost.getPostTyp()));
                 tblPost.setMdfrSn(userSn);
-            }else{
+            } else {
                 tblPost = modelMapper.map(params, TblPost.class);
                 tblPost.setUserSn(userSn);
                 tblPost.setCreatrSn(userSn);
+                tblPost.setPostTyp(resolvePostTyp(params, tblPost.getCommSn(), userSn, "NORMAL"));
                 tblPostRepository.save(tblPost);
                 actionLogService.log(userSn, TblUserActionLog.TARGET_POST, tblPost.getPostSn(), TblUserActionLog.ACTION_POST);
                 eventPublisher.publishEvent(new PostCreatedEvent(
-                        tblPost.getPostSn(), "POST", userSn, null, tblPost.getFrstCrtDt()));
+                        tblPost.getPostSn(), userSn, tblPost.getCommSn(), tblPost.getFrstCrtDt()));
             }
 
             @SuppressWarnings("unchecked")
             List<String> tagNms = (List<String>) params.get("tagNms");
-            if(params.get("postSn") != null){
-                tagService.updateTag(tagNms, userSn, "post", tblPost.getPostSn());
-            }else{
-                tagService.setTag(tagNms, userSn, "post", tblPost.getPostSn());
-            }
+            if (isEdit) tagService.updateTag(tagNms, userSn, tblPost.getPostSn());
+            else        tagService.setTag(tagNms, userSn, tblPost.getPostSn());
 
             resultVO.putResult("postSn", tblPost.getPostSn());
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
@@ -102,72 +167,49 @@ public class PostService {
             resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
             resultVO.setResultMessage(ResponseCode.SAVE_ERROR.getMessage());
         }
-
         return resultVO;
     }
 
+    /** 공지(NOTICE)는 커뮤니티 OWNER/ADMIN 만 쓸 수 있다. 그 외는 조용히 NORMAL 로 내린다. */
+    private String resolvePostTyp(Map<String, Object> params, Long commSn, long userSn, String fallback) {
+        Object raw = params.get("postTyp");
+        if (raw == null) return fallback;
+        String typ = raw.toString();
+        if ("NOTICE".equals(typ) && !isManagerRole(roleIn(commSn, userSn))) return "NORMAL";
+        return "NOTICE".equals(typ) ? "NOTICE" : "NORMAL";
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // 상세
+    // ─────────────────────────────────────────────────────────────────────
+
     public ResultVO getPost(TblPost tblPost, Long me) {
         ResultVO resultVO = new ResultVO();
-
         try {
-            Long userSn = me;
-            JPAQueryFactory q = new JPAQueryFactory(em);
             long postSn = tblPost.getPostSn();
-
-            QTblPost    post    = QTblPost.tblPost;
-            QTblUser    user    = QTblUser.tblUser;
-            QTblComFile pfpFile = new QTblComFile("pfpFile");
-
-            // 게시글 + 작성자
-            com.querydsl.core.Tuple postTuple = q.select(post, user.name, user.nickName, pfpFile.atchFilePathNm, pfpFile.strgFileNm, pfpFile.atchFileExtnNm)
-                    .from(post)
-                    .join(user).on(post.userSn.eq(user.userSn))
-                    .leftJoin(user.pfp, pfpFile)
-                    .where(post.postSn.eq(postSn), post.stat.eq("ACTIVE"))
+            Tuple t = postQuery.base()
+                    .where(POST.postSn.eq(postSn), PostQuery.alive(), PostQuery.visibleTo(me))
                     .fetchOne();
-
-            if (postTuple == null) {
+            if (t == null) {
                 resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
                 resultVO.setResultMessage("게시글을 찾을 수 없습니다.");
                 return resultVO;
             }
-
-            TblPost p = postTuple.get(post);
-
-            // 태그
-            List<String> tagNms = tagService.fetchTagMap(List.of(postSn), "post").getOrDefault(postSn, List.of());
-
-            // 내 좋아요 여부 (UP / DOWN / null)
-            TblPostLike myLike = userSn != null
-                    ? tblPostLikeRepository.findByPostSnAndUserSn(postSn, userSn)
-                    : null;
-            String myLikeTyp = myLike != null ? myLike.getLikeTyp() : null;
-
-            boolean mySaved = userSn != null &&
-                    tblPostSaveRepository.findByUserSnAndPostSnAndPostKind(userSn, postSn, "POST") != null;
-
-            PostDTO postDTO = new PostDTO(
-                    "POST", p.getPostTyp(), p.getPostSn(), p.getUserSn(),
-                    postTuple.get(user.nickName), postTuple.get(user.name),
-                    p.getPostTtl(), p.getPostCntnt(), p.getFrstCrtDt(),
-                    p.getViewCnt(), p.getLikeCnt(), p.getCmtCnt(), myLikeTyp, mySaved
-            );
-            postDTO.setTagNms(tagNms);
-            String pathNm = postTuple.get(pfpFile.atchFilePathNm);
-            if (pathNm != null) {
-                postDTO.setPfpUrl(pathNm + "/" + postTuple.get(pfpFile.strgFileNm) + "." + postTuple.get(pfpFile.atchFileExtnNm));
+            PostDTO dto = postQuery.decorate(List.of(t), me).get(0);
+            resultVO.putResult("post", dto);
+            resultVO.putResult("myLikeTyp", dto.getMyLikeTyp());
+            if (dto.getCommSn() != null) {
+                TblComm community = tblCommRepository.findByCommSn(dto.getCommSn());
+                resultVO.putResult("comm", community);
+                resultVO.putResult("myRole", roleIn(dto.getCommSn(), me));
             }
-            resultVO.putResult("post", postDTO);
-            resultVO.putResult("myLikeTyp", myLikeTyp);
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
             resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
-
         } catch (Exception e) {
             e.printStackTrace();
             resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
             resultVO.setResultMessage(ResponseCode.SELECT_ERROR.getMessage());
         }
-
         return resultVO;
     }
 
@@ -175,15 +217,10 @@ public class PostService {
         ResultVO resultVO = new ResultVO();
         try {
             long postSn = Long.parseLong(params.get("postSn").toString());
-            String type = params.get("type").toString();
-            redisApiService.incrementViewCount(REDIS_DB, type, postSn);
-
+            redisApiService.incrementViewCount(REDIS_DB, "post", postSn);
             if (me != null) {
-                long userSn = me;
-                String targetType = "comm".equalsIgnoreCase(type) ? TblUserActionLog.TARGET_COMM_POST : TblUserActionLog.TARGET_POST;
-                actionLogService.log(userSn, targetType, postSn, TblUserActionLog.ACTION_VIEW);
+                actionLogService.log(me, TblUserActionLog.TARGET_POST, postSn, TblUserActionLog.ACTION_VIEW);
             }
-
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
             resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
         } catch (Exception e) {
@@ -194,119 +231,198 @@ public class PostService {
         return resultVO;
     }
 
+    // ─────────────────────────────────────────────────────────────────────
+    // 목록
+    // ─────────────────────────────────────────────────────────────────────
+
+    /**
+     * 커뮤니티 게시판 목록.
+     * <ul>
+     *   <li>POPULAR: likeCnt 내림차순, page 기반(50개)</li>
+     *   <li>NOTICE: 공지만, postSn 커서</li>
+     *   <li>그 외(LATEST): 첫 페이지는 공지 전부 + 일반 글, 이후 페이지는 일반 글만 postSn 커서</li>
+     * </ul>
+     */
+    public ResultVO getCommPostList(Map<String, Object> params, Long me) {
+        ResultVO resultVO = new ResultVO();
+        try {
+            long   commSn  = Long.parseLong(params.get("commSn").toString());
+            String listTyp = params.get("listTyp") != null ? params.get("listTyp").toString() : "LATEST";
+            Long   cursor  = params.get("cursor")  != null ? Long.parseLong(params.get("cursor").toString()) : null;
+            int    page    = params.get("page")    != null ? Integer.parseInt(params.get("page").toString()) : 0;
+
+            BooleanExpression condition = POST.commSn.eq(commSn).and(PostQuery.alive());
+            List<Tuple> tuples;
+            if ("POPULAR".equals(listTyp)) {
+                tuples = postQuery.base()
+                        .where(condition)
+                        .orderBy(POST.likeCnt.desc(), POST.postSn.desc())
+                        .offset((long) page * PAGE_SIZE)
+                        .limit(PAGE_SIZE)
+                        .fetch();
+            } else if ("NOTICE".equals(listTyp)) {
+                BooleanExpression c = condition.and(POST.postTyp.eq("NOTICE"));
+                if (cursor != null) c = c.and(POST.postSn.lt(cursor));
+                tuples = postQuery.base().where(c).orderBy(POST.postSn.desc()).limit(PAGE_SIZE).fetch();
+            } else if (cursor == null) {
+                // 첫 페이지: 공지는 항상 상단 고정, 일반 글은 남은 자리만큼
+                List<Tuple> notices = postQuery.base()
+                        .where(condition.and(POST.postTyp.eq("NOTICE")))
+                        .orderBy(POST.postSn.desc())
+                        .fetch();
+                int normalLimit = Math.max(PAGE_SIZE - notices.size(), 0);
+                List<Tuple> normals = postQuery.base()
+                        .where(condition.and(POST.postTyp.eq("NORMAL")))
+                        .orderBy(POST.postSn.desc())
+                        .limit(normalLimit)
+                        .fetch();
+                tuples = new ArrayList<>(notices);
+                tuples.addAll(normals);
+            } else {
+                tuples = postQuery.base()
+                        .where(condition.and(POST.postTyp.eq("NORMAL")).and(POST.postSn.lt(cursor)))
+                        .orderBy(POST.postSn.desc())
+                        .limit(PAGE_SIZE)
+                        .fetch();
+            }
+
+            List<PostDTO> list = postQuery.decorate(tuples, me);
+            Long nextCursor = list.size() == PAGE_SIZE ? list.get(list.size() - 1).getPostSn() : null;
+            resultVO.putResult("list", list);
+            resultVO.putResult("nextCursor", nextCursor); // null이면 마지막 페이지
+            resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
+            resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
+        } catch (Exception e) {
+            e.printStackTrace();
+            resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
+            resultVO.setResultMessage(ResponseCode.SELECT_ERROR.getMessage());
+        }
+        return resultVO;
+    }
+
+    /** 한 사용자가 쓴 글 (전체 공개 + viewer 가 볼 수 있는 커뮤니티 글), 작성일 커서, 최신순. */
+    public List<PostDTO> fetchPostsByUser(long userSn, Long viewerSn, LocalDateTime cursor, int size) {
+        BooleanExpression condition = POST.userSn.eq(userSn)
+                .and(PostQuery.alive())
+                .and(PostQuery.visibleTo(viewerSn));
+        if (cursor != null) condition = condition.and(POST.frstCrtDt.lt(cursor));
+        List<Tuple> tuples = postQuery.base()
+                .where(condition)
+                .orderBy(POST.frstCrtDt.desc())
+                .limit(size)
+                .fetch();
+        return postQuery.decorate(tuples, viewerSn);
+    }
+
+    /** 태그가 달린 글 (viewer 가 볼 수 있는 것만), 작성일 커서, 최신순. */
+    public List<PostDTO> fetchPostsByTag(long tagSn, Long viewerSn, LocalDateTime cursor, int size) {
+        QTblPostTag qTag = QTblPostTag.tblPostTag;
+        BooleanExpression condition = POST.postSn.in(
+                        JPAExpressions.select(qTag.postSn).from(qTag).where(qTag.tagSn.eq(tagSn)))
+                .and(PostQuery.alive())
+                .and(PostQuery.visibleTo(viewerSn));
+        if (cursor != null) condition = condition.and(POST.frstCrtDt.lt(cursor));
+        List<Tuple> tuples = postQuery.base()
+                .where(condition)
+                .orderBy(POST.frstCrtDt.desc())
+                .limit(size)
+                .fetch();
+        return postQuery.decorate(tuples, viewerSn);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // 좋아요 · 댓글 · 반응
+    // ─────────────────────────────────────────────────────────────────────
+
     public ResultVO setPostLike(Map<String, Object> params, Long me) {
         ResultVO resultVO = new ResultVO();
-
         try {
-            JPAQueryFactory q = new JPAQueryFactory(em);
-
-            long userSn = me;
-            long postSn = Long.parseLong(params.get("postSn").toString());
+            long   userSn   = me;
+            long   postSn   = Long.parseLong(params.get("postSn").toString());
             String postLike = params.get("postLike").toString().toUpperCase();
+            boolean up      = "UP".equals(postLike);
 
-            QTblPost qPost = QTblPost.tblPost;
-            TblPostLike tblPostLike = tblPostLikeRepository.findByPostSnAndUserSn(postSn, userSn);
-
+            TblPostLike like = tblPostLikeRepository.findByPostSnAndUserSn(postSn, userSn);
             int delta;
-            if (tblPostLike == null) {
+            if (like == null) {
                 // 처음 반응 → 추가
-                delta = "UP".equals(postLike) ? 1 : -1;
+                delta = up ? 1 : -1;
                 tblPostLikeRepository.save(TblPostLike.builder()
-                        .userSn(userSn)
-                        .postSn(postSn)
-                        .likeTyp(postLike)
-                        .creatrSn(userSn)
-                        .build());
+                        .userSn(userSn).postSn(postSn).likeTyp(postLike).creatrSn(userSn).build());
                 actionLogService.log(userSn, TblUserActionLog.TARGET_POST, postSn, TblUserActionLog.ACTION_LIKE);
-                if ("UP".equals(postLike)) {
+                if (up) {
                     interestScoreService.update(userSn, TblUserActionLog.TARGET_POST, postSn, 3);
-                    interestScoreService.updateForTags(userSn, fetchPostTagSns(postSn), 3);
+                    interestScoreService.updateForTags(userSn, tagService.fetchTagSns(postSn), 3);
                 }
-            } else if (tblPostLike.getLikeTyp().equals(postLike)) {
+            } else if (like.getLikeTyp().equals(postLike)) {
                 // 같은 반응 재클릭 → 취소
-                delta = "UP".equals(postLike) ? -1 : 1;
-                tblPostLikeRepository.delete(tblPostLike);
-                if ("UP".equals(postLike)) {
+                delta = up ? -1 : 1;
+                tblPostLikeRepository.delete(like);
+                if (up) {
                     interestScoreService.update(userSn, TblUserActionLog.TARGET_POST, postSn, -3);
-                    interestScoreService.updateForTags(userSn, fetchPostTagSns(postSn), -3);
+                    interestScoreService.updateForTags(userSn, tagService.fetchTagSns(postSn), -3);
                 }
             } else {
                 // 반대 반응으로 전환 (DOWN→UP: +2, UP→DOWN: -2)
-                delta = "UP".equals(postLike) ? 2 : -2;
-                tblPostLike.setLikeTyp(postLike);
-                tblPostLikeRepository.save(tblPostLike);
-                double tagDelta = "UP".equals(postLike) ? 3 : -3;
+                delta = up ? 2 : -2;
+                like.setLikeTyp(postLike);
+                tblPostLikeRepository.save(like);
+                double tagDelta = up ? 3 : -3;
                 interestScoreService.update(userSn, TblUserActionLog.TARGET_POST, postSn, tagDelta);
-                interestScoreService.updateForTags(userSn, fetchPostTagSns(postSn), tagDelta);
+                interestScoreService.updateForTags(userSn, tagService.fetchTagSns(postSn), tagDelta);
             }
 
-            q.update(qPost)
-                    .set(qPost.likeCnt, qPost.likeCnt.add(delta))
-                    .where(qPost.postSn.eq(postSn))
+            new JPAQueryFactory(em).update(POST)
+                    .set(POST.likeCnt, POST.likeCnt.add(delta))
+                    .where(POST.postSn.eq(postSn))
                     .execute();
-
-            eventPublisher.publishEvent(new PostReactedEvent(postSn, "POST", "LIKE", delta));
+            eventPublisher.publishEvent(new PostReactedEvent(postSn, "LIKE", delta));
 
             // 좋아요 시에만 알림 (취소·DOWN은 제외)
-            if ("UP".equals(postLike) && delta > 0) {
-                Long ownerSn = new JPAQueryFactory(em)
-                        .select(qPost.userSn).from(qPost)
-                        .where(qPost.postSn.eq(postSn)).fetchOne();
+            if (up && delta > 0) {
+                Long ownerSn = ownerOf(postSn);
                 if (ownerSn != null) {
                     eventPublisher.publishEvent(new NotifTriggerEvent(ownerSn, userSn, "LIKE", postSn, "POST"));
                 }
             }
-
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
             resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
-        }catch (Exception e) {
+        } catch (Exception e) {
             e.printStackTrace();
             resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
             resultVO.setResultMessage(ResponseCode.SAVE_ERROR.getMessage());
         }
-
         return resultVO;
     }
 
     public ResultVO setPostCmt(Map<String, Object> params, Long me) {
         ResultVO resultVO = new ResultVO();
-
         try {
-            long userSn = me;
-            long postSn = Long.parseLong(params.get("postSn").toString());
+            long userSn    = me;
+            long postSn    = Long.parseLong(params.get("postSn").toString());
             Long prntCmtSn = params.get("prntCmtSn") != null
                     ? Long.parseLong(params.get("prntCmtSn").toString()) : null;
 
-            TblPostCmt cmt = TblPostCmt.builder()
+            tblPostCmtRepository.save(TblPostCmt.builder()
                     .postSn(postSn)
                     .userSn(userSn)
                     .prntCmtSn(prntCmtSn)
                     .cmtCntnt(params.get("cmtCntnt").toString())
                     .creatrSn(userSn)
-                    .build();
-            tblPostCmtRepository.save(cmt);
+                    .build());
             actionLogService.log(userSn, TblUserActionLog.TARGET_POST, postSn, TblUserActionLog.ACTION_COMMENT);
-            interestScoreService.updateForTags(userSn, fetchPostTagSns(postSn), 4);
+            interestScoreService.updateForTags(userSn, tagService.fetchTagSns(postSn), 4);
 
-            // 댓글수 +1
-            JPAQueryFactory q = new JPAQueryFactory(em);
-            QTblPost qPost = QTblPost.tblPost;
-            q.update(qPost)
-                    .set(qPost.cmtCnt, qPost.cmtCnt.add(1))
-                    .where(qPost.postSn.eq(postSn))
+            new JPAQueryFactory(em).update(POST)
+                    .set(POST.cmtCnt, POST.cmtCnt.add(1))
+                    .where(POST.postSn.eq(postSn))
                     .execute();
+            eventPublisher.publishEvent(new PostReactedEvent(postSn, "COMMENT", 1));
 
-            eventPublisher.publishEvent(new PostReactedEvent(postSn, "POST", "COMMENT", 1));
-
-            // 댓글 알림 (게시글 작성자에게)
-            QTblPost qPostRef = QTblPost.tblPost;
-            Long ownerSn = new JPAQueryFactory(em)
-                    .select(qPostRef.userSn).from(qPostRef)
-                    .where(qPostRef.postSn.eq(postSn)).fetchOne();
+            Long ownerSn = ownerOf(postSn);
             if (ownerSn != null) {
                 eventPublisher.publishEvent(new NotifTriggerEvent(ownerSn, userSn, "COMMENT", postSn, "POST"));
             }
-
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
         } catch (Exception e) {
             e.printStackTrace();
@@ -318,31 +434,20 @@ public class PostService {
 
     public ResultVO setPostCmtReact(Map<String, Object> params, Long me) {
         ResultVO resultVO = new ResultVO();
-
         try {
-            long userSn = me;
-            long postCmtSn = Long.parseLong(params.get("postCmtSn").toString());
+            long   userSn    = me;
+            long   postCmtSn = Long.parseLong(params.get("postCmtSn").toString());
             String reactTyp  = params.get("reactTyp").toString();
 
-            TblPostCmtReact existing =
-                    tblPostCmtReactRepository.findByPostCmtSnAndUserSn(postCmtSn, userSn);
-
+            TblPostCmtReact existing = tblPostCmtReactRepository.findByPostCmtSnAndUserSn(postCmtSn, userSn);
             if (existing == null) {
-                // 처음 반응
                 tblPostCmtReactRepository.save(TblPostCmtReact.builder()
-                        .postCmtSn(postCmtSn)
-                        .userSn(userSn)
-                        .reactTyp(reactTyp)
-                        .creatrSn(userSn)
-                        .build());
+                        .postCmtSn(postCmtSn).userSn(userSn).reactTyp(reactTyp).creatrSn(userSn).build());
             } else if (existing.getReactTyp().equals(reactTyp)) {
-                // 같은 반응 재클릭 → 취소
-                tblPostCmtReactRepository.delete(existing);
+                tblPostCmtReactRepository.delete(existing);        // 같은 반응 재클릭 → 취소
             } else {
-                // 다른 반응으로 전환
-                existing.setReactTyp(reactTyp);
+                existing.setReactTyp(reactTyp);                     // 다른 반응으로 전환
             }
-
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
         } catch (Exception e) {
             e.printStackTrace();
@@ -352,62 +457,67 @@ public class PostService {
         return resultVO;
     }
 
+    private Long ownerOf(long postSn) {
+        return new JPAQueryFactory(em)
+                .select(POST.userSn).from(POST)
+                .where(POST.postSn.eq(postSn)).fetchOne();
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // 삭제
+    // ─────────────────────────────────────────────────────────────────────
+
     public ResultVO setPostDel(Map<String, Object> params, Long me) {
         ResultVO resultVO = new ResultVO();
-
         try {
             long userSn = me;
-
             long postSn = Long.parseLong(params.get("postSn").toString());
-
-            if(params.get("type").equals("COMM")){
-                TblCommPost tblCommPost = tblCommPostRepository.findByCommPostSn(postSn);
-                tblCommPost.setActvtnYn("N");
-                tblCommPost.setMdfrSn(userSn);
-                tblCommPostRepository.save(tblCommPost);
-                eventPublisher.publishEvent(new PostDeletedEvent(postSn, "COMM"));
-            }else{
-                TblPost tblPost = tblPostRepository.findByPostSn(postSn);
-                tblPost.setActvtnYn("N");
-                tblPost.setMdfrSn(userSn);
-                tblPostRepository.save(tblPost);
-                eventPublisher.publishEvent(new PostDeletedEvent(postSn, "POST"));
+            TblPost tblPost = tblPostRepository.findByPostSn(postSn);
+            if (tblPost == null || !canManage(tblPost, userSn)) {
+                resultVO.setResultCode(ResponseCode.DELETE_ERROR.getCode());
+                resultVO.setResultMessage("삭제 권한이 없습니다.");
+                return resultVO;
             }
-
+            tblPost.setActvtnYn("N");
+            tblPost.setMdfrSn(userSn);
+            tblPostRepository.save(tblPost);
+            eventPublisher.publishEvent(new PostDeletedEvent(postSn));
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
             resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
-
         } catch (Exception e) {
             e.printStackTrace();
             resultVO.setResultCode(ResponseCode.DELETE_ERROR.getCode());
             resultVO.setResultMessage(ResponseCode.DELETE_ERROR.getMessage());
         }
-
         return resultVO;
     }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // 댓글 목록 (루트 댓글 커서 + 대댓글 배치)
+    // ─────────────────────────────────────────────────────────────────────
 
     public ResultVO getPostCmtList(Map<String, Object> params, Long me) {
         ResultVO resultVO = new ResultVO();
         try {
             Long userSn = me;
-            JPAQueryFactory q = new JPAQueryFactory(em);
-
             long postSn = Long.parseLong(params.get("postSn").toString());
-            int  size       = params.get("size")   != null ? Integer.parseInt(params.get("size").toString()) : 10;
-            Long cursor     = params.get("cursor") != null ? Long.parseLong(params.get("cursor").toString()) : null;
+            int  size   = params.get("size")   != null ? Integer.parseInt(params.get("size").toString()) : 10;
+            Long cursor = params.get("cursor") != null ? Long.parseLong(params.get("cursor").toString()) : null;
 
+            JPAQueryFactory q = new JPAQueryFactory(em);
             QTblPostCmt cmt        = QTblPostCmt.tblPostCmt;
             QTblUser    cmtUser    = new QTblUser("cmtUser");
             QTblComFile cmtPfpFile = new QTblComFile("cmtPfpFile");
 
-            // ── 1. 루트 댓글만 커서 페이지네이션 (commPostCmtSn ASC) ──────────
-            var rootCondition = cmt.postSn.eq(postSn)
+            // ── 1. 루트 댓글만 커서 페이지네이션 (postCmtSn ASC) ──────────────
+            BooleanExpression rootCondition = cmt.postSn.eq(postSn)
                     .and(cmt.stat.eq("ACTIVE"))
                     .and(cmt.actvtnYn.eq("Y"))
                     .and(cmt.prntCmtSn.isNull());
             if (cursor != null) rootCondition = rootCondition.and(cmt.postCmtSn.gt(cursor));
 
-            List<com.querydsl.core.Tuple> rootTuples = q.select(cmt, cmtUser.nickName, cmtUser.name, cmtPfpFile.atchFilePathNm, cmtPfpFile.strgFileNm, cmtPfpFile.atchFileExtnNm)
+            List<Tuple> rootTuples = q.select(cmt, cmtUser.nickName, cmtUser.name,
+                            cmtPfpFile.atchFilePathNm, cmtPfpFile.strgFileNm, cmtPfpFile.atchFileExtnNm)
                     .from(cmt)
                     .join(cmtUser).on(cmt.userSn.eq(cmtUser.userSn))
                     .leftJoin(cmtUser.pfp, cmtPfpFile)
@@ -423,13 +533,11 @@ public class PostService {
                 resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
                 return resultVO;
             }
-
-            List<Long> rootSns = rootTuples.stream()
-                    .map(t -> t.get(cmt).getPostCmtSn())
-                    .toList();
+            List<Long> rootSns = rootTuples.stream().map(t -> t.get(cmt).getPostCmtSn()).toList();
 
             // ── 2. 대댓글 배치 로드 ────────────────────────────────────────────
-            List<com.querydsl.core.Tuple> replyTuples = q.select(cmt, cmtUser.nickName, cmtUser.name, cmtPfpFile.atchFilePathNm, cmtPfpFile.strgFileNm, cmtPfpFile.atchFileExtnNm)
+            List<Tuple> replyTuples = q.select(cmt, cmtUser.nickName, cmtUser.name,
+                            cmtPfpFile.atchFilePathNm, cmtPfpFile.strgFileNm, cmtPfpFile.atchFileExtnNm)
                     .from(cmt)
                     .join(cmtUser).on(cmt.userSn.eq(cmtUser.userSn))
                     .leftJoin(cmtUser.pfp, cmtPfpFile)
@@ -443,54 +551,46 @@ public class PostService {
             List<Long> allSns = new ArrayList<>(rootSns);
             replyTuples.stream().map(t -> t.get(cmt).getPostCmtSn()).forEach(allSns::add);
 
-            Map<Long, Map<String, Long>> reactionsMap = new java.util.HashMap<>();
+            Map<Long, Map<String, Long>> reactionsMap = new HashMap<>();
             tblPostCmtReactRepository.countByCmtSns(allSns).forEach(row -> {
                 long   cmtSn = ((Number) row[0]).longValue();
                 String typ   = (String) row[1];
                 long   cnt   = ((Number) row[2]).longValue();
-                reactionsMap.computeIfAbsent(cmtSn, k -> new java.util.HashMap<>()).put(typ, cnt);
+                reactionsMap.computeIfAbsent(cmtSn, k -> new HashMap<>()).put(typ, cnt);
             });
-
-            Map<Long, String> myReactMap = new java.util.HashMap<>();
+            Map<Long, String> myReactMap = new HashMap<>();
             if (userSn != null) {
                 tblPostCmtReactRepository.findByPostCmtSnInAndUserSn(allSns, userSn)
                         .forEach(r -> myReactMap.put(r.getPostCmtSn(), r.getReactTyp()));
             }
 
             // ── 4. 트리 조립 ──────────────────────────────────────────────────
-            java.util.function.Function<com.querydsl.core.Tuple, CmtDTO> toDto = t -> {
+            Function<Tuple, CmtDTO> toDto = t -> {
                 TblPostCmt c      = t.get(cmt);
                 long       sn     = c.getPostCmtSn();
                 String     pathNm = t.get(cmtPfpFile.atchFilePathNm);
-                String     pfpUrl = pathNm != null ? pathNm + "/" + t.get(cmtPfpFile.strgFileNm) + "." + t.get(cmtPfpFile.atchFileExtnNm) : null;
+                String     pfpUrl = pathNm != null
+                        ? pathNm + "/" + t.get(cmtPfpFile.strgFileNm) + "." + t.get(cmtPfpFile.atchFileExtnNm) : null;
                 return new CmtDTO(
                         sn, c.getUserSn(), t.get(cmtUser.nickName), t.get(cmtUser.name),
                         c.getCmtCntnt(), c.getLikeCnt(), c.getFrstCrtDt(), new ArrayList<>(),
-                        reactionsMap.getOrDefault(sn, new java.util.HashMap<>()),
-                        myReactMap.get(sn), pfpUrl
-                );
+                        reactionsMap.getOrDefault(sn, new HashMap<>()),
+                        myReactMap.get(sn), pfpUrl);
             };
-
-            Map<Long, CmtDTO> rootMap = new java.util.LinkedHashMap<>();
+            Map<Long, CmtDTO> rootMap = new LinkedHashMap<>();
             rootTuples.forEach(t -> rootMap.put(t.get(cmt).getPostCmtSn(), toDto.apply(t)));
             replyTuples.forEach(t -> {
-                Long prnt = t.get(cmt).getPrntCmtSn();
-                CmtDTO parent = rootMap.get(prnt);
+                CmtDTO parent = rootMap.get(t.get(cmt).getPrntCmtSn());
                 if (parent != null) parent.getReplies().add(toDto.apply(t));
             });
-
             List<CmtDTO> list = new ArrayList<>(rootMap.values());
 
             // ── 5. nextCursor: 마지막 루트 댓글 SN (size 미달이면 null) ────────
-            Long nextCursor = list.size() == size
-                    ? rootSns.get(rootSns.size() - 1)
-                    : null;
-
+            Long nextCursor = list.size() == size ? rootSns.get(rootSns.size() - 1) : null;
             resultVO.putResult("list", list);
             resultVO.putResult("nextCursor", nextCursor);
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
             resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
-
         } catch (Exception e) {
             e.printStackTrace();
             resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
@@ -499,93 +599,83 @@ public class PostService {
         return resultVO;
     }
 
-    public ResultVO getPostList(Map<String, Object> params, Long me) {
+    // ─────────────────────────────────────────────────────────────────────
+    // 저장(북마크)
+    // ─────────────────────────────────────────────────────────────────────
+
+    /** params: postSn, isSave. 같은 글을 두 번 저장해도 한 행만 남는다. */
+    public ResultVO setPostSave(Map<String, Object> params, Long me) {
         ResultVO resultVO = new ResultVO();
         try {
-            Long          userSn       = params.get("userSn") != null ? Long.parseLong(params.get("userSn").toString()) : null;
-            Long viewerUserSn = me;
-            LocalDateTime cursor       = params.get("cursor") != null ? LocalDateTime.parse(params.get("cursor").toString()) : null;
-            int           size         = params.get("size")   != null ? Integer.parseInt(params.get("size").toString()) : 50;
+            long    userSn = me;
+            long    postSn = Long.parseLong(params.get("postSn").toString());
+            boolean isSave = (boolean) params.get("isSave");
 
-            QTblPost    qPost   = QTblPost.tblPost;
-            QTblUser    qUser   = QTblUser.tblUser;
-            QTblPostTag qTag    = QTblPostTag.tblPostTag;
-            QTblTag     qTbl    = QTblTag.tblTag;
-            QTblComFile pfpFile = new QTblComFile("pfpFile");
+            TblPostSave existing = tblPostSaveRepository.findByUserSnAndPostSn(userSn, postSn);
+            if (isSave) {
+                if (existing == null) {
+                    TblPostSave save = new TblPostSave();
+                    save.setUserSn(userSn);
+                    save.setPostSn(postSn);
+                    save.setCreatrSn(userSn);
+                    tblPostSaveRepository.save(save);
+                    actionLogService.log(userSn, TblUserActionLog.TARGET_POST, postSn, TblUserActionLog.ACTION_SCRAP);
+                    interestScoreService.updateForTags(userSn, tagService.fetchTagSns(postSn), 5);
+                }
+            } else if (existing != null) {
+                tblPostSaveRepository.delete(existing);
+            }
+            resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
+            resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
+        } catch (Exception e) {
+            e.printStackTrace();
+            resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
+            resultVO.setResultMessage(ResponseCode.SAVE_ERROR.getMessage());
+        }
+        return resultVO;
+    }
 
-            var condition = qPost.stat.eq("ACTIVE").and(qPost.actvtnYn.eq("Y"));
-            if (userSn != null) condition = condition.and(qPost.userSn.eq(userSn));
-            if (cursor  != null) condition = condition.and(qPost.frstCrtDt.lt(cursor));
+    /**
+     * 내가 저장한 글, 최근 저장 순. 커서는 저장 행의 SN(postSaveSn) — 클라이언트는 그대로 되돌려 준다.
+     *
+     * <p>예전 구현은 50개를 가정한 nextCursor 만 있고 실제 limit 이 없어 전부 내려보냈다.
+     */
+    public ResultVO getPostSaveList(Map<String, Object> params, Long me) {
+        ResultVO resultVO = new ResultVO();
+        try {
+            long userSn = me;
+            int  size   = params.get("size")   != null ? Integer.parseInt(params.get("size").toString()) : 20;
+            Long cursor = params.get("cursor") != null ? Long.parseLong(params.get("cursor").toString()) : null;
 
-            List<com.querydsl.core.Tuple> tuples = new JPAQueryFactory(em)
-                    .select(qPost, qUser.name, pfpFile.atchFilePathNm, pfpFile.strgFileNm, pfpFile.atchFileExtnNm)
-                    .from(qPost)
-                    .join(qUser).on(qPost.userSn.eq(qUser.userSn))
-                    .leftJoin(qUser.pfp, pfpFile)
+            QTblPostSave qSave = QTblPostSave.tblPostSave;
+            BooleanExpression condition = qSave.userSn.eq(userSn).and(qSave.actvtnYn.eq("Y"));
+            if (cursor != null) condition = condition.and(qSave.postSaveSn.lt(cursor));
+            List<Tuple> saves = new JPAQueryFactory(em)
+                    .select(qSave.postSaveSn, qSave.postSn)
+                    .from(qSave)
                     .where(condition)
-                    .orderBy(qPost.frstCrtDt.desc())
+                    .orderBy(qSave.postSaveSn.desc())
                     .limit(size)
                     .fetch();
 
-            if (tuples.isEmpty()) {
-                resultVO.putResult("list",       List.of());
-                resultVO.putResult("nextCursor", null);
-                resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
-                resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
-                return resultVO;
-            }
-
-            List<Long> postSns = tuples.stream().map(t -> t.get(qPost).getPostSn()).toList();
-
-            // 태그 배치 조회
-            Map<Long, List<String>> tagMap = tagService.fetchTagMap(postSns, "post");
-
-            // 내 좋아요 배치 조회 (TblPostLike는 likeTyp 없음 → actvtnYn "Y" 로 반환)
-            java.util.Set<Long> likedSet = new java.util.HashSet<>();
-            if (viewerUserSn != null) {
-                tblPostLikeRepository.findByPostSnInAndUserSn(postSns, viewerUserSn)
-                        .stream()
-                        .filter(l -> "Y".equals(l.getActvtnYn()))
-                        .forEach(l -> likedSet.add(l.getPostSn()));
-            }
-
-            // 내 저장 여부 배치 조회
-            java.util.Set<Long> mySavedSet = new java.util.HashSet<>();
-            if (viewerUserSn != null) {
-                QTblPostSave qSave = QTblPostSave.tblPostSave;
-                new JPAQueryFactory(em)
-                        .select(qSave.postSn)
-                        .from(qSave)
-                        .where(qSave.userSn.eq(viewerUserSn)
-                                .and(qSave.postKind.eq("POST"))
-                                .and(qSave.postSn.in(postSns))
-                                .and(qSave.actvtnYn.eq("Y")))
+            List<Long> postSns = saves.stream().map(t -> t.get(qSave.postSn)).toList();
+            Map<Long, Tuple> byPostSn = new HashMap<>();
+            if (!postSns.isEmpty()) {
+                postQuery.base()
+                        .where(POST.postSn.in(postSns), PostQuery.alive())
                         .fetch()
-                        .forEach(mySavedSet::add);
+                        .forEach(t -> byPostSn.put(t.get(POST).getPostSn(), t));
             }
+            // 저장 순서를 유지한다 — 글이 지워졌으면 건너뛴다
+            List<Tuple> ordered = postSns.stream()
+                    .map(byPostSn::get)
+                    .filter(java.util.Objects::nonNull)
+                    .toList();
+            List<PostDTO> list = postQuery.decorate(ordered, userSn);
 
-            List<Map<String, Object>> list = tuples.stream().map(t -> {
-                TblPost p = t.get(qPost);
-                Map<String, Object> map = new LinkedHashMap<>();
-                map.put("postTyp",  "POST");
-                map.put("postSn",    p.getPostSn());
-                map.put("userSn",    p.getUserSn());
-                map.put("authorNm",  t.get(qUser.name));
-                map.put("postTtl",   p.getPostTtl());
-                map.put("frstCrtDt", p.getFrstCrtDt());
-                map.put("viewCnt",   p.getViewCnt());
-                map.put("likeCnt",   p.getLikeCnt());
-                map.put("cmtCnt",    p.getCmtCnt());
-                map.put("tagNms",    tagMap.getOrDefault(p.getPostSn(), List.of()));
-                map.put("myLikeTyp", likedSet.contains(p.getPostSn()) ? "Y" : null);
-                map.put("mySaved",   mySavedSet.contains(p.getPostSn()));
-                String pathNm = t.get(pfpFile.atchFilePathNm);
-                map.put("pfpUrl", pathNm != null ? pathNm + "/" + t.get(pfpFile.strgFileNm) + "." + t.get(pfpFile.atchFileExtnNm) : null);
-                return map;
-            }).toList();
-
-            resultVO.putResult("list",       list);
-            resultVO.putResult("nextCursor", list.size() == size ? list.getLast().get("frstCrtDt").toString() : null);
+            Long nextCursor = saves.size() == size ? saves.get(saves.size() - 1).get(qSave.postSaveSn) : null;
+            resultVO.putResult("list", list);
+            resultVO.putResult("nextCursor", nextCursor);
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
             resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
         } catch (Exception e) {
@@ -594,159 +684,5 @@ public class PostService {
             resultVO.setResultMessage(ResponseCode.SELECT_ERROR.getMessage());
         }
         return resultVO;
-    }
-
-    public ResultVO setPostSave(Map<String, Object> params, Long me) {
-        ResultVO resultVO = new ResultVO();
-
-        try {
-            long userSn = me;
-            long postSn = Long.parseLong(params.get("postSn").toString());
-            String postKind = params.get("postKind").toString();
-            boolean isSave = (boolean) params.get("isSave");
-            if (isSave) {
-                TblPostSave tblPostSave = new TblPostSave();
-                tblPostSave.setUserSn(userSn);
-                tblPostSave.setPostSn(postSn);
-                tblPostSave.setPostKind(postKind);
-                tblPostSave.setCreatrSn(userSn);
-                tblPostSaveRepository.save(tblPostSave);
-                String scrapTarget = "COMM".equals(postKind) ? TblUserActionLog.TARGET_COMM_POST : TblUserActionLog.TARGET_POST;
-                actionLogService.log(userSn, scrapTarget, postSn, TblUserActionLog.ACTION_SCRAP);
-                List<Long> tagSns = "COMM".equals(postKind) ? fetchCommPostTagSns(postSn) : fetchPostTagSns(postSn);
-                interestScoreService.updateForTags(userSn, tagSns, 5);
-            }else{
-                TblPostSave tblPostSave = tblPostSaveRepository.findByUserSnAndPostSnAndPostKind(userSn, postSn, postKind);
-                if (tblPostSave != null) {
-                    tblPostSaveRepository.delete(tblPostSave);
-                }
-            }
-
-            resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
-            resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
-        }catch (Exception e){
-            e.printStackTrace();
-            resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
-            resultVO.setResultMessage(ResponseCode.SAVE_ERROR.getMessage());
-        }
-
-        return resultVO;
-    }
-
-    public ResultVO getPostSaveList(Map<String, Object> params, Long me) {
-        ResultVO resultVO = new ResultVO();
-
-        try {
-            long userSn = me;
-
-            JPAQueryFactory  q        = new JPAQueryFactory(em);
-            QTblUser         qUser    = QTblUser.tblUser;
-            QTblPostSave     qTblPostSave  = QTblPostSave.tblPostSave;
-            QTblPost         qPost    = QTblPost.tblPost;
-            QTblPostLike     qTblPostLike  = QTblPostLike.tblPostLike;
-            QTblPostTag      qPostTag = QTblPostTag.tblPostTag;
-            QTblComm         qComm    = QTblComm.tblComm;
-            QTblCommPost     qCommPost     = QTblCommPost.tblCommPost;
-            QTblCommPostLike qCommPostLike = QTblCommPostLike.tblCommPostLike;
-            QTblComFile      pfpFile  = new QTblComFile("pfpFile");
-
-            var pfpUrlExpr = new CaseBuilder()
-                    .when(pfpFile.atchFilePathNm.isNotNull())
-                    .then(pfpFile.atchFilePathNm.concat("/").concat(pfpFile.strgFileNm).concat(".").concat(pfpFile.atchFileExtnNm))
-                    .otherwise(Expressions.nullExpression(String.class));
-
-            List<PostSaveDTO> post = q.select(
-                        Projections.constructor(
-                                PostSaveDTO.class,
-                                qTblPostSave, qUser.userSn, qUser.nickName, qUser.name,
-                                Expressions.constant(""), Expressions.constant(""), qPost.postTtl, qPost.postCntnt,
-                                qPost.frstCrtDt, qPost.viewCnt, qPost.likeCnt, qPost.cmtCnt,
-                                new CaseBuilder().when(qTblPostLike.isNotNull()).then(qTblPostLike.likeTyp)
-                                        .otherwise(Expressions.nullExpression()),
-                                Expressions.constant(true),
-                                pfpUrlExpr
-                        )
-                    )
-                    .from(qTblPostSave)
-                    .join(qPost).on(qTblPostSave.postSn.eq(qPost.postSn))
-                    .join(qUser).on(qPost.userSn.eq(qUser.userSn))
-                    .leftJoin(qUser.pfp, pfpFile)
-
-                    .leftJoin(qTblPostLike).on(qTblPostLike.postSn.eq(qPost.postSn).and(qTblPostLike.userSn.eq(userSn)))
-                    .where(qTblPostSave.userSn.eq(userSn)
-                            .and(qTblPostSave.actvtnYn.eq("Y"))
-                            .and(qTblPostSave.postKind.eq("POST"))
-                            .and(qPost.actvtnYn.eq("Y")))
-                    .fetch();
-
-            List<Long> postSns = post.stream().map(t -> t.getTblPostSave().getPostSn()).toList();
-            Map<Long, List<String>> tagMap = tagService.fetchTagMap(postSns, "commPost");
-            post.forEach(d -> d.setTagNms(tagMap.getOrDefault(d.getTblPostSave().getPostSn(), List.of())));
-
-            List<PostSaveDTO> commPost = q.select(
-                        Projections.constructor(
-                                PostSaveDTO.class,
-                                qTblPostSave, qUser.userSn, qUser.nickName, qUser.name,
-                                qComm.commNm, qComm.commDsplNm, qCommPost.postTtl, qCommPost.postCntnt,
-                                qCommPost.frstCrtDt, qCommPost.viewCnt, qCommPost.likeCnt, qCommPost.cmtCnt,
-                                new CaseBuilder().when(qCommPostLike.isNotNull()).then(qCommPostLike.likeTyp)
-                                                .otherwise(Expressions.nullExpression()),
-                                Expressions.constant(true),
-                                pfpUrlExpr
-                        )
-                    )
-                    .from(qTblPostSave)
-                    .join(qCommPost).on(qTblPostSave.postSn.eq(qCommPost.commPostSn))
-                    .join(qComm).on(qCommPost.commSn.eq(qComm.commSn))
-                    .join(qUser).on(qCommPost.userSn.eq(qUser.userSn))
-                    .leftJoin(qUser.pfp, pfpFile)
-                    .leftJoin(qCommPostLike).on(qCommPostLike.commPostSn.eq(qCommPost.commPostSn).and(qCommPostLike.userSn.eq(userSn)))
-                    .where(qTblPostSave.userSn.eq(userSn)
-                            .and(qTblPostSave.actvtnYn.eq("Y"))
-                            .and(qTblPostSave.postKind.eq("COMM"))
-                            .and(qCommPost.actvtnYn.eq("Y")))
-                    .fetch();
-
-            List<Long> commPostSns = commPost.stream().map(t -> t.getTblPostSave().getPostSn()).toList();
-            Map<Long, List<String>> commPostTagMap = tagService.fetchTagMap(commPostSns, "commPost");
-            commPost.forEach(d -> d.setTagNms(commPostTagMap.getOrDefault(d.getTblPostSave().getPostSn(), List.of())));
-
-            List<PostSaveDTO> list = new ArrayList<>();
-            list.addAll(post);
-            list.addAll(commPost);
-
-            Long nextCursor = list.size() == 50
-                    ? list.get(list.size() - 1).getTblPostSave().getPostSn()
-                    : null;
-
-            resultVO.putResult("list", list);
-            resultVO.putResult("nextCursor", nextCursor);
-            resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
-            resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
-        }catch (Exception e){
-            e.printStackTrace();
-            resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
-            resultVO.setResultMessage(ResponseCode.SAVE_ERROR.getMessage());
-        }
-
-        return resultVO;
-    }
-
-    private List<Long> fetchPostTagSns(long postSn) {
-        QTblPostTag q = QTblPostTag.tblPostTag;
-        return new JPAQueryFactory(em)
-                .select(q.tagSn)
-                .from(q)
-                .where(q.postSn.eq(postSn))
-                .fetch();
-    }
-
-    private List<Long> fetchCommPostTagSns(long commPostSn) {
-        QTblCommPostTag q = QTblCommPostTag.tblCommPostTag;
-        return new JPAQueryFactory(em)
-                .select(q.tagSn)
-                .from(q)
-                .where(q.commPostSn.eq(commPostSn))
-                .fetch();
     }
 }

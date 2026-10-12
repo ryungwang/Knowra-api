@@ -7,24 +7,31 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * CommPost / Post 통합 응답 DTO
- * <p>
- * postKind: "COMM" | "POST" 로 출처를 구분한다.<br>
- * COMM: commSn, commNm, commDsplNm 사용<br>
- * POST: commSn·commNm·commDsplNm = null
- * </p>
+ * 게시글 응답 DTO. 전체 공개 글과 커뮤니티 글이 같은 모양이다.
+ *
+ * <p>{@code commSn} 이 null 이면 전체 공개 글, 아니면 그 커뮤니티의 글이다. 예전의
+ * {@code postKind("POST"|"COMM")} 는 두 테이블 시절의 흔적이라 없앴다 — 클라이언트는
+ * {@code commSn != null} 로 판단한다.
  */
 @Getter
 @Setter
 public class PostDTO {
 
-    // ── 공통 ──────────────────────────────────────────────────
-    private String postKind;         // "COMM" | "POST"
     private String postTyp;          // "NOTICE" | "NORMAL"
-    private long postSn;             // commPostSn 또는 postSn
+    private long postSn;
+
+    // ── 커뮤니티 (전체 공개 글이면 전부 null) ──────────────────────
+    private Long commSn;
+    private String commNm;
+    private String commDsplNm;
+
+    // ── 작성자 ──────────────────────────────────────────────────
     private long userSn;
     private String nickName;
     private String authorNm;
+    private String pfpUrl;           // atchFilePathNm/strgFileNm.atchFileExtnNm
+
+    // ── 본문·통계 ────────────────────────────────────────────────
     private String postTtl;
     private String postCntnt;
     private LocalDateTime frstCrtDt;
@@ -32,9 +39,10 @@ public class PostDTO {
     private int likeCnt;
     private int cmtCnt;
     private List<String> tagNms;
+
+    // ── 조회자 기준 ──────────────────────────────────────────────
     private String myLikeTyp;        // "UP" | "DOWN" | null
     private boolean mySaved;
-    private String pfpUrl;           // atchFilePathNm/strgFileNm.atchFileExtnNm
 
     // ── 피드 근거 ─────────────────────────────────────────────
     // 이 글이 왜 이 자리에 있는지. 점수만 매기고 이유를 숨기면 사용자는 피드를 신뢰할 수 없다.
@@ -42,46 +50,18 @@ public class PostDTO {
     private String feedReason;
     private String feedReasonDetail;   // INTEREST 면 맞은 태그명
 
-    // ── COMM 전용 ──────────────────────────────────────────────
-    private Long commSn;
-    private String commNm;
-    private String commDsplNm;
-
-    // ── QueryDSL Projections.constructor — POST용 ──────────────
-    public PostDTO(String postKind, String postTyp, long postSn, long userSn, String nickName, String authorNm,
-                   String postTtl, String postCntnt,
-                   LocalDateTime frstCrtDt, int viewCnt, int likeCnt, int cmtCnt,
-                   String myLikeTyp, boolean mySaved) {
-        this.postKind  = postKind;
-        this.postTyp   = postTyp;
-        this.postSn    = postSn;
-        this.userSn    = userSn;
-        this.nickName    = nickName;
-        this.authorNm  = authorNm;
-        this.postTtl   = postTtl;
-        this.postCntnt = postCntnt;
-        this.frstCrtDt = frstCrtDt;
-        this.viewCnt   = viewCnt;
-        this.likeCnt   = likeCnt;
-        this.cmtCnt    = cmtCnt;
-        this.myLikeTyp = myLikeTyp;
-        this.mySaved   = mySaved;
-        this.tagNms    = List.of();
-    }
-
-    // ── QueryDSL Projections.constructor — COMMPOST용 ──────────
-    public PostDTO(String postKind, String postTyp, long commSn, String commNm, String commDsplNm, long postSn,
+    public PostDTO(String postTyp, long postSn, Long commSn, String commNm, String commDsplNm,
                    long userSn, String nickName, String authorNm,
                    String postTtl, String postCntnt, LocalDateTime frstCrtDt,
-                   int viewCnt, int likeCnt, int cmtCnt, String myLikeTyp, boolean mySaved) {
-        this.postKind   = postKind;
+                   int viewCnt, int likeCnt, int cmtCnt,
+                   String myLikeTyp, boolean mySaved) {
         this.postTyp    = postTyp;
+        this.postSn     = postSn;
         this.commSn     = commSn;
         this.commNm     = commNm;
         this.commDsplNm = commDsplNm;
-        this.postSn     = postSn;
         this.userSn     = userSn;
-        this.nickName     = nickName;
+        this.nickName   = nickName;
         this.authorNm   = authorNm;
         this.postTtl    = postTtl;
         this.postCntnt  = postCntnt;

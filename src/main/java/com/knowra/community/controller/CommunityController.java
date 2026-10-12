@@ -4,7 +4,6 @@ import com.knowra.cmm.model.ResultVO;
 import com.knowra.cmm.security.CurrentUser;
 import com.knowra.community.entity.TblComm;
 import com.knowra.community.service.CommunityExploreService;
-import com.knowra.community.service.CommunityPostService;
 import com.knowra.community.service.CommunityService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;

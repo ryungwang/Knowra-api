@@ -1,9 +1,7 @@
 package com.knowra.post.controller;
 
-import com.knowra.cmm.jwt.JwtProvider;
 import com.knowra.cmm.model.ResultVO;
 import com.knowra.cmm.security.CurrentUser;
-import com.knowra.community.entity.TblCommPost;
 import com.knowra.post.entity.TblPost;
 import com.knowra.post.service.PostService;
 import lombok.RequiredArgsConstructor;
@@ -11,6 +9,10 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
+/**
+ * 게시글 API. 전체 공개 글과 커뮤니티 글이 같은 엔드포인트를 쓴다 — 커뮤니티 글은
+ * 작성 시 {@code commSn} 을 함께 보내면 된다. 커뮤니티 게시판 목록만 별도다.
+ */
 @RestController
 @RequestMapping("/api/post")
 @RequiredArgsConstructor
@@ -26,6 +28,12 @@ public class PostController {
     @GetMapping("/getPost")
     public ResultVO getPost(@ModelAttribute TblPost tblPost, @CurrentUser Long me) {
         return postService.getPost(tblPost, me);
+    }
+
+    /** 커뮤니티 게시판 목록 — params: commSn, listTyp(LATEST|POPULAR|NOTICE), cursor | page */
+    @PostMapping("/getCommPostList")
+    public ResultVO getCommPostList(@RequestBody Map<String, Object> params, @CurrentUser Long me) {
+        return postService.getCommPostList(params, me);
     }
 
     @PostMapping("/viewPost")
@@ -67,5 +75,4 @@ public class PostController {
     public ResultVO getPostSaveList(@RequestBody Map<String, Object> params, @CurrentUser Long me) {
         return postService.getPostSaveList(params, me);
     }
-
 }

@@ -1,6 +1,5 @@
 package com.knowra.post.repository;
 
-import com.knowra.community.entity.TblCommPostCmtReact;
 import com.knowra.post.entity.TblPost;
 import com.knowra.post.entity.TblPostCmt;
 import com.knowra.post.entity.TblPostCmtReact;

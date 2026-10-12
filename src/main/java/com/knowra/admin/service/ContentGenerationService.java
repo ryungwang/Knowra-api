@@ -4,6 +4,8 @@ import com.knowra.common.entity.TblTag;
 import com.knowra.common.repository.TblTagRepository;
 import com.knowra.community.entity.*;
 import com.knowra.community.repository.*;
+import com.knowra.post.entity.*;
+import com.knowra.post.repository.*;
 import com.knowra.user.entity.TblUser;
 import com.knowra.user.repository.TblUserRepository;
 import com.querydsl.jpa.impl.JPAQueryFactory;
@@ -35,12 +37,12 @@ public class ContentGenerationService {
 
     private final TblCommRepository tblCommRepository;
     private final TblCommMbrRepository tblCommMbrRepository;
-    private final TblCommPostRepository tblCommPostRepository;
-    private final TblCommPostCmtRepository tblCommPostCmtRepository;
-    private final TblCommPostLikeRepository tblCommPostLikeRepository;
-    private final TblCommPostCmtReactRepository tblCommPostCmtReactRepository;
+    private final TblPostRepository tblPostRepository;
+    private final TblPostCmtRepository tblPostCmtRepository;
+    private final TblPostLikeRepository tblPostLikeRepository;
+    private final TblPostCmtReactRepository tblPostCmtReactRepository;
     private final TblTagRepository tblTagRepository;
-    private final TblCommPostTagRepository tblCommPostTagRepository;
+    private final TblPostTagRepository tblPostTagRepository;
     private final TblUserRepository tblUserRepository;
     private final PasswordEncoder passwordEncoder;
     private final RestTemplate restTemplate;
@@ -561,15 +563,15 @@ public class ContentGenerationService {
         List<String> tags = new ArrayList<>();
         postJson.path("tags").forEach(t -> tags.add(t.asText()));
 
-        TblCommPost post = TblCommPost.builder()
+        TblPost post = TblPost.builder()
                 .commSn(comm.getCommSn())
                 .userSn(writer.getUserSn())
                 .postTtl(title)
                 .postCntnt(content)
                 .creatrSn(writer.getUserSn())
                 .build();
-        tblCommPostRepository.save(post);
-        saveTags(post.getCommPostSn(), tags, writer.getUserSn());
+        tblPostRepository.save(post);
+        saveTags(post.getPostSn(), tags, writer.getUserSn());
 
         log.info("[ContentGen] 게시글 저장 — [{}] {} (페르소나: {})", comm.getCommDsplNm(), title, persona.name());
         return new PostGenResult(persona.name(), 1);
@@ -577,11 +579,11 @@ public class ContentGenerationService {
 
     // ── 댓글 생성 ──────────────────────────────────────────────────────────
     private int generateCommentForLatestPost(TblComm comm) throws Exception {
-        QTblCommPost qPost = QTblCommPost.tblCommPost;
-        TblCommPost latestPost = new JPAQueryFactory(em)
+        QTblPost qPost = QTblPost.tblPost;
+        TblPost latestPost = new JPAQueryFactory(em)
                 .selectFrom(qPost)
                 .where(qPost.commSn.eq(comm.getCommSn()).and(qPost.stat.eq("ACTIVE")))
-                .orderBy(qPost.commPostSn.desc())
+                .orderBy(qPost.postSn.desc())
                 .fetchFirst();
         if (latestPost == null) return 0;
 
@@ -611,16 +613,16 @@ public class ContentGenerationService {
         JsonNode cmtArray = cmtJson.path("comments");
         for (int i = 0; i < cmtArray.size() && i < commenters.size(); i++) {
             long userSn = commenters.get(i).getUserSn();
-            tblCommPostCmtRepository.save(TblCommPostCmt.builder()
-                    .commPostSn(latestPost.getCommPostSn())
+            tblPostCmtRepository.save(TblPostCmt.builder()
+                    .postSn(latestPost.getPostSn())
                     .userSn(userSn)
                     .cmtCntnt(cmtArray.get(i).path("content").asText())
                     .creatrSn(userSn)
                     .build());
 
-            new JPAQueryFactory(em).update(QTblCommPost.tblCommPost)
-                    .set(QTblCommPost.tblCommPost.cmtCnt, QTblCommPost.tblCommPost.cmtCnt.add(1))
-                    .where(QTblCommPost.tblCommPost.commPostSn.eq(latestPost.getCommPostSn()))
+            new JPAQueryFactory(em).update(QTblPost.tblPost)
+                    .set(QTblPost.tblPost.cmtCnt, QTblPost.tblPost.cmtCnt.add(1))
+                    .where(QTblPost.tblPost.postSn.eq(latestPost.getPostSn()))
                     .execute();
             count++;
         }
@@ -629,8 +631,8 @@ public class ContentGenerationService {
 
     // ── Few-shot 예시 조회 ─────────────────────────────────────────────────
     private String getFewShotExamples(long commSn) {
-        QTblCommPost qPost = QTblCommPost.tblCommPost;
-        List<TblCommPost> examples = new JPAQueryFactory(em)
+        QTblPost qPost = QTblPost.tblPost;
+        List<TblPost> examples = new JPAQueryFactory(em)
                 .selectFrom(qPost)
                 .where(qPost.commSn.eq(commSn)
                         .and(qPost.stat.eq("ACTIVE"))
@@ -642,7 +644,7 @@ public class ContentGenerationService {
         if (examples.isEmpty()) return "";
 
         StringBuilder sb = new StringBuilder("\n\n[이 커뮤니티 인기 게시글 — 스타일 참고]\n");
-        for (TblCommPost p : examples) {
+        for (TblPost p : examples) {
             sb.append("제목: ").append(p.getPostTtl()).append("\n");
             String preview = p.getPostCntnt().length() > 100
                     ? p.getPostCntnt().substring(0, 100) + "..." : p.getPostCntnt();
@@ -661,29 +663,29 @@ public class ContentGenerationService {
         if (users.isEmpty()) return 0;
 
         JPAQueryFactory q   = new JPAQueryFactory(em);
-        QTblCommPost    qPost = QTblCommPost.tblCommPost;
-        QTblCommPostCmt qCmt  = QTblCommPostCmt.tblCommPostCmt;
+        QTblPost    qPost = QTblPost.tblPost;
+        QTblPostCmt qCmt  = QTblPostCmt.tblPostCmt;
 
         // ⚠️ 제외 커뮤니티의 글에는 반응도 달지 않는다. 글 생성만 막고 반응을 놔두면
         // 사람이 쓴 공모전 글에 봇 좋아요가 붙는다 — 막으려던 바로 그 그림이다.
         Set<Long> excluded = excludedCommunities();
-        List<TblCommPost> posts = q.selectFrom(qPost)
+        List<TblPost> posts = q.selectFrom(qPost)
                 .where(qPost.stat.eq("ACTIVE").and(qPost.actvtnYn.eq("Y")))
                 .fetch()
                 .stream()
-                .filter(p -> !excluded.contains(p.getCommSn()))
+                .filter(p -> p.getCommSn() != null && !excluded.contains(p.getCommSn()))   // 봇 반응은 커뮤니티 글에만
                 .toList();
         if (posts.isEmpty()) return 0;
 
         // 댓글도 같은 이유로 거른다. 댓글엔 커뮤니티 컬럼이 없어 **허용된 글의 번호**로 맞춘다.
         Set<Long> allowedPostSns = posts.stream()
-                .map(TblCommPost::getCommPostSn)
+                .map(TblPost::getPostSn)
                 .collect(java.util.stream.Collectors.toSet());
-        List<TblCommPostCmt> cmts = q.selectFrom(qCmt)
+        List<TblPostCmt> cmts = q.selectFrom(qCmt)
                 .where(qCmt.stat.eq("ACTIVE").and(qCmt.actvtnYn.eq("Y")))
                 .fetch()
                 .stream()
-                .filter(c -> allowedPostSns.contains(c.getCommPostSn()))
+                .filter(c -> allowedPostSns.contains(c.getPostSn()))
                 .toList();
 
         Random rnd   = new Random();
@@ -692,20 +694,20 @@ public class ContentGenerationService {
         // ── 게시글 좋아요 ──────────────────────────────────────────────────
         for (int i = 0; i < REACTION_ATTEMPTS; i++) {
             TblUser      user = users.get(rnd.nextInt(users.size()));
-            TblCommPost  post = posts.get(rnd.nextInt(posts.size()));
-            long postSn = post.getCommPostSn(), userSn = user.getUserSn();
+            TblPost  post = posts.get(rnd.nextInt(posts.size()));
+            long postSn = post.getPostSn(), userSn = user.getUserSn();
 
-            if (tblCommPostLikeRepository.findByCommPostSnAndUserSn(postSn, userSn) != null) continue;
+            if (tblPostLikeRepository.findByPostSnAndUserSn(postSn, userSn) != null) continue;
 
             String likeTyp = POST_LIKE_TYPES[rnd.nextInt(POST_LIKE_TYPES.length)];
-            tblCommPostLikeRepository.save(TblCommPostLike.builder()
-                    .commPostSn(postSn).userSn(userSn)
+            tblPostLikeRepository.save(TblPostLike.builder()
+                    .postSn(postSn).userSn(userSn)
                     .likeTyp(likeTyp).creatrSn(userSn)
                     .build());
 
             q.update(qPost)
                     .set(qPost.likeCnt, qPost.likeCnt.add("UP".equals(likeTyp) ? 1 : -1))
-                    .where(qPost.commPostSn.eq(postSn))
+                    .where(qPost.postSn.eq(postSn))
                     .execute();
             count++;
             log.debug("[ContentGen] 게시글 반응 — postSn={} user={} typ={}", postSn, userSn, likeTyp);
@@ -715,14 +717,14 @@ public class ContentGenerationService {
         if (!cmts.isEmpty()) {
             for (int i = 0; i < REACTION_ATTEMPTS; i++) {
                 TblUser        user = users.get(rnd.nextInt(users.size()));
-                TblCommPostCmt cmt  = cmts.get(rnd.nextInt(cmts.size()));
-                long cmtSn = cmt.getCommPostCmtSn(), userSn = user.getUserSn();
+                TblPostCmt cmt  = cmts.get(rnd.nextInt(cmts.size()));
+                long cmtSn = cmt.getPostCmtSn(), userSn = user.getUserSn();
 
-                if (tblCommPostCmtReactRepository.findByCommPostCmtSnAndUserSn(cmtSn, userSn) != null) continue;
+                if (tblPostCmtReactRepository.findByPostCmtSnAndUserSn(cmtSn, userSn) != null) continue;
 
                 String reactTyp = CMT_REACT_TYPES[rnd.nextInt(CMT_REACT_TYPES.length)];
-                tblCommPostCmtReactRepository.save(TblCommPostCmtReact.builder()
-                        .commPostCmtSn(cmtSn).userSn(userSn)
+                tblPostCmtReactRepository.save(TblPostCmtReact.builder()
+                        .postCmtSn(cmtSn).userSn(userSn)
                         .reactTyp(reactTyp).creatrSn(userSn)
                         .build());
                 count++;
@@ -822,7 +824,7 @@ public class ContentGenerationService {
         );
     }
 
-    private String buildCommentPrompt(TblCommPost post, int count, List<Persona> personas) {
+    private String buildCommentPrompt(TblPost post, int count, List<Persona> personas) {
         StringBuilder personaGuides = new StringBuilder();
         for (int i = 0; i < count; i++) {
             Persona p = i < personas.size() ? personas.get(i) : selectRandomPersona();
@@ -1046,7 +1048,7 @@ public class ContentGenerationService {
     }
 
     // ── 태그 저장 ──────────────────────────────────────────────────────────
-    private void saveTags(long commPostSn, List<String> tagNms, long userSn) {
+    private void saveTags(long postSn, List<String> tagNms, long userSn) {
         for (String tagNm : tagNms) {
             if (tagNm == null || tagNm.isBlank()) continue;
             TblTag tag = tblTagRepository.findByTagNm(tagNm);
@@ -1056,8 +1058,8 @@ public class ContentGenerationService {
             } else {
                 tag.setUseCount(tag.getUseCount() + 1);
             }
-            tblCommPostTagRepository.save(TblCommPostTag.builder()
-                    .commPostSn(commPostSn).tagSn(tag.getTagSn()).creatrSn(userSn).build());
+            tblPostTagRepository.save(TblPostTag.builder()
+                    .postSn(postSn).tagSn(tag.getTagSn()).creatrSn(userSn).build());
         }
     }
 }

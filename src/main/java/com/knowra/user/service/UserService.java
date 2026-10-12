@@ -15,12 +15,8 @@ import com.knowra.common.service.TagService;
 import com.knowra.common.util.ComUtil;
 import com.knowra.community.entity.QTblComm;
 import com.knowra.community.entity.QTblCommMbr;
-import com.knowra.community.entity.QTblCommPost;
-import com.knowra.community.entity.QTblCommPostLike;
-import com.knowra.community.entity.QTblCommPostTag;
 import com.knowra.post.entity.*;
 import com.knowra.post.service.PostService;
-import com.knowra.community.service.CommunityPostService;
 import com.knowra.cmm.event.NotifTriggerEvent;
 import com.knowra.user.entity.*;
 import com.knowra.user.event.UserFollowChangedEvent;
@@ -61,7 +57,6 @@ public class UserService {
     private final TblUserFlwrRepository tblUserFlwrRepository;
     private final JwtProvider jwtProvider;
     private final PostService postService;
-    private final CommunityPostService communityPostService;
     private final TagService tagService;
     private final FileUtil fileUtil;
     private final TblComFileRepository tblComFileRepository;
@@ -224,26 +219,9 @@ public class UserService {
                     ? LocalDateTime.parse(params.get("cursor").toString()) : null;
             int size             = params.get("size") != null ? Integer.parseInt(params.get("size").toString()) : 20;
 
-            // 두 소스에서 각각 size개씩 조회
-            List<Map<String, Object>> commPosts = communityPostService.fetchCommPostListByUser(userSn, viewerUserSn, cursor, size);
-
-            Map<String, Object> postParams = new java.util.HashMap<>();
-            postParams.put("userSn", userSn);
-            postParams.put("cursor", cursor != null ? cursor.toString() : null);
-            postParams.put("size",   size);
-            ResultVO postResult = postService.getPostList(postParams, me);
-            @SuppressWarnings("unchecked")
-            List<Map<String, Object>> posts = (List<Map<String, Object>>) postResult.getResult("list");
-
-            // 합산 후 frstCrtDt 내림차순 정렬, 상위 size개만 반환
-            List<Map<String, Object>> merged = new ArrayList<>();
-            merged.addAll(commPosts);
-            merged.addAll(posts != null ? posts : List.of());
-            merged.sort((a, b) -> ((LocalDateTime) b.get("frstCrtDt")).compareTo((LocalDateTime) a.get("frstCrtDt")));
-
-            List<Map<String, Object>> list = merged.size() > size ? merged.subList(0, size) : merged;
-            LocalDateTime nextCursor = list.size() == size
-                    ? (LocalDateTime) list.get(list.size() - 1).get("frstCrtDt") : null;
+            // 전체 공개 글 + viewer 가 볼 수 있는 커뮤니티 글을 한 쿼리로 (예전엔 두 소스를 합쳐 정렬했다)
+            List<PostDTO> list = postService.fetchPostsByUser(userSn, viewerUserSn, cursor, size);
+            LocalDateTime nextCursor = list.size() == size ? list.get(list.size() - 1).getFrstCrtDt() : null;
 
             resultVO.putResult("list",       list);
             resultVO.putResult("nextCursor", nextCursor != null ? nextCursor.toString() : null);
@@ -517,133 +495,13 @@ public class UserService {
 
     public ResultVO getMyTagPostList(Map<String, Object> params, Long me) {
         ResultVO resultVO = new ResultVO();
-
         try {
-            long userSn = me;
-            long tagSn            = Long.parseLong(params.get("tagSn").toString());
-            LocalDateTime cursor  = params.get("cursor") != null ? LocalDateTime.parse(params.get("cursor").toString()) : null;
-            int size              = params.get("size") != null ? Integer.parseInt(params.get("size").toString()) : 50;
+            long          userSn = me;
+            long          tagSn  = Long.parseLong(params.get("tagSn").toString());
+            LocalDateTime cursor = params.get("cursor") != null ? LocalDateTime.parse(params.get("cursor").toString()) : null;
+            int           size   = params.get("size")   != null ? Integer.parseInt(params.get("size").toString()) : 50;
 
-            JPAQueryFactory q = new JPAQueryFactory(em);
-
-            QTblUser qUser = QTblUser.tblUser;
-            QTblTag qTag = QTblTag.tblTag;
-            QTblPost qPost = QTblPost.tblPost;
-            QTblPostTag qPostTag = QTblPostTag.tblPostTag;
-            QTblPostLike qTblPostLike = QTblPostLike.tblPostLike;
-
-            QTblPostSave qTblPostSave = QTblPostSave.tblPostSave;
-
-            QTblCommPost qCommPost = QTblCommPost.tblCommPost;
-            QTblComm qComm = QTblComm.tblComm;
-            QTblCommPostTag qCommPostTag = QTblCommPostTag.tblCommPostTag;
-            QTblCommPostLike qCommPostLike = QTblCommPostLike.tblCommPostLike;
-
-            List<PostDTO> posts = q.select(
-                Projections.constructor(
-                    PostDTO.class,
-                    Expressions.constant("POST"),
-                    qPost.postTyp, qPost.postSn, qUser.userSn,
-                    qUser.nickName, qUser.name, qPost.postTtl,
-                    qPost.postCntnt, qPost.frstCrtDt,
-                    qPost.viewCnt, qPost.likeCnt, qPost.cmtCnt,
-                    new CaseBuilder().when(qTblPostLike.isNotNull()).then(qTblPostLike.likeTyp)
-                        .otherwise(Expressions.nullExpression()),
-                    new CaseBuilder().when(qTblPostSave.isNotNull()).then(true)
-                        .otherwise(Expressions.nullExpression())
-                )
-            ).from(qPost)
-            .join(qUser)
-            .on(qPost.userSn.eq(qUser.userSn))
-            .leftJoin(qTblPostLike)
-            .on(qTblPostLike.postSn.eq(qPost.postSn).and(qTblPostLike.userSn.eq(userSn)))
-            .leftJoin(qTblPostSave)
-            .on(qPost.postSn.eq(qTblPostSave.postSn).and(qTblPostSave.userSn.eq(userSn)))
-            .join(qPostTag)
-            .on(qPost.postSn.eq(qPostTag.postSn))
-            .join(qTag)
-            .on(qPostTag.tagSn.eq(qTag.tagSn))
-            .where(qTag.tagSn.eq(tagSn)
-                .and(cursor != null ? qPost.frstCrtDt.lt(cursor) : null))
-            .orderBy(qPost.frstCrtDt.desc())
-            .limit(size)
-            .groupBy(qPost.postSn).fetch();
-
-            List<Long> postSns = posts.stream().map(PostDTO::getPostSn).toList();
-            Map<Long, List<String>> tagMap = tagService.fetchTagMap(postSns, "post");
-            posts.forEach(p -> p.setTagNms(tagMap.getOrDefault(p.getPostSn(), List.of())));
-
-            List<PostDTO> commPosts = q.select(
-                    Projections.constructor(
-                            PostDTO.class,
-                            Expressions.constant("COMM"),
-                            qCommPost.postTyp, qComm.commSn, qComm.commNm,
-                            qComm.commDsplNm, qCommPost.commPostSn, qUser.userSn,
-                            qUser.nickName, qUser.name, qCommPost.postTtl, qCommPost.postCntnt,
-                            qCommPost.frstCrtDt, qCommPost.viewCnt, qCommPost.likeCnt,
-                            qCommPost.cmtCnt,
-                            new CaseBuilder().when(qCommPostLike.isNotNull()).then(qCommPostLike.likeTyp)
-                                    .otherwise(Expressions.nullExpression()),
-                            new CaseBuilder().when(qTblPostSave.isNotNull()).then(true)
-                                    .otherwise(Expressions.nullExpression())
-
-                    )
-            ).from(qCommPost)
-            .join(qComm)
-            .on(qCommPost.commSn.eq(qComm.commSn))
-            .join(qUser)
-            .on(qCommPost.userSn.eq(qUser.userSn))
-            .leftJoin(qCommPostLike)
-            .on(qCommPostLike.commPostSn.eq(qCommPost.commPostSn).and(qCommPostLike.userSn.eq(userSn)))
-            .leftJoin(qTblPostSave)
-            .on(qCommPost.commPostSn.eq(qTblPostSave.postSn).and(qTblPostSave.userSn.eq(userSn)))
-            .join(qCommPostTag)
-            .on(qCommPost.commPostSn.eq(qCommPostTag.commPostSn))
-            .join(qTag)
-            .on(qCommPostTag.tagSn.eq(qTag.tagSn))
-            .where(qTag.tagSn.eq(tagSn)
-                .and(CommunityQueryHelper.accessCondition(qComm, userSn))
-                .and(cursor != null ? qCommPost.frstCrtDt.lt(cursor) : null))
-            .orderBy(qCommPost.frstCrtDt.desc())
-            .limit(size)
-            .groupBy(qCommPost.commPostSn).fetch();
-
-            List<Long> commPostSns = commPosts.stream().map(PostDTO::getPostSn).toList();
-            Map<Long, List<String>> commTagMap = tagService.fetchTagMap(commPostSns, "commPost");
-            commPosts.forEach(p -> p.setTagNms(commTagMap.getOrDefault(p.getPostSn(), List.of())));
-
-            // pfp 배치 조회
-            List<Long> allUserSns = java.util.stream.Stream.concat(
-                    posts.stream().map(PostDTO::getUserSn),
-                    commPosts.stream().map(PostDTO::getUserSn)
-            ).distinct().toList();
-            if (!allUserSns.isEmpty()) {
-                QTblUser    qU   = new QTblUser("pfpUser");
-                QTblComFile pfpF = new QTblComFile("pfpF");
-                Map<Long, String> pfpUrlMap = new JPAQueryFactory(em)
-                        .select(qU.userSn, pfpF.atchFilePathNm, pfpF.strgFileNm, pfpF.atchFileExtnNm)
-                        .from(qU)
-                        .leftJoin(qU.pfp, pfpF)
-                        .where(qU.userSn.in(allUserSns))
-                        .fetch()
-                        .stream()
-                        .filter(t -> t.get(pfpF.atchFilePathNm) != null)
-                        .collect(java.util.stream.Collectors.toMap(
-                                t -> t.get(qU.userSn),
-                                t -> t.get(pfpF.atchFilePathNm) + "/" + t.get(pfpF.strgFileNm) + "." + t.get(pfpF.atchFileExtnNm),
-                                (a, b) -> a
-                        ));
-                posts.forEach(p -> p.setPfpUrl(pfpUrlMap.get(p.getUserSn())));
-                commPosts.forEach(p -> p.setPfpUrl(pfpUrlMap.get(p.getUserSn())));
-            }
-
-            // 합산 → frstCrtDt 내림차순 → 상위 size개
-            List<PostDTO> merged = new ArrayList<>();
-            merged.addAll(posts);
-            merged.addAll(commPosts);
-            merged.sort((a, b) -> b.getFrstCrtDt().compareTo(a.getFrstCrtDt()));
-            List<PostDTO> list = merged.size() > size ? merged.subList(0, size) : merged;
-
+            List<PostDTO> list = postService.fetchPostsByTag(tagSn, userSn, cursor, size);
             LocalDateTime nextCursor = list.size() == size ? list.get(list.size() - 1).getFrstCrtDt() : null;
 
             resultVO.putResult("list", list);

@@ -125,12 +125,12 @@ class FeedRankingTest {
         // 보정항에 원점수(15, 20, 수백)가 하나라도 남아 있으면 총점이 [0,1] 인 지금
         // 그 항이 순위를 통째로 지배한다. 여기서 상한을 넘으며 걸린다.
         FeedPost p = post("COMM", 500_000, 90_000, 40_000, 0);
-        Map<Long, List<Long>> commTags = Map.of(p.postSn(), List.of(1L));
+        Map<Long, List<Long>> tags = Map.of(p.postSn(), List.of(1L));
 
         for (String mode : List.of("PERSONALIZED", "FOLLOWING", "POPULAR", "LATEST")) {
             double score = FeedService.computeScore(p, mode, CFG,
                     Map.of(1L, 1e9), Map.of(7L, 1e9), Map.of(9L, 1e9),
-                    Set.of(7L), Set.of(9L), Map.of(), commTags);
+                    Set.of(7L), Set.of(9L), tags);
 
             assertThat(score).as("mode=%s", mode).isBetween(0.0, 1.0);
         }
@@ -240,13 +240,13 @@ class FeedRankingTest {
 
     /** 익숙한 글(작성자 7번을 팔로우) */
     private static FeedPost familiarPost(long sn) {
-        return new FeedPost("POST", "NORMAL", sn, 7L, "닉", "이름", "제목", "본문",
+        return new FeedPost("NORMAL", sn, 7L, "닉", "이름", "제목", "본문",
                 LocalDateTime.now().minusHours(5), 10, 1, 1, null, null, null, null);
     }
 
     /** 낯선 글 — 작성자도 커뮤니티도 엮인 적 없다. */
     private static FeedPost strangePost(long sn) {
-        return new FeedPost("POST", "NORMAL", sn, 900L + sn, "낯", "낯선이", "제목", "본문",
+        return new FeedPost("NORMAL", sn, 900L + sn, "낯", "낯선이", "제목", "본문",
                 LocalDateTime.now().minusHours(5), 10, 1, 1, null, null, null, null);
     }
 
@@ -308,7 +308,7 @@ class FeedRankingTest {
         Set<String> promoted = quota(feed, 10);
 
         List<Long> rest = feed.stream()
-                .filter(p -> !promoted.contains("POST:" + p.postSn()))
+                .filter(p -> !promoted.contains(String.valueOf(p.postSn())))
                 .map(FeedPost::postSn).toList();
         assertThat(rest).isSorted();   // 원래 0,1,2... 순서였다
     }
@@ -349,7 +349,7 @@ class FeedRankingTest {
     // ── 픽스처 ────────────────────────────────────────────────────────────
 
     private static FeedPost post(String kind, int view, int like, int cmt, int ageHours) {
-        return new FeedPost(kind, "NORMAL", 100L, 7L, "닉", "이름", "제목", "본문",
+        return new FeedPost("NORMAL", 100L, 7L, "닉", "이름", "제목", "본문",
                 LocalDateTime.now().minusHours(ageHours).minusMinutes(1),
                 view, like, cmt,
                 "COMM".equals(kind) ? 9L : null, "커뮤", "커뮤니티", null);

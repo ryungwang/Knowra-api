@@ -7,8 +7,8 @@ import com.knowra.cmm.model.ResultVO;
 import com.knowra.common.entity.QTblComFile;
 import com.knowra.community.entity.QTblComm;
 import com.knowra.community.entity.QTblCommMbr;
-import com.knowra.community.entity.QTblCommPost;
-import com.knowra.community.entity.QTblCommPostTag;
+import com.knowra.post.entity.QTblPost;
+import com.knowra.post.entity.QTblPostTag;
 import com.knowra.user.entity.QTblUserActionLog;
 import com.knowra.user.entity.TblUserActionLog;
 import com.knowra.user.entity.TblUserInterestScore;
@@ -293,15 +293,16 @@ public class CommunityExploreService {
     // 커뮤니티별 태그 가중치 Map<commSn, Map<tagSn, count>>
     // ─────────────────────────────────────────────────────────────────────
     private Map<Long, Map<Long, Double>> fetchCommunityTagWeights() {
-        QTblCommPostTag qTag     = QTblCommPostTag.tblCommPostTag;
-        QTblCommPost    qPost    = QTblCommPost.tblCommPost;
+        QTblPostTag qTag  = QTblPostTag.tblPostTag;
+        QTblPost    qPost = QTblPost.tblPost;
 
         var countExpr = qTag.tagSn.count();
 
         List<Tuple> rows = new JPAQueryFactory(em)
                 .select(qPost.commSn, qTag.tagSn, countExpr)
                 .from(qTag)
-                .join(qPost).on(qTag.commPostSn.eq(qPost.commPostSn))
+                .join(qPost).on(qTag.postSn.eq(qPost.postSn))
+                .where(qPost.commSn.isNotNull())
                 .groupBy(qPost.commSn, qTag.tagSn)
                 .fetch();
 
@@ -361,8 +362,8 @@ public class CommunityExploreService {
     // 최근 7일 커뮤니티별 품질 통계
     // ─────────────────────────────────────────────────────────────────────
     private Map<Long, QualityStat> fetchQualityStats() {
-        QTblCommPost qPost  = QTblCommPost.tblCommPost;
-        QTblCommMbr  qMbr   = QTblCommMbr.tblCommMbr;
+        QTblPost    qPost  = QTblPost.tblPost;
+        QTblCommMbr qMbr   = QTblCommMbr.tblCommMbr;
         LocalDateTime since = LocalDateTime.now().minusDays(7);
 
         var postCntExpr       = qPost.commSn.count();
@@ -375,7 +376,7 @@ public class CommunityExploreService {
         List<Tuple> postRows = new JPAQueryFactory(em)
                 .select(qPost.commSn, postCntExpr, viewSumExpr, cmtSumExpr, activeUserExpr, latestExpr)
                 .from(qPost)
-                .where(qPost.frstCrtDt.goe(since).and(qPost.actvtnYn.eq("Y")))
+                .where(qPost.commSn.isNotNull().and(qPost.frstCrtDt.goe(since)).and(qPost.actvtnYn.eq("Y")))
                 .groupBy(qPost.commSn)
                 .fetch();
 

@@ -33,7 +33,7 @@ public class TblUserInterestScore {
     private long userSn;
 
     @Column(name = "TARGET_TYPE", length = 20, nullable = false)
-    @Comment("COMM | COMM_POST | POST | USER")
+    @Comment("COMM | POST | USER | TAG")
     private String targetType;
 
     @Column(name = "TARGET_SN", nullable = false)

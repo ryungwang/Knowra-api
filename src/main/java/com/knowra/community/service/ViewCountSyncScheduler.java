@@ -1,7 +1,6 @@
 package com.knowra.community.service;
 
 import com.knowra.cmm.service.RedisApiService;
-import com.knowra.community.repository.TblCommPostRepository;
 import com.knowra.post.repository.TblPostRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -15,7 +14,6 @@ import java.util.Set;
 public class ViewCountSyncScheduler {
 
     private final RedisApiService redisApiService;
-    private final TblCommPostRepository tblCommPostRepository;
     private final TblPostRepository tblPostRepository;
 
     private static final int REDIS_DB = 15;
@@ -36,12 +34,8 @@ public class ViewCountSyncScheduler {
             String type = parts[0];
             long postSn = Long.parseLong(parts[1]);
 
-            if ("comm".equals(type)) {
-                tblCommPostRepository.findById(postSn).ifPresent(post -> {
-                    post.setViewCnt(post.getViewCnt() + (int) delta);
-                    tblCommPostRepository.save(post);
-                });
-            } else if ("post".equals(type)) {
+            // V2 이전의 "comm:" 키는 옛 번호를 가리킨다 — 읽어서 버린다(getAndDelete 가 이미 지웠다).
+            if ("post".equals(type)) {
                 tblPostRepository.findById(postSn).ifPresent(post -> {
                     post.setViewCnt(post.getViewCnt() + (int) delta);
                     tblPostRepository.save(post);

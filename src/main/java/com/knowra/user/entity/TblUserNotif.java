@@ -42,7 +42,7 @@ public class TblUserNotif {
     private Long targetSn;
 
     @Column(name = "TARGET_KIND", length = 20)
-    @Comment("대상종류 POST|COMM_POST")
+    @Comment("대상종류 POST (FOLLOW 는 NULL)")
     private String targetKind;
 
     @Builder.Default
