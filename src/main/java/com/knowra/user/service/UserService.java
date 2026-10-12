@@ -70,9 +70,11 @@ public class UserService {
 
     private final RedisApiService redisApiService;
 
-    public Long getUserSn(String nickName) {
-        return tblUserRepository.findByNickName(nickName)
-                .orElseThrow(() -> new IllegalStateException("User not found: " + nickName))
+    /** 로그인 폼이 보내는 건 아이디다. 닉네임으로 먼저 찾던 시절엔 닉네임 ≠ 아이디인 계정이 로그인 직후 여기서 죽었다. */
+    public Long getUserSn(String loginId) {
+        return tblUserRepository.findByLoginId(loginId)
+                .or(() -> tblUserRepository.findByNickName(loginId))
+                .orElseThrow(() -> new IllegalStateException("User not found: " + loginId))
                 .getUserSn();
     }
 

@@ -27,4 +27,9 @@ public class CmtDTO {
     // 내 반응 타입 (LIKE / LOVE / HAHA / WOW / SAD / ANGRY / null)
     private String myReactTyp;
     private String pfpUrl;
+
+    /** ACTIVE | DELETED — 답글이 달린 댓글은 지워도 자리(DELETED)가 남는다. */
+    private String stat;
+    /** 수정 시각. 생성 시각과 다르면 화면이 "수정됨"을 붙인다. */
+    private LocalDateTime mdfcnDt;
 }

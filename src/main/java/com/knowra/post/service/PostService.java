@@ -6,6 +6,8 @@ import com.knowra.cmm.model.ResultVO;
 import com.knowra.cmm.service.RedisApiService;
 import com.knowra.common.entity.QTblComFile;
 import com.knowra.common.service.TagService;
+import com.knowra.community.entity.QTblComm;
+import com.knowra.community.entity.QTblCommMbr;
 import com.knowra.community.entity.TblComm;
 import com.knowra.community.entity.TblCommMbr;
 import com.knowra.community.repository.TblCommMbrRepository;
@@ -145,6 +147,13 @@ public class PostService {
                 tblPost.setMdfrSn(userSn);
             } else {
                 tblPost = modelMapper.map(params, TblPost.class);
+                // 커뮤니티 글은 활성 멤버만 쓴다. 예전엔 이 검사가 없어 가입 대기(PENDING)·비멤버도
+                // API 로는 아무 커뮤니티에나 글을 넣을 수 있었다.
+                if (tblPost.getCommSn() != null && roleIn(tblPost.getCommSn(), userSn) == null) {
+                    resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
+                    resultVO.setResultMessage("커뮤니티에 참여한 멤버만 글을 쓸 수 있습니다.");
+                    return resultVO;
+                }
                 tblPost.setUserSn(userSn);
                 tblPost.setCreatrSn(userSn);
                 tblPost.setPostTyp(resolvePostTyp(params, tblPost.getCommSn(), userSn, "NORMAL"));
@@ -152,6 +161,7 @@ public class PostService {
                 actionLogService.log(userSn, TblUserActionLog.TARGET_POST, tblPost.getPostSn(), TblUserActionLog.ACTION_POST);
                 eventPublisher.publishEvent(new PostCreatedEvent(
                         tblPost.getPostSn(), userSn, tblPost.getCommSn(), tblPost.getFrstCrtDt()));
+                notifyCommunityMembers(tblPost, userSn);
             }
 
             @SuppressWarnings("unchecked")
@@ -168,6 +178,29 @@ public class PostService {
             resultVO.setResultMessage(ResponseCode.SAVE_ERROR.getMessage());
         }
         return resultVO;
+    }
+
+    /**
+     * 커뮤니티 새 글 알림. 일반 글은 <b>알림을 켠 멤버</b>(notifYn='Y')에게, 공지는 구독과
+     * 무관하게 <b>활성 멤버 전원</b>에게 간다. 글쓴이 본인은 리스너가 거른다.
+     */
+    private void notifyCommunityMembers(TblPost post, long authorSn) {
+        if (post.getCommSn() == null) return;
+        boolean notice = "NOTICE".equals(post.getPostTyp());
+        QTblCommMbr mbr = QTblCommMbr.tblCommMbr;
+        BooleanExpression cond = mbr.commSn.eq(post.getCommSn())
+                .and(mbr.stat.eq("ACTIVE")).and(mbr.actvtnYn.eq("Y"))
+                .and(mbr.userSn.ne(authorSn));
+        if (!notice) cond = cond.and(mbr.notifYn.eq("Y"));
+        List<Long> receivers = new JPAQueryFactory(em).select(mbr.userSn).from(mbr).where(cond).fetch();
+        if (receivers.isEmpty()) return;
+        QTblComm comm = QTblComm.tblComm;
+        String commName = new JPAQueryFactory(em).select(comm.commDsplNm).from(comm)
+                .where(comm.commSn.eq(post.getCommSn())).fetchOne();
+        String typ = notice ? "COMM_NOTICE" : "COMM_POST";
+        for (Long r : receivers) {
+            eventPublisher.publishEvent(new NotifTriggerEvent(r, authorSn, typ, post.getPostSn(), "POST", commName));
+        }
     }
 
     /** 공지(NOTICE)는 커뮤니티 OWNER/ADMIN 만 쓸 수 있다. 그 외는 조용히 NORMAL 로 내린다. */
@@ -419,8 +452,16 @@ public class PostService {
                     .execute();
             eventPublisher.publishEvent(new PostReactedEvent(postSn, "COMMENT", 1));
 
-            Long ownerSn = ownerOf(postSn);
-            if (ownerSn != null) {
+            // 답글이면 부모 댓글 작성자에게 REPLY, 글 주인에게 COMMENT. 둘이 같은 사람이면 REPLY 하나만.
+            Long ownerSn  = ownerOf(postSn);
+            Long parentSn = null;
+            if (prntCmtSn != null) {
+                parentSn = tblPostCmtRepository.findById(prntCmtSn).map(TblPostCmt::getUserSn).orElse(null);
+                if (parentSn != null) {
+                    eventPublisher.publishEvent(new NotifTriggerEvent(parentSn, userSn, "REPLY", postSn, "POST"));
+                }
+            }
+            if (ownerSn != null && !ownerSn.equals(parentSn)) {
                 eventPublisher.publishEvent(new NotifTriggerEvent(ownerSn, userSn, "COMMENT", postSn, "POST"));
             }
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
@@ -428,6 +469,82 @@ public class PostService {
             e.printStackTrace();
             resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
             resultVO.setResultMessage(ResponseCode.SAVE_ERROR.getMessage());
+        }
+        return resultVO;
+    }
+
+    /** 댓글 수정 — 작성자 본인만. params: postCmtSn, cmtCntnt */
+    public ResultVO setPostCmtEdit(Map<String, Object> params, Long me) {
+        ResultVO resultVO = new ResultVO();
+        try {
+            long userSn    = me;
+            long postCmtSn = Long.parseLong(params.get("postCmtSn").toString());
+            String cntnt   = params.get("cmtCntnt") == null ? "" : params.get("cmtCntnt").toString().trim();
+            if (cntnt.isEmpty()) throw new IllegalArgumentException("내용이 비어 있습니다.");
+
+            TblPostCmt cmt = tblPostCmtRepository.findById(postCmtSn)
+                    .orElseThrow(() -> new IllegalArgumentException("댓글을 찾을 수 없습니다."));
+            if (cmt.getUserSn() != userSn || !"ACTIVE".equals(cmt.getStat()) || !"Y".equals(cmt.getActvtnYn())) {
+                resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
+                resultVO.setResultMessage("수정 권한이 없습니다.");
+                return resultVO;
+            }
+            cmt.setCmtCntnt(cntnt);
+            cmt.setMdfrSn(userSn);
+            tblPostCmtRepository.save(cmt);
+            resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
+        } catch (Exception e) {
+            e.printStackTrace();
+            resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
+            resultVO.setResultMessage(ResponseCode.SAVE_ERROR.getMessage());
+        }
+        return resultVO;
+    }
+
+    /**
+     * 댓글 삭제 — 작성자 본인 또는 글을 관리할 수 있는 사람(글 주인·커뮤니티 운영진).
+     * 답글이 달린 댓글은 행을 숨기지 않고 stat=DELETED 로 남긴다 — 답글이 고아가 되면 안 된다.
+     * 답글이 없으면 그냥 비활성화한다. 어느 쪽이든 글의 댓글 수는 1 줄어든다.
+     */
+    public ResultVO setPostCmtDel(Map<String, Object> params, Long me) {
+        ResultVO resultVO = new ResultVO();
+        try {
+            long userSn    = me;
+            long postCmtSn = Long.parseLong(params.get("postCmtSn").toString());
+            TblPostCmt cmt = tblPostCmtRepository.findById(postCmtSn)
+                    .orElseThrow(() -> new IllegalArgumentException("댓글을 찾을 수 없습니다."));
+            if (!"ACTIVE".equals(cmt.getStat()) || !"Y".equals(cmt.getActvtnYn())) {
+                resultVO.setResultCode(ResponseCode.DELETE_ERROR.getCode());
+                resultVO.setResultMessage("이미 삭제된 댓글입니다.");
+                return resultVO;
+            }
+            TblPost post = tblPostRepository.findByPostSn(cmt.getPostSn());
+            boolean allowed = cmt.getUserSn() == userSn || (post != null && canManage(post, userSn));
+            if (!allowed) {
+                resultVO.setResultCode(ResponseCode.DELETE_ERROR.getCode());
+                resultVO.setResultMessage("삭제 권한이 없습니다.");
+                return resultVO;
+            }
+
+            QTblPostCmt c = QTblPostCmt.tblPostCmt;
+            long liveReplies = new JPAQueryFactory(em).select(c.count()).from(c)
+                    .where(c.prntCmtSn.eq(postCmtSn).and(c.stat.eq("ACTIVE")).and(c.actvtnYn.eq("Y")))
+                    .fetchOne();
+            cmt.setStat("DELETED");
+            if (liveReplies == 0) cmt.setActvtnYn("N");
+            cmt.setMdfrSn(userSn);
+            tblPostCmtRepository.save(cmt);
+
+            new JPAQueryFactory(em).update(POST)
+                    .set(POST.cmtCnt, POST.cmtCnt.subtract(1))
+                    .where(POST.postSn.eq(cmt.getPostSn()).and(POST.cmtCnt.gt(0)))
+                    .execute();
+            eventPublisher.publishEvent(new PostReactedEvent(cmt.getPostSn(), "COMMENT", -1));
+            resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
+        } catch (Exception e) {
+            e.printStackTrace();
+            resultVO.setResultCode(ResponseCode.DELETE_ERROR.getCode());
+            resultVO.setResultMessage(ResponseCode.DELETE_ERROR.getMessage());
         }
         return resultVO;
     }
@@ -510,8 +627,9 @@ public class PostService {
             QTblComFile cmtPfpFile = new QTblComFile("cmtPfpFile");
 
             // ── 1. 루트 댓글만 커서 페이지네이션 (postCmtSn ASC) ──────────────
+            // stat 으로 거르지 않는다 — 답글이 달린 채 지워진 댓글(DELETED, actvtnYn=Y)은 자리가 남아야
+            // 답글이 보인다. 답글도 없이 지워진 댓글은 actvtnYn=N 이라 여기서 빠진다.
             BooleanExpression rootCondition = cmt.postSn.eq(postSn)
-                    .and(cmt.stat.eq("ACTIVE"))
                     .and(cmt.actvtnYn.eq("Y"))
                     .and(cmt.prntCmtSn.isNull());
             if (cursor != null) rootCondition = rootCondition.and(cmt.postCmtSn.gt(cursor));
@@ -542,7 +660,6 @@ public class PostService {
                     .join(cmtUser).on(cmt.userSn.eq(cmtUser.userSn))
                     .leftJoin(cmtUser.pfp, cmtPfpFile)
                     .where(cmt.prntCmtSn.in(rootSns)
-                            .and(cmt.stat.eq("ACTIVE"))
                             .and(cmt.actvtnYn.eq("Y")))
                     .orderBy(cmt.postCmtSn.asc())
                     .fetch();
@@ -571,11 +688,14 @@ public class PostService {
                 String     pathNm = t.get(cmtPfpFile.atchFilePathNm);
                 String     pfpUrl = pathNm != null
                         ? pathNm + "/" + t.get(cmtPfpFile.strgFileNm) + "." + t.get(cmtPfpFile.atchFileExtnNm) : null;
+                boolean deleted = !"ACTIVE".equals(c.getStat());
                 return new CmtDTO(
                         sn, c.getUserSn(), t.get(cmtUser.nickName), t.get(cmtUser.name),
-                        c.getCmtCntnt(), c.getLikeCnt(), c.getFrstCrtDt(), new ArrayList<>(),
+                        deleted ? "" : c.getCmtCntnt(),   // 지워진 댓글의 본문은 내보내지 않는다
+                        c.getLikeCnt(), c.getFrstCrtDt(), new ArrayList<>(),
                         reactionsMap.getOrDefault(sn, new HashMap<>()),
-                        myReactMap.get(sn), pfpUrl);
+                        myReactMap.get(sn), pfpUrl,
+                        deleted ? "DELETED" : "ACTIVE", c.getMdfcnDt());
             };
             Map<Long, CmtDTO> rootMap = new LinkedHashMap<>();
             rootTuples.forEach(t -> rootMap.put(t.get(cmt).getPostCmtSn(), toDto.apply(t)));

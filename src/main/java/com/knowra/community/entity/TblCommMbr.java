@@ -54,6 +54,12 @@ public class TblCommMbr {
     @Builder.Default
     private String stat = "ACTIVE";
 
+    /** 새 글 알림 구독. 공지(NOTICE)는 이 값과 무관하게 전 멤버에게 간다. */
+    @Column(name = "NOTIF_YN", length = 1, nullable = false)
+    @Comment("새 글 알림 구독 여부")
+    @Builder.Default
+    private String notifYn = "N";
+
     @Column(name = "ACTVTN_YN", length = 1, nullable = false)
     @Comment("활성화 여부")
     @Builder.Default

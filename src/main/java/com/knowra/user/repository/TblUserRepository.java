@@ -18,6 +18,8 @@ public interface TblUserRepository extends JpaRepository<TblUser, Long> {
 
     Optional<TblUser> findByEmail(String email);
 
+    Optional<TblUser> findByPhone(String phone);
+
     Optional<TblUser> findByLoginId(String loginId);
 
     Optional<TblUser> findByNickName(String nickName);

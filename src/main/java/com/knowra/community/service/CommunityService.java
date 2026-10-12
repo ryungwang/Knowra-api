@@ -171,6 +171,7 @@ public class CommunityService {
             resultVO.putResult("bannerFile", bannerFile);
             resultVO.putResult("isMember", myMember != null);
             resultVO.putResult("memberStatus", myMember != null ? myMember.getStat() : null);
+            resultVO.putResult("notifOn", myMember != null && "Y".equals(myMember.getNotifYn()));
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
             resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
         } catch (Exception e) {
@@ -289,6 +290,7 @@ public class CommunityService {
                     q.update(qTblCommMbr)
                         .set(qTblCommMbr.stat, memberStatus)
                         .set(qTblCommMbr.joinTyp, joinTyp)
+                        .set(qTblCommMbr.notifYn, "Y")
                         .where(
                             qTblCommMbr.commSn.eq(tblComm.getCommSn())
                             .and(qTblCommMbr.userSn.eq(userSn))
@@ -299,6 +301,7 @@ public class CommunityService {
                             .userSn(userSn)
                             .stat(memberStatus)
                             .joinTyp(joinTyp)
+                            .notifYn("Y")   // 막 참여한 멤버는 새 글을 보고 싶어 한다. 끄는 건 종 버튼.
                             .actvtnYn("Y")
                             .creatrSn(userSn)
                             .build();
@@ -327,6 +330,36 @@ public class CommunityService {
             resultVO.setResultMessage(ResponseCode.COMMUNITY_MEMBER_ERROR.getMessage());
         }
 
+        return resultVO;
+    }
+
+    /** 새 글 알림 켜기/끄기. 활성 멤버만 바꿀 수 있다. params: commSn, notifOn */
+    @Transactional
+    public ResultVO setNotif(Map<String, Object> params, Long me) {
+        ResultVO resultVO = new ResultVO();
+        try {
+            long userSn = me;
+            long commSn = Long.parseLong(params.get("commSn").toString());
+            boolean on  = Boolean.parseBoolean(String.valueOf(params.get("notifOn")));
+            TblCommMbr member = tblCommMbrRepository.findByCommSnAndUserSn(commSn, userSn)
+                    .filter(m -> "ACTIVE".equals(m.getStat()) && "Y".equals(m.getActvtnYn()))
+                    .orElse(null);
+            if (member == null) {
+                resultVO.setResultCode(ResponseCode.COMMUNITY_NOT_MEMBER.getCode());
+                resultVO.setResultMessage(ResponseCode.COMMUNITY_NOT_MEMBER.getMessage());
+                return resultVO;
+            }
+            member.setNotifYn(on ? "Y" : "N");
+            member.setMdfrSn(userSn);
+            tblCommMbrRepository.save(member);
+            resultVO.putResult("notifOn", on);
+            resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
+            resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
+        } catch (Exception e) {
+            e.printStackTrace();
+            resultVO.setResultCode(ResponseCode.COMMUNITY_MEMBER_ERROR.getCode());
+            resultVO.setResultMessage(ResponseCode.COMMUNITY_MEMBER_ERROR.getMessage());
+        }
         return resultVO;
     }
 

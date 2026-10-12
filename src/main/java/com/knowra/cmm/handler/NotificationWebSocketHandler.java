@@ -106,6 +106,25 @@ public class NotificationWebSocketHandler extends TextWebSocketHandler {
         }
     }
 
+    /**
+     * 알림이 아닌 실시간 이벤트(채팅 메시지 등)도 같은 소켓으로 보낸다 — 소켓을 둘 열 이유가 없다.
+     * 프론트는 {@code type} 으로 분기한다. 상대가 접속 중이 아니면 조용히 버린다(DB 에는 이미 있다).
+     */
+    public void pushEvent(long userSn, String type, Object data) {
+        WebSocketSession session = sessions.get(userSn);
+        if (session == null || !session.isOpen()) return;
+        try {
+            send(session, Map.of("type", type, "data", data));
+        } catch (Exception e) {
+            log.warn("WebSocket pushEvent 실패 userSn={} type={}", userSn, type, e);
+        }
+    }
+
+    public boolean isOnline(long userSn) {
+        WebSocketSession s = sessions.get(userSn);
+        return s != null && s.isOpen();
+    }
+
     // ── 내부 유틸 ─────────────────────────────────────────────────────────
     private void send(WebSocketSession session, Object payload) throws Exception {
         session.sendMessage(new TextMessage(MAPPER.writeValueAsString(payload)));

@@ -42,6 +42,12 @@ public class CommunityController {
         return communityService.getMyCommunityList(me);
     }
 
+    /** 새 글 알림 켜기/끄기 — 활성 멤버만. params: commSn, notifOn */
+    @PostMapping("/api/community/setNotif")
+    public ResultVO setNotif(@RequestBody Map<String, Object> params, @CurrentUser Long me) {
+        return communityService.setNotif(params, me);
+    }
+
     @PostMapping("/api/community/setMember")
     public ResultVO setMember(@RequestBody Map<String, Object> params, @CurrentUser Long me) {
         return communityService.setMember(params, me);

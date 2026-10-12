@@ -7,6 +7,9 @@ import com.knowra.cmm.model.ResponseCode;
 import com.knowra.cmm.model.ResultVO;
 import com.knowra.cmm.service.RedisApiService;
 import com.knowra.cmm.util.FileUtil;
+import com.knowra.cmm.messaging.MailService;
+import com.knowra.cmm.messaging.SmsService;
+import com.knowra.cmm.messaging.VerificationService;
 import com.knowra.common.repository.TblComFileRepository;
 import com.knowra.common.util.ComUtil;
 import com.knowra.user.entity.TblUser;
@@ -21,6 +24,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestTemplate;
@@ -28,6 +32,8 @@ import org.springframework.web.multipart.MultipartFile;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
+import java.security.SecureRandom;
+import java.util.Base64;
 import java.util.Map;
 import java.util.Optional;
 
@@ -48,8 +54,17 @@ public class AuthService {
     private final TblComFileRepository tblComFileRepository;
     private final FileUtil fileUtil;
     private final RefreshCookie refreshCookie;
+    private final VerificationService verificationService;
+    private final MailService mailService;
+    private final SmsService smsService;
 
     private static final int REDIS_DB = JwtAuthenticationFilter.REDIS_DB;
+    private static final int PW_RESET_TTL = 1800;
+    private final SecureRandom secureRandom = new SecureRandom();
+
+    /** 비밀번호 재설정 링크가 가리키는 프론트 주소. 로컬은 vite, 운영은 환경변수. */
+    @Value("${knowra.front.base-url:http://localhost:5111}")
+    private String frontBaseUrl;
 
     public ResultVO login(Map<String, String> params, String clientIp, HttpServletResponse response) {
         ResultVO resultVO = new ResultVO();
@@ -227,10 +242,44 @@ public class AuthService {
             String loginId = ComUtil.getStrValue(params.get("loginId"));
             String rawPassword = ComUtil.getStrValue(params.get("password"));
             String snsYn = ComUtil.getStrValue(params.get("snsYn"));
+            String email = VerificationService.normalize(VerificationService.EMAIL, ComUtil.getStrValue(params.get("email")));
+            String phone = VerificationService.normalize(VerificationService.PHONE, ComUtil.getStrValue(params.get("phone")));
+
+            // 일반 가입은 이메일이나 휴대폰 중 하나는 코드로 확인돼 있어야 한다. 구글 가입은 구글이 확인한다.
+            if (!"Y".equals(snsYn)) {
+                boolean emailOk = !email.isEmpty() && verificationService.isVerified(VerificationService.EMAIL, email);
+                boolean phoneOk = !phone.isEmpty() && verificationService.isVerified(VerificationService.PHONE, phone);
+                if (!emailOk && !phoneOk) {
+                    resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
+                    resultVO.setResultMessage("본인 확인이 끝나지 않았습니다. 인증 코드를 먼저 확인해주세요.");
+                    return resultVO;
+                }
+                if (rawPassword.length() < 8) {
+                    resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
+                    resultVO.setResultMessage("비밀번호는 8자 이상이어야 합니다.");
+                    return resultVO;
+                }
+            }
+            if (tblUserRepository.findByLoginId(loginId).isPresent()) {
+                resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
+                resultVO.setResultMessage("이미 사용 중인 아이디입니다.");
+                return resultVO;
+            }
+            if (!email.isEmpty() && tblUserRepository.findByEmail(email).isPresent()) {
+                resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
+                resultVO.setResultMessage("이미 가입된 이메일입니다.");
+                return resultVO;
+            }
+            String nickName = ComUtil.getStrValue(params.get("nickName"));
+            if (tblUserRepository.findByNickName(nickName).isPresent()) {
+                resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
+                resultVO.setResultMessage("이미 사용 중인 닉네임입니다.");
+                return resultVO;
+            }
 
             TblUser tblUser = new TblUser();
-            tblUser.setEmail(ComUtil.getStrValue(params.get("email")));
-            tblUser.setPhone(ComUtil.getStrValue(params.get("phone")));
+            tblUser.setEmail(email.isEmpty() ? null : email);
+            tblUser.setPhone(phone.isEmpty() ? null : phone);
             tblUser.setLoginId(loginId);
             tblUser.setPassword(passwordEncoder.encode(rawPassword));
             tblUser.setName(ComUtil.getStrValue(params.get("name")));
@@ -254,11 +303,141 @@ public class AuthService {
             tblUserStng.setCreatrSn(tblUser.getUserSn());
             tblUserStngRepository.save(tblUserStng);
 
+            if (!email.isEmpty()) verificationService.consume(VerificationService.EMAIL, email);
+            if (!phone.isEmpty()) verificationService.consume(VerificationService.PHONE, phone);
+
             resultVO = login(Map.of("loginId", loginId, "password", rawPassword, "snsYn", snsYn), clientIp, response);
         } catch (Exception e) {
             e.printStackTrace();
             resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
             resultVO.setResultMessage(ResponseCode.SELECT_ERROR.getMessage());
+        }
+        return resultVO;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // 가입 전 본인 확인 (이메일 · 휴대폰)
+    // ─────────────────────────────────────────────────────────────────────
+
+    /**
+     * params: channel(email|phone), target. 이미 가입된 주소면 코드를 보내지 않고 바로 알려 준다 —
+     * 가입하려는 사람 본인이 치는 칸이라 존재 여부를 숨길 이유가 없다(비밀번호 찾기는 다르다).
+     */
+    public ResultVO sendVerifyCode(Map<String, String> params) {
+        ResultVO resultVO = new ResultVO();
+        try {
+            String channel = params.getOrDefault("channel", VerificationService.EMAIL);
+            String target  = VerificationService.normalize(channel, params.get("target"));
+            boolean isEmail = VerificationService.EMAIL.equals(channel);
+            if (isEmail ? !target.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$") : !target.matches("^01[0-9]{8,9}$")) {
+                resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
+                resultVO.setResultMessage(isEmail ? "올바른 이메일 주소가 아닙니다." : "올바른 휴대폰 번호가 아닙니다.");
+                return resultVO;
+            }
+            boolean taken = isEmail
+                    ? tblUserRepository.findByEmail(target).isPresent()
+                    : tblUserRepository.findByPhone(target).isPresent();
+            if (taken) {
+                resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
+                resultVO.setResultMessage(isEmail ? "이미 가입된 이메일입니다. 로그인해주세요." : "이미 가입된 휴대폰 번호입니다.");
+                return resultVO;
+            }
+            String code = verificationService.issue(channel, target);
+            if (code == null) {
+                resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
+                resultVO.setResultMessage("잠시 후 다시 시도해주세요. (재발송은 1분에 한 번)");
+                return resultVO;
+            }
+            if (isEmail) {
+                mailService.send(target, "[Knowra] 인증 코드 " + code,
+                        "Knowra 가입 인증 코드는 " + code + " 입니다.\n10분 안에 입력해주세요. 본인이 요청하지 않았다면 이 메일은 무시하셔도 됩니다.");
+            } else {
+                smsService.send(target, "[Knowra] 인증 코드 " + code + " (10분 내 입력)");
+            }
+            if (verificationService.exposeCode()) resultVO.putResult("devCode", code);
+            resultVO.putResult("expiresIn", 600);
+            resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
+        } catch (Exception e) {
+            e.printStackTrace();
+            resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
+            resultVO.setResultMessage("인증 코드를 보내지 못했습니다. 잠시 후 다시 시도해주세요.");
+        }
+        return resultVO;
+    }
+
+    /** params: channel, target, code */
+    public ResultVO checkVerifyCode(Map<String, String> params) {
+        ResultVO resultVO = new ResultVO();
+        String channel = params.getOrDefault("channel", VerificationService.EMAIL);
+        String target  = VerificationService.normalize(channel, params.get("target"));
+        if (verificationService.check(channel, target, params.get("code"))) {
+            resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
+        } else {
+            resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
+            resultVO.setResultMessage("인증 코드가 올바르지 않거나 만료됐습니다.");
+        }
+        return resultVO;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // 비밀번호 재설정
+    // ─────────────────────────────────────────────────────────────────────
+
+    /**
+     * params: email. <b>항상 성공으로 답한다</b> — 어떤 이메일이 가입돼 있는지 이 창구로
+     * 알아낼 수 없어야 한다. 가입된 일반 계정이면 30분짜리 토큰 링크를 메일로 보낸다.
+     */
+    public ResultVO forgotPassword(Map<String, String> params) {
+        ResultVO resultVO = new ResultVO();
+        try {
+            String email = VerificationService.normalize(VerificationService.EMAIL, params.get("email"));
+            Optional<TblUser> user = tblUserRepository.findByEmail(email);
+            if (user.isPresent() && !"Y".equals(user.get().getSnsYn())) {
+                byte[] buf = new byte[32]; secureRandom.nextBytes(buf);
+                String token = Base64.getUrlEncoder().withoutPadding().encodeToString(buf);
+                redisApiService.setRedis(REDIS_DB, "pwreset:" + token, String.valueOf(user.get().getUserSn()), PW_RESET_TTL);
+                String link = frontBaseUrl + "/reset-password?token=" + token;
+                mailService.send(email, "[Knowra] 비밀번호 재설정",
+                        "아래 링크에서 새 비밀번호를 설정할 수 있습니다. 링크는 30분 동안만 유효합니다.\n\n" + link
+                        + "\n\n본인이 요청하지 않았다면 이 메일은 무시하셔도 됩니다.");
+                if (verificationService.exposeCode()) resultVO.putResult("devToken", token);
+            }
+            resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
+        } catch (Exception e) {
+            e.printStackTrace();
+            resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
+            resultVO.setResultMessage("메일을 보내지 못했습니다. 잠시 후 다시 시도해주세요.");
+        }
+        return resultVO;
+    }
+
+    /** params: token, newPassword. 토큰은 한 번 쓰면 버린다. */
+    public ResultVO resetPassword(Map<String, String> params) {
+        ResultVO resultVO = new ResultVO();
+        try {
+            String token = params.get("token");
+            String newPw = params.get("newPassword");
+            if (!StringUtils.hasText(token) || newPw == null || newPw.length() < 8) {
+                resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
+                resultVO.setResultMessage("비밀번호는 8자 이상이어야 합니다.");
+                return resultVO;
+            }
+            Object userSnRaw = redisApiService.getRedis(REDIS_DB, "pwreset:" + token);
+            if (userSnRaw == null) {
+                resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
+                resultVO.setResultMessage("링크가 만료됐거나 올바르지 않습니다. 다시 요청해주세요.");
+                return resultVO;
+            }
+            TblUser user = tblUserRepository.findById(Long.parseLong(userSnRaw.toString())).orElseThrow();
+            user.setPassword(passwordEncoder.encode(newPw));
+            tblUserRepository.save(user);
+            redisApiService.delRedis(REDIS_DB, "pwreset:" + token);
+            resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
+            resultVO.setResultMessage("비밀번호가 바뀌었습니다. 새 비밀번호로 로그인해주세요.");
+        } catch (Exception e) {
+            e.printStackTrace();
+            resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
+            resultVO.setResultMessage(ResponseCode.SAVE_ERROR.getMessage());
         }
         return resultVO;
     }

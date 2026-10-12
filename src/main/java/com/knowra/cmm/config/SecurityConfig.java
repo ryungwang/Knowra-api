@@ -69,7 +69,10 @@ public class SecurityConfig {
                         // 로그아웃(쿠키 삭제)은 할 수 있어야 한다. 서비스가 있는 토큰만 폐기한다.
                         .requestMatchers(HttpMethod.POST,
                                 "/api/auth/login", "/api/auth/snsLogin", "/api/auth/join",
-                                "/api/auth/refresh", "/api/auth/logout").permitAll()
+                                "/api/auth/refresh", "/api/auth/logout",
+                                // 가입 전 인증 코드(메일·문자) · 비밀번호 재설정 — 로그인 전에 쓰는 것들
+                                "/api/auth/verify/send", "/api/auth/verify/check",
+                                "/api/auth/password/forgot", "/api/auth/password/reset").permitAll()
 
                         // 비로그인 열람 — 피드·글·댓글
                         .requestMatchers(HttpMethod.GET, "/api/feed/**", "/api/post/getPost", "/api/search").permitAll()

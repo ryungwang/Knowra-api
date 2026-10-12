@@ -56,7 +56,7 @@ public class NotificationEventListener {
             }
         }
 
-        String message = buildMessage(event.notifTyp(), nickName);
+        String message = buildMessage(event.notifTyp(), nickName, event.extra());
 
         TblUserNotif entity = TblUserNotif.builder()
                 .userSn(event.receiverSn())
@@ -71,13 +71,19 @@ public class NotificationEventListener {
         wsHandler.push(event.receiverSn(), new NotifDTO(entity, nickName, pfpUrl));
     }
 
-    private String buildMessage(String notifTyp, String nickName) {
+    private String buildMessage(String notifTyp, String nickName, String extra) {
         String sender = nickName != null ? nickName + "님" : "누군가";
-        return switch (notifTyp) {
-            case "LIKE"    -> sender + "이 내 게시글을 좋아합니다.";
-            case "COMMENT" -> sender + "이 내 게시글에 댓글을 달았습니다.";
-            case "FOLLOW"  -> sender + "이 팔로우를 시작했습니다.";
-            default        -> "새 알림이 있습니다. (" + notifTyp + ")";
+        String place  = extra != null ? extra : "커뮤니티";
+        String msg = switch (notifTyp) {
+            case "LIKE"        -> sender + "이 내 게시글을 좋아합니다.";
+            case "COMMENT"     -> sender + "이 내 게시글에 댓글을 달았습니다.";
+            case "REPLY"       -> sender + "이 내 댓글에 답글을 달았습니다.";
+            case "FOLLOW"      -> sender + "이 팔로우를 시작했습니다.";
+            case "COMM_POST"   -> sender + "이 " + place + "에 새 글을 올렸습니다.";
+            case "COMM_NOTICE" -> place + "에 새 공지가 올라왔습니다.";
+            default            -> "새 알림이 있습니다. (" + notifTyp + ")";
         };
+        // MESSAGE 컬럼은 255자다 — 커뮤니티 이름이 길어도 넘치지 않게 자른다.
+        return msg.length() > 250 ? msg.substring(0, 250) + "…" : msg;
     }
 }

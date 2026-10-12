@@ -52,6 +52,30 @@ public class AuthController {
         return authService.refresh(request, response);
     }
 
+    /** 가입 전 본인 확인 코드 발송. body: channel(email|phone), target */
+    @PostMapping("/verify/send")
+    public ResultVO sendVerifyCode(@RequestBody Map<String, String> params) {
+        return authService.sendVerifyCode(params);
+    }
+
+    /** body: channel, target, code */
+    @PostMapping("/verify/check")
+    public ResultVO checkVerifyCode(@RequestBody Map<String, String> params) {
+        return authService.checkVerifyCode(params);
+    }
+
+    /** body: email — 가입 여부와 무관하게 성공으로 답한다. */
+    @PostMapping("/password/forgot")
+    public ResultVO forgotPassword(@RequestBody Map<String, String> params) {
+        return authService.forgotPassword(params);
+    }
+
+    /** body: token, newPassword */
+    @PostMapping("/password/reset")
+    public ResultVO resetPassword(@RequestBody Map<String, String> params) {
+        return authService.resetPassword(params);
+    }
+
     @PostMapping("/join")
     public ResultVO join(@RequestParam Map<String, Object> params,
                          @RequestParam(required = false) MultipartFile profileImage,

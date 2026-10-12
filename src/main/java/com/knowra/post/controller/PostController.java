@@ -51,6 +51,16 @@ public class PostController {
         return postService.setPostCmt(params, me);
     }
 
+    @PostMapping("/setPostCmtEdit")
+    public ResultVO setPostCmtEdit(@RequestBody Map<String, Object> params, @CurrentUser Long me) {
+        return postService.setPostCmtEdit(params, me);
+    }
+
+    @PostMapping("/setPostCmtDel")
+    public ResultVO setPostCmtDel(@RequestBody Map<String, Object> params, @CurrentUser Long me) {
+        return postService.setPostCmtDel(params, me);
+    }
+
     @PostMapping("/setPostCmtReact")
     public ResultVO setPostCmtReact(@RequestBody Map<String, Object> params, @CurrentUser Long me) {
         return postService.setPostCmtReact(params, me);
