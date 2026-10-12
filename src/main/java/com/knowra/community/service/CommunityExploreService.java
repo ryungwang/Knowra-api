@@ -57,7 +57,8 @@ public class CommunityExploreService {
     public ResultVO getExploreCommunities(Long me) {
         ResultVO resultVO = new ResultVO();
         try {
-            long userSn = me;
+            // 비로그인도 탐색은 볼 수 있다 (permitAll). 개인화 재료만 비워 둔다.
+            Long userSn = me;
 
             List<Map<String, Object>> candidates = fetchCandidatesFiltered(userSn, Map.of());
             if (candidates.isEmpty()) {
@@ -68,10 +69,10 @@ public class CommunityExploreService {
                 return resultVO;
             }
 
-            Map<Long, Double>              interestMap     = buildInterestMap(userSn);
-            Map<Long, Double>              userTagScores   = buildTagScoreMap(userSn);
-            Set<Long>                      joinedSet       = fetchJoinedSet(userSn);
-            Set<Long>                      recentVisited   = fetchRecentlyVisitedSet(userSn);
+            Map<Long, Double>              interestMap     = userSn != null ? buildInterestMap(userSn)         : Map.of();
+            Map<Long, Double>              userTagScores   = userSn != null ? buildTagScoreMap(userSn)         : Map.of();
+            Set<Long>                      joinedSet       = userSn != null ? fetchJoinedSet(userSn)           : Set.of();
+            Set<Long>                      recentVisited   = userSn != null ? fetchRecentlyVisitedSet(userSn)  : Set.of();
             Map<Long, QualityStat>         qualityMap      = fetchQualityStats();
             Map<Long, Map<Long, Double>>   commTagWeights  = fetchCommunityTagWeights();
 

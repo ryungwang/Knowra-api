@@ -129,7 +129,8 @@ public class CommunityService {
         ResultVO resultVO = new ResultVO();
 
         try {
-            long userSn = me;
+            // 비로그인도 볼 수 있는 화면이다 (permitAll). me 가 null 이면 멤버십·행동로그만 건너뛴다.
+            Long userSn = me;
 
             QTblComFile qLogoFile = new QTblComFile("logoFile");
             QTblComFile qBannerFile = new QTblComFile("bannerFile");
@@ -157,11 +158,13 @@ public class CommunityService {
                     ).and(qBannerFile.atchFilePathNm.contains("banner")))
                 .fetchOne();
 
-            TblCommMbr myMember = tblComm.getMembers().stream()
+            TblCommMbr myMember = userSn == null ? null : tblComm.getMembers().stream()
                     .filter(m -> m.getUserSn() == userSn)
                     .findFirst().orElse(null);
 
-            actionLogService.log(userSn, TblUserActionLog.TARGET_COMM, tblComm.getCommSn(), TblUserActionLog.ACTION_VIEW);
+            if (userSn != null) {
+                actionLogService.log(userSn, TblUserActionLog.TARGET_COMM, tblComm.getCommSn(), TblUserActionLog.ACTION_VIEW);
+            }
 
             resultVO.putResult("community", tblComm);
             resultVO.putResult("logoFile", logoFile);
@@ -332,7 +335,7 @@ public class CommunityService {
         PaginationInfo paginationInfo = new PaginationInfo();
 
         try {
-            long userSn = me;
+            // 비로그인도 조회 가능 (permitAll) — 이 메서드는 me 를 쓰지 않는다.
 
             QTblComm qTblComm = QTblComm.tblComm;
 
