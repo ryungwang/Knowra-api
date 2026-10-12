@@ -54,10 +54,10 @@ public class CommunityExploreService {
     // ─────────────────────────────────────────────────────────────────────
     // 맞춤 10 + 인기 10
     // ─────────────────────────────────────────────────────────────────────
-    public ResultVO getExploreCommunities(String token) {
+    public ResultVO getExploreCommunities(Long me) {
         ResultVO resultVO = new ResultVO();
         try {
-            long userSn = jwtProvider.extractUserSn(token.replace("Bearer ", ""));
+            long userSn = me;
 
             List<Map<String, Object>> candidates = fetchCandidatesFiltered(userSn, Map.of());
             if (candidates.isEmpty()) {
@@ -107,10 +107,10 @@ public class CommunityExploreService {
     // ─────────────────────────────────────────────────────────────────────
     // 일반 필터 20 (offset 기반)
     // ─────────────────────────────────────────────────────────────────────
-    public ResultVO getExploreFilterCommunities(Map<String, Object> params, String token) {
+    public ResultVO getExploreFilterCommunities(Map<String, Object> params, Long me) {
         ResultVO resultVO = new ResultVO();
         try {
-            Long userSn = token != null ? jwtProvider.extractUserSn(token.replace("Bearer ", "")) : null;
+            Long userSn = me;
 
             int page = params.get("pageIndex") != null
                     ? Integer.parseInt(params.get("pageIndex").toString()) : 0;

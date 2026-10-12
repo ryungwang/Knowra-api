@@ -3,20 +3,23 @@ package com.knowra.user.controller;
 import com.knowra.cmm.model.ResultVO;
 import com.knowra.common.util.ComUtil;
 import com.knowra.user.service.AuthService;
-import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.multipart.MultipartHttpServletRequest;
 
 import java.util.Map;
 
 /**
- * 인증 API 컨트롤러
- * <p>로그인, 로그아웃, 토큰 갱신, 회원가입 엔드포인트를 제공한다.</p>
+ * 인증 API — 로그인, 로그아웃, 토큰 갱신, 회원가입.
+ *
+ * <p>리프레시 토큰은 응답 본문이 아니라 <b>HttpOnly 쿠키</b>({@code /api/auth} 경로)로
+ * 오간다. 프론트는 액세스 토큰만 메모리에 들고, 갱신·로그아웃은 {@code credentials:'include'}
+ * 로 호출한다.
+ *
+ * <p>예전에 있던 {@code GET /encode}(고정 문자열의 BCrypt 를 돌려주던 개발용)는 지웠다 —
+ * 공개 저장소·공개 엔드포인트에 둘 것이 아니다.
  */
 @RestController
 @RequestMapping("/api/auth")
@@ -25,84 +28,34 @@ public class AuthController {
 
     private final AuthService authService;
 
-    /**
-     * 비밀번호 BCrypt 인코딩 (개발용)
-     *
-     * @return 인코딩된 비밀번호 문자열
-     */
-    @GetMapping("/encode")
-    public String encode() {
-        PasswordEncoder encoder = new BCryptPasswordEncoder();
-        return encoder.encode("1111");
-    }
-
-    /**
-     * 로그인
-     * <p>아이디·비밀번호를 검증하고 Access/Refresh 토큰을 발급한다.</p>
-     *
-     * @param params {@code loginId}, {@code password} 포함
-     * @return Access Token, Refresh Token
-     */
     @PostMapping("/login")
-    public ResultVO login(@RequestBody Map<String, String> params, HttpServletRequest request) {
-        return authService.login(params, ComUtil.extractClientIp(request));
+    public ResultVO login(@RequestBody Map<String, String> params,
+                          HttpServletRequest request, HttpServletResponse response) {
+        return authService.login(params, ComUtil.extractClientIp(request), response);
     }
 
     @PostMapping("/snsLogin")
-    public ResultVO snsLogin(@RequestBody Map<String, String> params, HttpServletRequest request) {
-        return authService.snsLogin(params, ComUtil.extractClientIp(request));
+    public ResultVO snsLogin(@RequestBody Map<String, String> params,
+                             HttpServletRequest request, HttpServletResponse response) {
+        return authService.snsLogin(params, ComUtil.extractClientIp(request), response);
     }
 
-    /**
-     * 로그아웃
-     * <p>Authorization 헤더의 토큰을 무효화하고 Redis 세션을 삭제한다.</p>
-     *
-     * @param request Authorization 헤더에 Bearer 토큰 포함
-     * @return 처리 결과
-     */
+    /** Authorization 헤더의 액세스 토큰과 쿠키의 리프레시 토큰을 폐기하고 쿠키를 지운다. */
     @PostMapping("/logout")
-    public ResultVO logout(HttpServletRequest request) {
-        String token = request.getHeader("Authorization");
-        return authService.logout(token);
+    public ResultVO logout(HttpServletRequest request, HttpServletResponse response) {
+        return authService.logout(request.getHeader("Authorization"), request, response);
     }
 
-    /**
-     * Access Token 갱신
-     * <p>Refresh Token을 검증하고 새 Access Token을 발급한다.</p>
-     *
-     * @param request {@code refreshToken} 포함
-     * @return 새 Access Token
-     */
+    /** 쿠키의 리프레시 토큰으로 새 액세스 토큰을 발급하고 리프레시 토큰도 회전한다. */
     @PostMapping("/refresh")
-    public ResultVO refresh(@RequestBody Map<String, String> request) {
-        return authService.refresh(request);
+    public ResultVO refresh(HttpServletRequest request, HttpServletResponse response) {
+        return authService.refresh(request, response);
     }
 
-    /**
-     * 회원가입
-     *
-     * @param params 회원 정보 (아이디, 비밀번호, 이름 등)
-     * @return 처리 결과
-     */
     @PostMapping("/join")
-    public ResultVO join(@RequestParam Map<String, Object> params, @RequestParam(required = false) MultipartFile profileImage, HttpServletRequest request) {
-        return authService.join(params, ComUtil.extractClientIp(request), profileImage);
+    public ResultVO join(@RequestParam Map<String, Object> params,
+                         @RequestParam(required = false) MultipartFile profileImage,
+                         HttpServletRequest request, HttpServletResponse response) {
+        return authService.join(params, ComUtil.extractClientIp(request), profileImage, response);
     }
-
-    //    @PostMapping("/api/auth/setRedisSession")
-//    public ResultVO setRedisSession(@RequestBody Map<String, Object> params) {
-//        return loginService.setRedisSession(params);
-//    }
-//
-//    @PostMapping("/api/auth/getEmailDuplicationCheck")
-//    public ResultVO getEmailDuplicationCheck(@RequestBody Map<String, Object> params) {
-//        return loginService.getEmailDuplicationCheck(params);
-//    }
-//
-
-
-    //    @PostMapping("/api/auth/logOut")
-//    public ResultVO logOut(@RequestBody Map<String, Object> params, HttpServletRequest request) {
-//        return loginService.logOut(params, request);
-//    }
 }

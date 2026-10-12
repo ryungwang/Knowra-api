@@ -1,11 +1,11 @@
 package com.knowra.user.controller;
 
 import com.knowra.cmm.model.ResultVO;
+import com.knowra.cmm.security.CurrentUser;
 import com.knowra.community.entity.TblComm;
 import com.knowra.community.service.CommunityService;
 import com.knowra.user.entity.TblUserStng;
 import com.knowra.user.service.UserService;
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -16,7 +16,6 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.Map;
 
 @RestController
-@CrossOrigin("*")
 @RequiredArgsConstructor
 public class UserController {
 
@@ -25,61 +24,61 @@ public class UserController {
     private final CommunityService communityService;
 
     @PostMapping("/api/user/getUserProfile")
-    public ResultVO getUserProfile(@RequestBody Map<String, Object> params, HttpServletRequest request) {
-        return userService.getUserProfile(params, request.getHeader("Authorization"));
+    public ResultVO getUserProfile(@RequestBody Map<String, Object> params, @CurrentUser Long me) {
+        return userService.getUserProfile(params, me);
     }
 
     @PostMapping("/api/user/setUserInfo")
     public ResultVO setUserInfo(@RequestParam Map<String, Object> params,
                                 @RequestParam(required = false) MultipartFile profileImage,
-                                HttpServletRequest request) {
-        return userService.setUserInfo(params, profileImage, request.getHeader("Authorization"));
+                                @CurrentUser Long me) {
+        return userService.setUserInfo(params, profileImage, me);
     }
 
     @PostMapping("/api/user/setUserSetting")
     public ResultVO setUserSetting(@RequestBody TblUserStng tblUserStng,
-                                   HttpServletRequest request) {
-        return userService.setUserSetting(tblUserStng, request.getHeader("Authorization"));
+                                   @CurrentUser Long me) {
+        return userService.setUserSetting(tblUserStng, me);
     }
 
     @PostMapping("/api/user/getUserPostList")
-    public ResultVO getUserPostList(@RequestBody Map<String, Object> params, HttpServletRequest request) {
-        return userService.getUserPostList(params, request.getHeader("Authorization"));
+    public ResultVO getUserPostList(@RequestBody Map<String, Object> params, @CurrentUser Long me) {
+        return userService.getUserPostList(params, me);
     }
 
     @PostMapping("/api/user/getUserFollowerList")
-    public ResultVO getUserFollowerList(@RequestBody Map<String, Object> params, HttpServletRequest request) {
-        return userService.getUserFollowerList(params, request.getHeader("Authorization"));
+    public ResultVO getUserFollowerList(@RequestBody Map<String, Object> params, @CurrentUser Long me) {
+        return userService.getUserFollowerList(params, me);
     }
 
     @PostMapping("/api/user/getUserFollowingList")
-    public ResultVO getUserFollowingList(@RequestBody Map<String, Object> params, HttpServletRequest request) {
-        return userService.getUserFollowingList(params, request.getHeader("Authorization"));
+    public ResultVO getUserFollowingList(@RequestBody Map<String, Object> params, @CurrentUser Long me) {
+        return userService.getUserFollowingList(params, me);
     }
 
     @PostMapping("/api/user/setFollow")
-    public ResultVO setFollow(@RequestBody Map<String, Object> params, HttpServletRequest request) {
-        return userService.setFollow(params, request.getHeader("Authorization"));
+    public ResultVO setFollow(@RequestBody Map<String, Object> params, @CurrentUser Long me) {
+        return userService.setFollow(params, me);
     }
 
     @PostMapping("/api/user/changePassword")
-    public ResultVO changePassword(@RequestBody Map<String, Object> params, HttpServletRequest request) {
-        return userService.changePassword(params, request.getHeader("Authorization"));
+    public ResultVO changePassword(@RequestBody Map<String, Object> params, @CurrentUser Long me) {
+        return userService.changePassword(params, me);
     }
 
     @PostMapping("/api/user/deleteAccount")
-    public ResultVO deleteAccount(@RequestBody Map<String, Object> params, HttpServletRequest request) {
-        return userService.deleteAccount(params, request.getHeader("Authorization"));
+    public ResultVO deleteAccount(@RequestBody Map<String, Object> params, @CurrentUser Long me) {
+        return userService.deleteAccount(params, me);
     }
 
     @PostMapping("/api/user/getMyTagList")
-    public ResultVO getMyTagList(HttpServletRequest request) {
-        return userService.getMyTagList(request.getHeader("Authorization"));
+    public ResultVO getMyTagList(@CurrentUser Long me) {
+        return userService.getMyTagList(me);
     }
 
     @PostMapping("/api/user/getMyTagPostList")
-    public ResultVO getMyTagPostList(@RequestBody Map<String, Object> params, HttpServletRequest request) {
-        return userService.getMyTagPostList(params, request.getHeader("Authorization"));
+    public ResultVO getMyTagPostList(@RequestBody Map<String, Object> params, @CurrentUser Long me) {
+        return userService.getMyTagPostList(params, me);
     }
 
 

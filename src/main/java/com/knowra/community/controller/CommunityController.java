@@ -1,6 +1,7 @@
 package com.knowra.community.controller;
 
 import com.knowra.cmm.model.ResultVO;
+import com.knowra.cmm.security.CurrentUser;
 import com.knowra.community.entity.TblComm;
 import com.knowra.community.service.CommunityExploreService;
 import com.knowra.community.service.CommunityPostService;
@@ -13,7 +14,6 @@ import org.springframework.web.multipart.MultipartHttpServletRequest;
 import java.util.Map;
 
 @RestController
-@CrossOrigin("*")
 @RequiredArgsConstructor
 public class CommunityController {
 
@@ -21,47 +21,40 @@ public class CommunityController {
     private final CommunityExploreService communityExploreService;
 
     @GetMapping("/api/community/getCommunityList")
-    public ResultVO getCommunityList(Map<String, Object> params, HttpServletRequest request) {
-        String token = request.getHeader("Authorization");
-        return communityService.getCommunityList(params, token);
+    public ResultVO getCommunityList(Map<String, Object> params, @CurrentUser Long me) {
+        return communityService.getCommunityList(params, me);
     }
 
     @PostMapping("/api/community/setCommunity")
     public ResultVO setCommunity(
             @ModelAttribute TblComm tblComm,
             MultipartHttpServletRequest request,
-            HttpServletRequest httpServletRequest) {
-        String token = httpServletRequest.getHeader("Authorization");
-        return communityService.setCommunity(tblComm, request, token);
+            @CurrentUser Long me) {
+        return communityService.setCommunity(tblComm, request, me);
     }
 
     @GetMapping("/api/community/getCommunity")
-    public ResultVO getCommunity(@RequestParam("commNm") String commNm, HttpServletRequest request) {
-        String token = request.getHeader("Authorization");
-        return communityService.getCommunity(commNm, token);
+    public ResultVO getCommunity(@RequestParam("commNm") String commNm, @CurrentUser Long me) {
+        return communityService.getCommunity(commNm, me);
     }
 
     @PostMapping("/api/community/getMyCommunityList")
-    public ResultVO getMyCommunityList(HttpServletRequest request) {
-        String token = request.getHeader("Authorization");
-        return communityService.getMyCommunityList(token);
+    public ResultVO getMyCommunityList(@CurrentUser Long me) {
+        return communityService.getMyCommunityList(me);
     }
 
     @PostMapping("/api/community/setMember")
-    public ResultVO setMember(@RequestBody Map<String, Object> params, HttpServletRequest request) {
-        String token = request.getHeader("Authorization");
-        return communityService.setMember(params, token);
+    public ResultVO setMember(@RequestBody Map<String, Object> params, @CurrentUser Long me) {
+        return communityService.setMember(params, me);
     }
 
     @GetMapping("/api/community/explore")
-    public ResultVO getExploreCommunities(HttpServletRequest request) {
-        String token = request.getHeader("Authorization");
-        return communityExploreService.getExploreCommunities(token);
+    public ResultVO getExploreCommunities(@CurrentUser Long me) {
+        return communityExploreService.getExploreCommunities(me);
     }
 
     @GetMapping("/api/community/explore/filter")
-    public ResultVO getExploreFilterCommunities(@RequestParam Map<String, Object> params, HttpServletRequest request) {
-        String token = request.getHeader("Authorization");
-        return communityExploreService.getExploreFilterCommunities(params, token);
+    public ResultVO getExploreFilterCommunities(@RequestParam Map<String, Object> params, @CurrentUser Long me) {
+        return communityExploreService.getExploreFilterCommunities(params, me);
     }
 }

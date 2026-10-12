@@ -61,11 +61,11 @@ public class CommunityService {
     private int pageUnit;
 
 
-    public ResultVO setCommunity(TblComm tblComm, MultipartHttpServletRequest request, String token) {
+    public ResultVO setCommunity(TblComm tblComm, MultipartHttpServletRequest request, Long me) {
         ResultVO resultVO = new ResultVO();
 
         try {
-            long userSn = jwtProvider.extractUserSn(token.replace("Bearer ", ""));
+            long userSn = me;
 
             if (tblCommRepository.findByCommNm(tblComm.getCommNm()) != null) {
                 resultVO.setResultCode(ResponseCode.COMMUNITY_NAME_DUPLICATE.getCode());
@@ -125,11 +125,11 @@ public class CommunityService {
         return resultVO;
     }
 
-    public ResultVO getCommunity(String commNm, String token) {
+    public ResultVO getCommunity(String commNm, Long me) {
         ResultVO resultVO = new ResultVO();
 
         try {
-            long userSn = jwtProvider.extractUserSn(token.replace("Bearer ", ""));
+            long userSn = me;
 
             QTblComFile qLogoFile = new QTblComFile("logoFile");
             QTblComFile qBannerFile = new QTblComFile("bannerFile");
@@ -179,11 +179,11 @@ public class CommunityService {
         return resultVO;
     }
 
-    public ResultVO getMyCommunityList(String token) {
+    public ResultVO getMyCommunityList(Long me) {
         ResultVO resultVO = new ResultVO();
 
         try {
-            long userSn = jwtProvider.extractUserSn(token.replace("Bearer ", ""));
+            long userSn = me;
 
             QTblComm    qComm = QTblComm.tblComm;
             QTblCommMbr qMbr  = QTblCommMbr.tblCommMbr;
@@ -229,11 +229,11 @@ public class CommunityService {
         return resultVO;
     }
 
-    public ResultVO setMember(Map<String, Object> params, String token) {
+    public ResultVO setMember(Map<String, Object> params, Long me) {
         ResultVO resultVO = new ResultVO();
 
         try {
-            long userSn = jwtProvider.extractUserSn(token.replace("Bearer ", ""));
+            long userSn = me;
 
             TblComm tblComm = tblCommRepository.findByCommSn(
                     Long.valueOf(params.get("commSn").toString()));
@@ -327,12 +327,12 @@ public class CommunityService {
         return resultVO;
     }
 
-    public ResultVO getCommunityList(Map<String, Object> params, String token) {
+    public ResultVO getCommunityList(Map<String, Object> params, Long me) {
         ResultVO resultVO = new ResultVO();
         PaginationInfo paginationInfo = new PaginationInfo();
 
         try {
-            long userSn = jwtProvider.extractUserSn(token.replace("Bearer ", ""));
+            long userSn = me;
 
             QTblComm qTblComm = QTblComm.tblComm;
 

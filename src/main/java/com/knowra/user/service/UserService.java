@@ -86,12 +86,12 @@ public class UserService {
                 .orElseThrow(() -> new IllegalStateException("User not found: " + loginId));
     }
 
-    public ResultVO getUserProfile(Map<String, Object> params, String token) {
+    public ResultVO getUserProfile(Map<String, Object> params, Long me) {
         ResultVO resultVO = new ResultVO();
 
         try {
             JPAQueryFactory q = new JPAQueryFactory(em);
-            Long userSn = token != null ? jwtProvider.extractUserSn(token.replace("Bearer ", "")) : null;
+            Long userSn = me;
             String nickName = params.get("nickName").toString();
 
             TblUser tblUser = tblUserRepository.findByNickName(nickName).orElseThrow();
@@ -120,11 +120,11 @@ public class UserService {
     }
 
 
-    public ResultVO setUserInfo(Map<String, Object> params, MultipartFile profileImage, String token) {
+    public ResultVO setUserInfo(Map<String, Object> params, MultipartFile profileImage, Long me) {
         ResultVO resultVO = new ResultVO();
 
         try {
-            Long userSn = jwtProvider.extractUserSn(token.replace("Bearer ", ""));
+            Long userSn = me;
 
             TblUser tblUser = tblUserRepository.findByUserSn(userSn);
             tblUser.setName(ComUtil.getStrValue(params.get("name")));
@@ -145,12 +145,10 @@ public class UserService {
 
             profileImageSave(profileImage, tblUser, fileUtil, tblComFileRepository, tblUserRepository);
 
-            boolean pfpChanged = params.get("removeProfileImage") != null || profileImage != null;
-            if (pfpChanged) {
-                String loginId = jwtProvider.extractLoginId(token.replace("Bearer ", ""));
-                resultVO.putResult("accessToken",  jwtProvider.generateAccessToken(userSn, loginId));
-                resultVO.putResult("refreshToken", jwtProvider.generateRefreshToken(userSn, loginId));
-            }
+            // 토큰에 nickName 이 들어 있어, 프로필을 고쳤으면 액세스 토큰을 새로 내려준다.
+            // 리프레시 토큰은 쿠키에 그대로 있으니 건드리지 않는다. 예전엔 프로필 사진 URL 이
+            // 토큰에 박혀 있어 사진만 바꿔도 토큰 둘을 다 재발급했다 — 그 클레임은 뺐다.
+            resultVO.putResult("accessToken", jwtProvider.generateAccessToken(userSn, tblUser.getLoginId()));
 
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
             resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
@@ -163,11 +161,11 @@ public class UserService {
         return resultVO;
     }
 
-    public ResultVO setUserSetting(TblUserStng tblUserStng, String token) {
+    public ResultVO setUserSetting(TblUserStng tblUserStng, Long me) {
         ResultVO resultVO = new ResultVO();
 
         try {
-            Long userSn = jwtProvider.extractUserSn(token.replace("Bearer ", ""));
+            Long userSn = me;
 
             if(tblUserStng.getUserStngSn() == null){
                 /** 헤더에서 테마 변견시 */
@@ -210,7 +208,7 @@ public class UserService {
         }
     }
 
-    public ResultVO getUserPostList(Map<String, Object> params, String token) {
+    public ResultVO getUserPostList(Map<String, Object> params, Long me) {
         ResultVO resultVO = new ResultVO();
         try {
             if (params.get("nickName") == null) {
@@ -221,7 +219,7 @@ public class UserService {
                 return resultVO;
             }
             long userSn          = getUserSn(params.get("nickName").toString());
-            Long viewerUserSn    = token != null ? jwtProvider.extractUserSn(token.replace("Bearer ", "")) : null;
+            Long viewerUserSn = me;
             LocalDateTime cursor = params.get("cursor") != null
                     ? LocalDateTime.parse(params.get("cursor").toString()) : null;
             int size             = params.get("size") != null ? Integer.parseInt(params.get("size").toString()) : 20;
@@ -233,7 +231,7 @@ public class UserService {
             postParams.put("userSn", userSn);
             postParams.put("cursor", cursor != null ? cursor.toString() : null);
             postParams.put("size",   size);
-            ResultVO postResult = postService.getPostList(postParams, token);
+            ResultVO postResult = postService.getPostList(postParams, me);
             @SuppressWarnings("unchecked")
             List<Map<String, Object>> posts = (List<Map<String, Object>>) postResult.getResult("list");
 
@@ -260,10 +258,10 @@ public class UserService {
     }
 
     // ── 팔로워 목록 (나를 팔로우하는 사람들) ───────────────────────────────
-    public ResultVO getUserFollowerList(Map<String, Object> params, String token) {
+    public ResultVO getUserFollowerList(Map<String, Object> params, Long me) {
         ResultVO resultVO = new ResultVO();
         try {
-            Long myUserSn     = token != null ? jwtProvider.extractUserSn(token.replace("Bearer ", "")) : null;
+            Long myUserSn = me;
             long targetUserSn = getUserSn(params.get("nickName").toString());
 
             QTblUserFlwr qFlwr     = QTblUserFlwr.tblUserFlwr;
@@ -305,10 +303,10 @@ public class UserService {
     }
 
     // ── 팔로잉 목록 (내가 팔로우하는 사람들) ───────────────────────────────
-    public ResultVO getUserFollowingList(Map<String, Object> params, String token) {
+    public ResultVO getUserFollowingList(Map<String, Object> params, Long me) {
         ResultVO resultVO = new ResultVO();
         try {
-            Long myUserSn     = token != null ? jwtProvider.extractUserSn(token.replace("Bearer ", "")) : null;
+            Long myUserSn = me;
             long targetUserSn = getUserSn(params.get("nickName").toString());
 
             QTblUserFlwr qFlwr     = QTblUserFlwr.tblUserFlwr;
@@ -349,10 +347,10 @@ public class UserService {
     }
 
     // ── 팔로우 / 언팔로우 토글 ─────────────────────────────────────────────
-    public ResultVO setFollow(Map<String, Object> params, String token) {
+    public ResultVO setFollow(Map<String, Object> params, Long me) {
         ResultVO resultVO = new ResultVO();
         try {
-            long myUserSn     = jwtProvider.extractUserSn(token.replace("Bearer ", ""));
+            long myUserSn = me;
             long targetUserSn = getUserSn(params.get("nickName").toString());
 
             if (myUserSn == targetUserSn) {
@@ -412,11 +410,11 @@ public class UserService {
                 .fetch());
     }
 
-    public ResultVO changePassword(Map<String, Object> params, String authorization) {
+    public ResultVO changePassword(Map<String, Object> params, Long me) {
         ResultVO resultVO = new ResultVO();
 
         try {
-            long userSn = jwtProvider.extractUserSn(authorization.replace("Bearer ", ""));
+            long userSn = me;
             TblUser tblUser = tblUserRepository.findById(userSn).orElseThrow();
 
             String currentPw = params.get("currentPw").toString();
@@ -453,11 +451,11 @@ public class UserService {
         return resultVO;
     }
 
-    public ResultVO deleteAccount(Map<String, Object> params, String authorization) {
+    public ResultVO deleteAccount(Map<String, Object> params, Long me) {
         ResultVO resultVO = new ResultVO();
 
         try {
-            long userSn = jwtProvider.extractUserSn(authorization.replace("Bearer ", ""));
+            long userSn = me;
             TblUser tblUser = tblUserRepository.findById(userSn).orElseThrow();
 
             String password = params.get("password").toString();
@@ -482,11 +480,11 @@ public class UserService {
         return resultVO;
     }
 
-    public ResultVO getMyTagList(String token) {
+    public ResultVO getMyTagList(Long me) {
         ResultVO resultVO = new ResultVO();
 
         try {
-            long userSn = jwtProvider.extractUserSn(token.replace("Bearer ", ""));
+            long userSn = me;
 
             QTblUserTag qUserTag = QTblUserTag.tblUserTag;
             QTblTag qTag = QTblTag.tblTag;
@@ -517,11 +515,11 @@ public class UserService {
         return resultVO;
     }
 
-    public ResultVO getMyTagPostList(Map<String, Object> params, String token) {
+    public ResultVO getMyTagPostList(Map<String, Object> params, Long me) {
         ResultVO resultVO = new ResultVO();
 
         try {
-            long userSn           = jwtProvider.extractUserSn(token.replace("Bearer ", ""));
+            long userSn = me;
             long tagSn            = Long.parseLong(params.get("tagSn").toString());
             LocalDateTime cursor  = params.get("cursor") != null ? LocalDateTime.parse(params.get("cursor").toString()) : null;
             int size              = params.get("size") != null ? Integer.parseInt(params.get("size").toString()) : 50;

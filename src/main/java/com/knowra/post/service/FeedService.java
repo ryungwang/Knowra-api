@@ -66,39 +66,38 @@ public class FeedService {
     // ─────────────────────────────────────────────────────────────────────
     // 홈 피드 (전체 개인화)
     // ─────────────────────────────────────────────────────────────────────
-    public ResultVO getPersonalizedFeed(Map<String, Object> params, String token) {
-        return buildFeed(params, token, "PERSONALIZED");
+    public ResultVO getPersonalizedFeed(Map<String, Object> params, Long me) {
+        return buildFeed(params, me, "PERSONALIZED");
     }
 
     // ─────────────────────────────────────────────────────────────────────
     // 팔로잉 피드
     // ─────────────────────────────────────────────────────────────────────
-    public ResultVO getFollowingFeed(Map<String, Object> params, String token) {
-        return buildFeed(params, token, "FOLLOWING");
+    public ResultVO getFollowingFeed(Map<String, Object> params, Long me) {
+        return buildFeed(params, me, "FOLLOWING");
     }
 
     // ─────────────────────────────────────────────────────────────────────
     // 인기 피드
     // ─────────────────────────────────────────────────────────────────────
-    public ResultVO getPopularFeed(Map<String, Object> params, String token) {
-        return buildFeed(params, token, "POPULAR");
+    public ResultVO getPopularFeed(Map<String, Object> params, Long me) {
+        return buildFeed(params, me, "POPULAR");
     }
 
     // ─────────────────────────────────────────────────────────────────────
     // 최신 피드
     // ─────────────────────────────────────────────────────────────────────
-    public ResultVO getLatestFeed(Map<String, Object> params, String token) {
-        return buildFeed(params, token, "LATEST");
+    public ResultVO getLatestFeed(Map<String, Object> params, Long me) {
+        return buildFeed(params, me, "LATEST");
     }
 
     // ─────────────────────────────────────────────────────────────────────
     // 공통 피드 빌더
     // ─────────────────────────────────────────────────────────────────────
-    private ResultVO buildFeed(Map<String, Object> params, String token, String mode) {
+    private ResultVO buildFeed(Map<String, Object> params, Long me, String mode) {
         ResultVO resultVO = new ResultVO();
         try {
-            Long userSn = token != null
-                    ? jwtProvider.extractUserSn(token.replace("Bearer ", "")) : null;
+            Long userSn = me;
             int page = params.get("pageIndex") != null
                     ? Integer.parseInt(params.get("pageIndex").toString()) : 0;
 

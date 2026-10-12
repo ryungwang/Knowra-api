@@ -70,12 +70,12 @@ public class CommunityPostService {
     @Value("${Globals.pageUnit}")
     private int pageUnit;
 
-    public ResultVO setCommPost(Map<String, Object> params, String token) {
+    public ResultVO setCommPost(Map<String, Object> params, Long me) {
 
         ResultVO resultVO = new ResultVO();
 
         try {
-            long userSn = jwtProvider.extractUserSn(token.replace("Bearer ", ""));
+            long userSn = me;
 
             TblCommPost tblCommPost;
             if(params.get("commPostSn") != null){
@@ -117,11 +117,11 @@ public class CommunityPostService {
         return resultVO;
     }
 
-    public ResultVO getCommPostList(Map<String, Object> params, String token) {
+    public ResultVO getCommPostList(Map<String, Object> params, Long me) {
         ResultVO resultVO = new ResultVO();
 
         try {
-            Long userSn = token != null ? jwtProvider.extractUserSn(token.replace("Bearer ", "")) : null;
+            Long userSn = me;
             JPAQueryFactory q = new JPAQueryFactory(em);
 
             long commSn = Long.parseLong(params.get("commSn").toString());
@@ -267,11 +267,11 @@ public class CommunityPostService {
         return resultVO;
     }
 
-    public ResultVO getCommPost(TblCommPost tblCommPost, String token) {
+    public ResultVO getCommPost(TblCommPost tblCommPost, Long me) {
         ResultVO resultVO = new ResultVO();
 
         try {
-            Long userSn = token != null ? jwtProvider.extractUserSn(token.replace("Bearer ", "")) : null;
+            Long userSn = me;
             JPAQueryFactory q = new JPAQueryFactory(em);
             long commPostSn = tblCommPost.getCommPostSn();
 
@@ -350,10 +350,10 @@ public class CommunityPostService {
         return resultVO;
     }
 
-    public ResultVO getCommPostCmtList(Map<String, Object> params, String token) {
+    public ResultVO getCommPostCmtList(Map<String, Object> params, Long me) {
         ResultVO resultVO = new ResultVO();
         try {
-            Long userSn = token != null ? jwtProvider.extractUserSn(token.replace("Bearer ", "")) : null;
+            Long userSn = me;
             JPAQueryFactory q = new JPAQueryFactory(em);
 
             long commPostSn = Long.parseLong(params.get("commPostSn").toString());
@@ -464,13 +464,13 @@ public class CommunityPostService {
         return resultVO;
     }
 
-    public ResultVO setCommPostLike(Map<String, Object> params, String token) {
+    public ResultVO setCommPostLike(Map<String, Object> params, Long me) {
         ResultVO resultVO = new ResultVO();
 
         try {
             JPAQueryFactory q = new JPAQueryFactory(em);
 
-            long userSn = jwtProvider.extractUserSn(token.replace("Bearer ", ""));
+            long userSn = me;
             long commPostSn = Long.parseLong(params.get("commPostSn").toString());
             String postLike = params.get("postLike").toString().toUpperCase();
 
@@ -538,10 +538,10 @@ public class CommunityPostService {
         return resultVO;
     }
 
-    public ResultVO setCommPostCmtReact(Map<String, Object> params, String token) {
+    public ResultVO setCommPostCmtReact(Map<String, Object> params, Long me) {
         ResultVO resultVO = new ResultVO();
         try {
-            long userSn      = jwtProvider.extractUserSn(token.replace("Bearer ", ""));
+            long userSn = me;
             long commPostCmtSn = Long.parseLong(params.get("commPostCmtSn").toString());
             String reactTyp  = params.get("reactTyp").toString();
 
@@ -573,10 +573,10 @@ public class CommunityPostService {
         return resultVO;
     }
 
-    public ResultVO setCommPostCmt(Map<String, Object> params, String token) {
+    public ResultVO setCommPostCmt(Map<String, Object> params, Long me) {
         ResultVO resultVO = new ResultVO();
         try {
-            long userSn = jwtProvider.extractUserSn(token.replace("Bearer ", ""));
+            long userSn = me;
             long commPostSn = Long.parseLong(params.get("commPostSn").toString());
             Long prntCmtSn = params.get("prntCmtSn") != null
                     ? Long.parseLong(params.get("prntCmtSn").toString()) : null;

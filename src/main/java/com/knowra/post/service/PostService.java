@@ -62,11 +62,11 @@ public class PostService {
     private final ApplicationEventPublisher eventPublisher;
     private static final int REDIS_DB = 15;
 
-    public ResultVO setPost(Map<String, Object> params, String token) {
+    public ResultVO setPost(Map<String, Object> params, Long me) {
         ResultVO resultVO = new ResultVO();
 
         try {
-            long userSn = jwtProvider.extractUserSn(token.replace("Bearer ", ""));
+            long userSn = me;
 
             TblPost tblPost;
             if(params.get("commPostSn") != null){
@@ -106,11 +106,11 @@ public class PostService {
         return resultVO;
     }
 
-    public ResultVO getPost(TblPost tblPost, String token) {
+    public ResultVO getPost(TblPost tblPost, Long me) {
         ResultVO resultVO = new ResultVO();
 
         try {
-            Long userSn = token != null ? jwtProvider.extractUserSn(token.replace("Bearer ", "")) : null;
+            Long userSn = me;
             JPAQueryFactory q = new JPAQueryFactory(em);
             long postSn = tblPost.getPostSn();
 
@@ -171,15 +171,15 @@ public class PostService {
         return resultVO;
     }
 
-    public ResultVO viewPost(Map<String, Object> params, String token) {
+    public ResultVO viewPost(Map<String, Object> params, Long me) {
         ResultVO resultVO = new ResultVO();
         try {
             long postSn = Long.parseLong(params.get("postSn").toString());
             String type = params.get("type").toString();
             redisApiService.incrementViewCount(REDIS_DB, type, postSn);
 
-            if (token != null) {
-                long userSn = jwtProvider.extractUserSn(token.replace("Bearer ", ""));
+            if (me != null) {
+                long userSn = me;
                 String targetType = "comm".equalsIgnoreCase(type) ? TblUserActionLog.TARGET_COMM_POST : TblUserActionLog.TARGET_POST;
                 actionLogService.log(userSn, targetType, postSn, TblUserActionLog.ACTION_VIEW);
             }
@@ -194,13 +194,13 @@ public class PostService {
         return resultVO;
     }
 
-    public ResultVO setPostLike(Map<String, Object> params, String token) {
+    public ResultVO setPostLike(Map<String, Object> params, Long me) {
         ResultVO resultVO = new ResultVO();
 
         try {
             JPAQueryFactory q = new JPAQueryFactory(em);
 
-            long userSn = jwtProvider.extractUserSn(token.replace("Bearer ", ""));
+            long userSn = me;
             long postSn = Long.parseLong(params.get("postSn").toString());
             String postLike = params.get("postLike").toString().toUpperCase();
 
@@ -268,11 +268,11 @@ public class PostService {
         return resultVO;
     }
 
-    public ResultVO setPostCmt(Map<String, Object> params, String token) {
+    public ResultVO setPostCmt(Map<String, Object> params, Long me) {
         ResultVO resultVO = new ResultVO();
 
         try {
-            long userSn = jwtProvider.extractUserSn(token.replace("Bearer ", ""));
+            long userSn = me;
             long postSn = Long.parseLong(params.get("postSn").toString());
             Long prntCmtSn = params.get("prntCmtSn") != null
                     ? Long.parseLong(params.get("prntCmtSn").toString()) : null;
@@ -316,11 +316,11 @@ public class PostService {
         return resultVO;
     }
 
-    public ResultVO setPostCmtReact(Map<String, Object> params, String token) {
+    public ResultVO setPostCmtReact(Map<String, Object> params, Long me) {
         ResultVO resultVO = new ResultVO();
 
         try {
-            long userSn      = jwtProvider.extractUserSn(token.replace("Bearer ", ""));
+            long userSn = me;
             long postCmtSn = Long.parseLong(params.get("postCmtSn").toString());
             String reactTyp  = params.get("reactTyp").toString();
 
@@ -352,11 +352,11 @@ public class PostService {
         return resultVO;
     }
 
-    public ResultVO setPostDel(Map<String, Object> params, String token) {
+    public ResultVO setPostDel(Map<String, Object> params, Long me) {
         ResultVO resultVO = new ResultVO();
 
         try {
-            long userSn = jwtProvider.extractUserSn(token.replace("Bearer ", ""));
+            long userSn = me;
 
             long postSn = Long.parseLong(params.get("postSn").toString());
 
@@ -386,10 +386,10 @@ public class PostService {
         return resultVO;
     }
 
-    public ResultVO getPostCmtList(Map<String, Object> params, String token) {
+    public ResultVO getPostCmtList(Map<String, Object> params, Long me) {
         ResultVO resultVO = new ResultVO();
         try {
-            Long userSn = token != null ? jwtProvider.extractUserSn(token.replace("Bearer ", "")) : null;
+            Long userSn = me;
             JPAQueryFactory q = new JPAQueryFactory(em);
 
             long postSn = Long.parseLong(params.get("postSn").toString());
@@ -499,11 +499,11 @@ public class PostService {
         return resultVO;
     }
 
-    public ResultVO getPostList(Map<String, Object> params, String token) {
+    public ResultVO getPostList(Map<String, Object> params, Long me) {
         ResultVO resultVO = new ResultVO();
         try {
             Long          userSn       = params.get("userSn") != null ? Long.parseLong(params.get("userSn").toString()) : null;
-            Long          viewerUserSn = token != null ? jwtProvider.extractUserSn(token.replace("Bearer ", "")) : null;
+            Long viewerUserSn = me;
             LocalDateTime cursor       = params.get("cursor") != null ? LocalDateTime.parse(params.get("cursor").toString()) : null;
             int           size         = params.get("size")   != null ? Integer.parseInt(params.get("size").toString()) : 50;
 
@@ -596,11 +596,11 @@ public class PostService {
         return resultVO;
     }
 
-    public ResultVO setPostSave(Map<String, Object> params, String token) {
+    public ResultVO setPostSave(Map<String, Object> params, Long me) {
         ResultVO resultVO = new ResultVO();
 
         try {
-            long userSn = jwtProvider.extractUserSn(token.replace("Bearer ", ""));
+            long userSn = me;
             long postSn = Long.parseLong(params.get("postSn").toString());
             String postKind = params.get("postKind").toString();
             boolean isSave = (boolean) params.get("isSave");
@@ -633,11 +633,11 @@ public class PostService {
         return resultVO;
     }
 
-    public ResultVO getPostSaveList(Map<String, Object> params, String token) {
+    public ResultVO getPostSaveList(Map<String, Object> params, Long me) {
         ResultVO resultVO = new ResultVO();
 
         try {
-            long userSn = jwtProvider.extractUserSn(token.replace("Bearer ", ""));
+            long userSn = me;
 
             JPAQueryFactory  q        = new JPAQueryFactory(em);
             QTblUser         qUser    = QTblUser.tblUser;
