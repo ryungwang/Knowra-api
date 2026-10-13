@@ -309,22 +309,27 @@ public class PostService {
                 if (cursor != null) c = c.and(POST.postSn.lt(cursor));
                 tuples = postQuery.base().where(c).orderBy(POST.postSn.desc()).limit(PAGE_SIZE).fetch();
             } else if (cursor == null) {
-                // 첫 페이지: 공지는 항상 상단 고정, 일반 글은 남은 자리만큼
+                // 첫 페이지: 운영진이 고정한 글 → 공지 → 일반 글. 고정된 글은 아래 목록에서 다시 나오지 않는다.
+                List<Tuple> pinned = postQuery.base()
+                        .where(condition.and(POST.pinnedAt.isNotNull()))
+                        .orderBy(POST.pinnedAt.desc())
+                        .fetch();
                 List<Tuple> notices = postQuery.base()
-                        .where(condition.and(POST.postTyp.eq("NOTICE")))
+                        .where(condition.and(POST.postTyp.eq("NOTICE")).and(POST.pinnedAt.isNull()))
                         .orderBy(POST.postSn.desc())
                         .fetch();
-                int normalLimit = Math.max(PAGE_SIZE - notices.size(), 0);
+                int normalLimit = Math.max(PAGE_SIZE - notices.size() - pinned.size(), 0);
                 List<Tuple> normals = postQuery.base()
-                        .where(condition.and(POST.postTyp.eq("NORMAL")))
+                        .where(condition.and(POST.postTyp.eq("NORMAL")).and(POST.pinnedAt.isNull()))
                         .orderBy(POST.postSn.desc())
                         .limit(normalLimit)
                         .fetch();
-                tuples = new ArrayList<>(notices);
+                tuples = new ArrayList<>(pinned);
+                tuples.addAll(notices);
                 tuples.addAll(normals);
             } else {
                 tuples = postQuery.base()
-                        .where(condition.and(POST.postTyp.eq("NORMAL")).and(POST.postSn.lt(cursor)))
+                        .where(condition.and(POST.postTyp.eq("NORMAL")).and(POST.pinnedAt.isNull()).and(POST.postSn.lt(cursor)))
                         .orderBy(POST.postSn.desc())
                         .limit(PAGE_SIZE)
                         .fetch();
@@ -599,6 +604,40 @@ public class PostService {
                 existing.setReactTyp(reactTyp);                     // 다른 반응으로 전환
             }
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
+        } catch (Exception e) {
+            e.printStackTrace();
+            resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
+            resultVO.setResultMessage(ResponseCode.SAVE_ERROR.getMessage());
+        }
+        return resultVO;
+    }
+
+    public static final int MAX_PINNED = 3;
+
+    /** 커뮤니티 상단 고정/해제 — 그 커뮤니티 운영진(OWNER/ADMIN)만. params: postSn, pin */
+    public ResultVO setPostPin(Map<String, Object> params, Long me) {
+        ResultVO resultVO = new ResultVO();
+        try {
+            long postSn = Long.parseLong(String.valueOf(params.get("postSn")));
+            boolean pin = Boolean.parseBoolean(String.valueOf(params.get("pin")));
+            TblPost post = tblPostRepository.findByPostSn(postSn);
+            if (post == null || !"Y".equals(post.getActvtnYn())) throw new IllegalArgumentException("글을 찾을 수 없어요.");
+            if (post.getCommSn() == null) throw new IllegalArgumentException("커뮤니티 글만 고정할 수 있어요.");
+            if (!isManagerRole(roleIn(post.getCommSn(), me))) throw new IllegalArgumentException("커뮤니티 운영진만 고정할 수 있어요.");
+            if (pin && post.getPinnedAt() == null) {
+                long n = new JPAQueryFactory(em).select(POST.count()).from(POST)
+                        .where(POST.commSn.eq(post.getCommSn()), POST.pinnedAt.isNotNull(), POST.actvtnYn.eq("Y")).fetchOne();
+                if (n >= MAX_PINNED) throw new IllegalArgumentException("고정은 " + MAX_PINNED + "개까지예요. 다른 글을 먼저 풀어 주세요.");
+                post.setPinnedAt(java.time.LocalDateTime.now());
+            } else if (!pin) {
+                post.setPinnedAt(null);
+            }
+            tblPostRepository.save(post);
+            resultVO.putResult("pinned", post.getPinnedAt() != null);
+            resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
+        } catch (IllegalArgumentException e) {
+            resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
+            resultVO.setResultMessage(e.getMessage());
         } catch (Exception e) {
             e.printStackTrace();
             resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());

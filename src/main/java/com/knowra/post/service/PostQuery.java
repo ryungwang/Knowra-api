@@ -93,6 +93,7 @@ public class PostQuery {
                 p.getViewCnt(), p.getLikeCnt(), p.getCmtCnt(),
                 null, false);
         dto.setPfpUrl(pfpUrl(t));
+        dto.setPinned(p.getPinnedAt() != null);
         return dto;
     }
 

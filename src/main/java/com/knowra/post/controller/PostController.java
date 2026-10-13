@@ -46,6 +46,12 @@ public class PostController {
         return postService.setPostLike(params, me);
     }
 
+    /** body: postSn, pin — 커뮤니티 운영진만 */
+    @PostMapping("/setPostPin")
+    public ResultVO setPostPin(@RequestBody Map<String, Object> params, @CurrentUser Long me) {
+        return postService.setPostPin(params, me);
+    }
+
     @PostMapping("/setPostCmt")
     public ResultVO setPostCmt(@RequestBody Map<String, Object> params, @CurrentUser Long me) {
         return postService.setPostCmt(params, me);

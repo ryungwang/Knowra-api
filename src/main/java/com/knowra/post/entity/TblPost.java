@@ -44,4 +44,8 @@ public class TblPost extends BasePostEntity {
     @Column(name = "COMM_SN")
     @Comment("커뮤니티 SN (tbl_comm 논리 참조) — NULL 이면 전체 공개 글")
     private Long commSn;
+
+    /** 커뮤니티 상단 고정 시각. NULL 이면 고정 아님. 커뮤니티 운영진만, 커뮤니티당 최대 3개. */
+    @Column(name = "PINNED_AT")
+    private java.time.LocalDateTime pinnedAt;
 }
