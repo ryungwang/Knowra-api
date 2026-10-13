@@ -102,7 +102,7 @@ public class NotificationEventListener {
             case "LIKE" -> st.getLikeNtfctnYn();
             case "COMMENT", "REPLY", "MENTION" -> st.getCmtNtfctnYn();
             case "FOLLOW" -> st.getFlwrNtfctnYn();
-            default -> st.getSysNtfctnYn();
+            default -> st.getSysNtfctnYn();   // 모임(EVENT_*)도 커뮤니티 소식 쪽
         };
         return "Y".equals(yn);
     }
@@ -126,6 +126,10 @@ public class NotificationEventListener {
             case "COMMENT"     -> sender + "이 내 게시글에 댓글을 달았습니다.";
             case "REPLY"       -> sender + "이 내 댓글에 답글을 달았습니다.";
             case "MENTION"     -> sender + "이 회원님을 언급했습니다.";
+            case "EVENT_NEW"      -> { String[] x = (extra == null ? "|" : extra).split("\\|", 2); String t = x.length > 1 ? x[1] : ""; yield sender + "이 " + x[0] + "에 모임 「" + t + "」" + objectJosa(t) + " 열었습니다."; }
+            case "EVENT_TOMORROW" -> "내일 모임 「" + nz(extra) + "」" + subjectJosa(nz(extra)) + " 있어요.";
+            case "EVENT_SOON"     -> "모임 「" + nz(extra) + "」" + subjectJosa(nz(extra)) + " 곧 시작해요.";
+            case "EVENT_CANCEL"   -> "참석하려던 모임 「" + nz(extra) + "」" + subjectJosa(nz(extra)) + " 취소됐어요.";
             case "BADGE"       -> "새 뱃지 " + (extra == null ? "" : extra) + objectJosa(extra) + " 얻었어요!";
             case "FOLLOW"      -> sender + "이 팔로우를 시작했습니다.";
             case "COMM_POST"   -> sender + "이 " + place + "에 새 글을 올렸습니다.";
@@ -151,4 +155,9 @@ public class NotificationEventListener {
         }
         return "를";
     }
+
+    /** 이/가 — 받침이 있으면 「이」 */
+    static String subjectJosa(String word) { return "을".equals(objectJosa(word)) ? "이" : "가"; }
+
+    private static String nz(String s) { return s == null ? "" : s; }
 }
