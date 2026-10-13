@@ -72,6 +72,9 @@ public class SecurityConfig {
                         .accessDeniedHandler(jsonAuthErrorHandler))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        // 오류 응답 경로. 막혀 있으면 잘못된 JSON(400)·서버 오류(500)까지 전부 "로그인이 필요합니다"(401)로
+                        // 둔갑해 원인을 가렸다 — 프론트는 401 에 토큰을 갱신하고 재시도까지 한다.
+                        .requestMatchers("/error").permitAll()
 
                         // 인증 자체. 로그아웃도 공개다 — 액세스 토큰이 이미 만료된 유저도
                         // 로그아웃(쿠키 삭제)은 할 수 있어야 한다. 서비스가 있는 토큰만 폐기한다.

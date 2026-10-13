@@ -43,6 +43,7 @@ public class PostDTO {
     // ── 조회자 기준 ──────────────────────────────────────────────
     private String myLikeTyp;        // "UP" | "DOWN" | null
     private boolean mySaved;
+    private boolean hasPoll;         // 피드 카드의 「투표」 표시
 
     // ── 피드 근거 ─────────────────────────────────────────────
     // 이 글이 왜 이 자리에 있는지. 점수만 매기고 이유를 숨기면 사용자는 피드를 신뢰할 수 없다.

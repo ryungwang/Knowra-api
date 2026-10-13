@@ -87,6 +87,7 @@ public class PostService {
     private final ActionLogService actionLogService;
     private final InterestScoreService interestScoreService;
     private final ApplicationEventPublisher eventPublisher;
+    private final com.knowra.poll.service.PollService pollService;
 
     private static final int REDIS_DB  = 15;
     private static final int PAGE_SIZE = 50;
@@ -131,6 +132,8 @@ public class PostService {
         try {
             long userSn = me;
             boolean isEdit = params.get("postSn") != null;
+            // 투표는 새 글에서만. 저장 전에 검사해야 글만 남고 투표가 빠지는 일이 없다.
+            com.knowra.poll.service.PollService.Draft poll = isEdit ? null : pollService.validate(params.get("poll"));
             TblPost tblPost;
             if (isEdit) {
                 tblPost = tblPostRepository.findById(Long.parseLong(params.get("postSn").toString()))
@@ -158,6 +161,7 @@ public class PostService {
                 tblPost.setCreatrSn(userSn);
                 tblPost.setPostTyp(resolvePostTyp(params, tblPost.getCommSn(), userSn, "NORMAL"));
                 tblPostRepository.save(tblPost);
+                if (poll != null) pollService.create(tblPost.getPostSn(), poll);
                 actionLogService.log(userSn, TblUserActionLog.TARGET_POST, tblPost.getPostSn(), TblUserActionLog.ACTION_POST);
                 eventPublisher.publishEvent(new PostCreatedEvent(
                         tblPost.getPostSn(), userSn, tblPost.getCommSn(), tblPost.getFrstCrtDt()));
@@ -172,6 +176,9 @@ public class PostService {
             resultVO.putResult("postSn", tblPost.getPostSn());
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
             resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
+        } catch (IllegalArgumentException e) {
+            resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
+            resultVO.setResultMessage(e.getMessage());
         } catch (Exception e) {
             e.printStackTrace();
             resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
@@ -231,6 +238,7 @@ public class PostService {
             PostDTO dto = postQuery.decorate(List.of(t), me).get(0);
             resultVO.putResult("post", dto);
             resultVO.putResult("myLikeTyp", dto.getMyLikeTyp());
+            resultVO.putResult("poll", pollService.view(postSn, dto.getUserSn(), me));
             if (dto.getCommSn() != null) {
                 TblComm community = tblCommRepository.findByCommSn(dto.getCommSn());
                 resultVO.putResult("comm", community);

@@ -43,6 +43,8 @@ public class PostQuery {
     private EntityManager em;
 
     private final TagService tagService;
+    // PollService 가 아니라 리포지토리 — PollService 가 PostQuery 를 쓰므로 서로 물면 순환이 된다
+    private final com.knowra.poll.repository.TblPollRepository pollRepository;
 
     public static final QTblPost    POST = QTblPost.tblPost;
     public static final QTblComm    COMM = QTblComm.tblComm;
@@ -114,7 +116,10 @@ public class PostQuery {
         Map<Long, List<String>> tagMap   = tagService.fetchTagMap(postSns);
         Map<Long, String>       likeMap  = viewerSn != null ? myLikeMap(viewerSn, postSns)  : Map.of();
         Set<Long>               savedSet = viewerSn != null ? mySavedSet(viewerSn, postSns) : Set.of();
+        Set<Long>               pollSet  = new HashSet<>();
+        pollRepository.findAllByPostSnIn(postSns).forEach(p -> pollSet.add(p.getPostSn()));
         for (PostDTO dto : list) {
+            dto.setHasPoll(pollSet.contains(dto.getPostSn()));
             dto.setTagNms(tagMap.getOrDefault(dto.getPostSn(), List.of()));
             dto.setMyLikeTyp(likeMap.get(dto.getPostSn()));
             dto.setMySaved(savedSet.contains(dto.getPostSn()));
