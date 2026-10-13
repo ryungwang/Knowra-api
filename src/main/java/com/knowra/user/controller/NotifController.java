@@ -55,7 +55,8 @@ public class NotifController {
         Map<Long, String[]> info = ws.fetchSenderInfoMap(rows);
         Map<Long, String> comm = ws.fetchCommNames(rows);
         List<NotifDTO> list = rows.stream().map(e -> {
-            String[] i = info.getOrDefault(e.getSenderSn(), new String[]{null, null});
+            String[] i = e.getSenderSn() == null ? null : info.get(e.getSenderSn());
+            if (i == null) i = new String[]{null, null};   // 보낸 사람 없는 알림(뱃지 등) — getOrDefault(null) 은 불변 Map 에서 NPE
             return new NotifDTO(e, i[0], i[1], "COMM".equals(e.getTargetKind()) && e.getTargetSn() != null ? comm.get(e.getTargetSn()) : null);
         }).toList();
         ResultVO r = new ResultVO();

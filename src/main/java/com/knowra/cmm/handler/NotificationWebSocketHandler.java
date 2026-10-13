@@ -2,6 +2,8 @@ package com.knowra.cmm.handler;
 
 import tools.jackson.databind.ObjectMapper;
 import com.knowra.cmm.jwt.JwtProvider;
+import com.knowra.cmm.service.RedisApiService;
+import com.knowra.session.SessionService;
 import com.knowra.common.entity.QTblComFile;
 import com.knowra.user.dto.NotifDTO;
 import com.knowra.user.entity.QTblUser;
@@ -12,6 +14,7 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.socket.*;
@@ -28,24 +31,51 @@ public class NotificationWebSocketHandler extends TextWebSocketHandler {
 
     private final JwtProvider jwtProvider;
     private final NotifService notifService;
+    private final RedisApiService redisApiService;
+    private final SessionService sessionService;
+
+    private static final int REDIS_DB = 15;          // 로그아웃 토큰 블랙리스트 — JwtAuthenticationFilter 와 같은 DB
+    private static final String ATTR_USER = "userSn";
+    private static final String ATTR_OPENED = "openedAt";
+    private static final long AUTH_TIMEOUT_MS = 10_000;
 
     @PersistenceContext
     private EntityManager em;
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
-    // userSn → WebSocket 세션
-    private final ConcurrentHashMap<Long, WebSocketSession> sessions = new ConcurrentHashMap<>();
+    // userSn → 그 사람의 열린 연결들(탭·기기마다 하나). 예전엔 하나만 들고 있어 마지막 탭만 알림을 받았다.
+    private final ConcurrentHashMap<Long, Set<WebSocketSession>> sessions = new ConcurrentHashMap<>();
 
     // ── 연결 수립 ─────────────────────────────────────────────────────────
+    /**
+     * ⚠️ <b>토큰을 주소(?token=)로 받지 않는다.</b> 주소는 nginx 접근 로그·프록시 로그에 그대로 남고,
+     * 연결이 예외로 닫히면 Spring 이 세션(주소 포함)을 ERROR 로그로 찍는다 — 실제로 한 시간에 1,555번
+     * 토큰 전체가 로그에 찍혔다. 연결 뒤 첫 메시지 {@code {"type":"AUTH","token":...}} 로 받는다.
+     * 10초 안에 인증하지 않은 연결은 {@link #closeUnauthenticated()} 가 끊는다.
+     */
     @Override
-    public void afterConnectionEstablished(WebSocketSession session) throws Exception {
-        Long userSn = extractUserSn(session);
+    public void afterConnectionEstablished(WebSocketSession session) {
+        session.getAttributes().put(ATTR_OPENED, System.currentTimeMillis());
+        pending.add(session);
+    }
+
+    /** HTTP 요청과 같은 기준으로 검증한다 — 서명·만료, access 토큰, 로그아웃(블랙리스트), 다른 기기에서 끊은 세션. */
+    private Long authenticate(String token) {
+        if (token == null || token.isBlank() || !jwtProvider.isValid(token) || !jwtProvider.isAccessToken(token)) return null;
+        if (redisApiService.isBlocklisted(REDIS_DB, token)) return null;
+        if (sessionService.isRevoked(jwtProvider.extractSid(token))) return null;
+        return jwtProvider.extractUserSn(token);
+    }
+
+    private void onAuth(WebSocketSession session, Object token) throws Exception {
+        Long userSn = authenticate(token == null ? null : String.valueOf(token));
         if (userSn == null) {
-            session.close(CloseStatus.NOT_ACCEPTABLE);
+            session.close(CloseStatus.POLICY_VIOLATION.withReason("auth"));
             return;
         }
-        sessions.put(userSn, session);
+        session.getAttributes().put(ATTR_USER, userSn);
+        sessions.computeIfAbsent(userSn, k -> ConcurrentHashMap.newKeySet()).add(session);
 
         List<TblUserNotif> entities = notifService.getAll(userSn);
         long unreadCnt = notifService.countUnread(userSn);
@@ -55,27 +85,55 @@ public class NotificationWebSocketHandler extends TextWebSocketHandler {
 
         List<NotifDTO> list = entities.stream()
                 .map(e -> {
-                    String[] info = senderInfoMap.getOrDefault(e.getSenderSn(), new String[]{null, null});
+                    // ⚠️ 보낸 사람이 없는 알림(뱃지·모임 리마인더)은 senderSn 이 null — getOrDefault(null) 이
+                    //    불변 Map 에서 NPE 를 던져 연결이 통째로 죽고 재연결을 끝없이 반복했다
+                    String[] info = e.getSenderSn() == null ? null : senderInfoMap.get(e.getSenderSn());
+                    if (info == null) info = new String[]{null, null};
                     // ⚠️ Map.of().get(null) 은 NPE — 팔로우 알림은 targetSn 이 null 이다(연결이 끊기며 알림이 통째로 안 왔다)
                     String commNm = "COMM".equals(e.getTargetKind()) && e.getTargetSn() != null ? commNames.get(e.getTargetSn()) : null;
                     return new NotifDTO(e, info[0], info[1], commNm);
                 })
                 .collect(Collectors.toList());
 
-        send(session, Map.of(
-                "type", "INIT",
-                "data", Map.of("unreadCnt", unreadCnt, "list", list)));
+        synchronized (session) {
+            send(session, Map.of(
+                    "type", "INIT",
+                    "data", Map.of("unreadCnt", unreadCnt, "list", list)));
+        }
     }
+
+    /** 인증 없이 붙어만 있는 연결을 정리한다. */
+    @Scheduled(fixedDelay = 10_000)
+    public void closeUnauthenticated() {
+        // 세션 목록은 인증된 것만 들고 있으므로, 대기 중인 것은 열린 시각으로 따로 본다
+        long now = System.currentTimeMillis();
+        pending.removeIf(ws -> {
+            if (!ws.isOpen() || ws.getAttributes().get(ATTR_USER) != null) return true;
+            Object at = ws.getAttributes().get(ATTR_OPENED);
+            if (at instanceof Long t && now - t > AUTH_TIMEOUT_MS) {
+                try { ws.close(CloseStatus.POLICY_VIOLATION.withReason("auth timeout")); } catch (Exception ignored) {}
+                return true;
+            }
+            return false;
+        });
+    }
+
+    private final Set<WebSocketSession> pending = ConcurrentHashMap.newKeySet();
 
     // ── 클라이언트 메시지 수신 ────────────────────────────────────────────
     @Override
     public void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
-        Long userSn = extractUserSn(session);
-        if (userSn == null) return;
-
         @SuppressWarnings("unchecked")
         Map<String, Object> payload = MAPPER.readValue(message.getPayload(), Map.class);
         String type = String.valueOf(payload.get("type"));
+
+        Long userSn = userOf(session);
+        if (userSn == null) {
+            // 인증 전엔 AUTH 말고는 받지 않는다
+            if ("AUTH".equals(type)) { pending.remove(session); onAuth(session, payload.get("token")); }
+            else session.close(CloseStatus.POLICY_VIOLATION.withReason("auth"));
+            return;
+        }
 
         switch (type) {
             case "MARK_READ" -> {
@@ -94,19 +152,14 @@ public class NotificationWebSocketHandler extends TextWebSocketHandler {
     // ── 연결 종료 ─────────────────────────────────────────────────────────
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
-        Long userSn = extractUserSn(session);
-        if (userSn != null) sessions.remove(userSn);
+        pending.remove(session);
+        Long userSn = userOf(session);
+        if (userSn != null) sessions.computeIfPresent(userSn, (k, set) -> { set.remove(session); return set.isEmpty() ? null : set; });
     }
 
     // ── 실시간 알림 Push (NotificationEventListener에서 호출) ─────────────
     public void push(long userSn, NotifDTO notifDTO) {
-        WebSocketSession session = sessions.get(userSn);
-        if (session == null || !session.isOpen()) return;
-        try {
-            send(session, Map.of("type", "NOTIFICATION", "data", notifDTO));
-        } catch (Exception e) {
-            log.warn("WebSocket push 실패 userSn={}", userSn, e);
-        }
+        pushEvent(userSn, "NOTIFICATION", notifDTO);
     }
 
     /**
@@ -114,18 +167,22 @@ public class NotificationWebSocketHandler extends TextWebSocketHandler {
      * 프론트는 {@code type} 으로 분기한다. 상대가 접속 중이 아니면 조용히 버린다(DB 에는 이미 있다).
      */
     public void pushEvent(long userSn, String type, Object data) {
-        WebSocketSession session = sessions.get(userSn);
-        if (session == null || !session.isOpen()) return;
-        try {
-            send(session, Map.of("type", type, "data", data));
-        } catch (Exception e) {
-            log.warn("WebSocket pushEvent 실패 userSn={} type={}", userSn, type, e);
+        Set<WebSocketSession> set = sessions.get(userSn);
+        if (set == null) return;
+        for (WebSocketSession ws : set) {
+            if (!ws.isOpen()) continue;
+            try {
+                // 한 연결에 두 스레드가 동시에 쓰면 IllegalStateException — 연결 단위로 잠근다
+                synchronized (ws) { send(ws, Map.of("type", type, "data", data)); }
+            } catch (Exception e) {
+                log.warn("WebSocket push 실패 userSn={} type={} : {}", userSn, type, e.getMessage());
+            }
         }
     }
 
     public boolean isOnline(long userSn) {
-        WebSocketSession s = sessions.get(userSn);
-        return s != null && s.isOpen();
+        Set<WebSocketSession> set = sessions.get(userSn);
+        return set != null && set.stream().anyMatch(WebSocketSession::isOpen);
     }
 
     // ── 내부 유틸 ─────────────────────────────────────────────────────────
@@ -133,19 +190,9 @@ public class NotificationWebSocketHandler extends TextWebSocketHandler {
         session.sendMessage(new TextMessage(MAPPER.writeValueAsString(payload)));
     }
 
-    private Long extractUserSn(WebSocketSession session) {
-        try {
-            String query = session.getUri() != null ? session.getUri().getQuery() : null;
-            if (query == null) return null;
-            return Arrays.stream(query.split("&"))
-                    .filter(p -> p.startsWith("token="))
-                    .map(p -> p.substring(6))
-                    .findFirst()
-                    .map(jwtProvider::extractUserSn)
-                    .orElse(null);
-        } catch (Exception e) {
-            return null;
-        }
+    /** 인증 때 붙여 둔 사용자. 토큰을 매번 다시 풀지 않는다 — 접속 중에 토큰이 만료돼도 연결은 유지된다. */
+    private static Long userOf(WebSocketSession session) {
+        return session.getAttributes().get(ATTR_USER) instanceof Long l ? l : null;
     }
 
     /** COMM 알림의 commSn → 커뮤니티 주소 이름. 알림 링크용. */
@@ -167,7 +214,7 @@ public class NotificationWebSocketHandler extends TextWebSocketHandler {
                 .filter(Objects::nonNull)
                 .distinct()
                 .collect(Collectors.toList());
-        if (senderSns.isEmpty()) return Map.of();
+        if (senderSns.isEmpty()) return new HashMap<>();   // 불변 Map.of() 는 get(null) 에서 NPE — 호출부가 null 키로 찾는다
 
         QTblUser    qUser   = QTblUser.tblUser;
         QTblComFile pfpFile = new QTblComFile("pfpFile");
