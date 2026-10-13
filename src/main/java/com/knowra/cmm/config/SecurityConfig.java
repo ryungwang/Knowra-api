@@ -15,6 +15,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.web.savedrequest.NullRequestCache;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -59,6 +60,13 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable) // 토큰은 헤더로, 리프레시 쿠키는 /api/auth 로 묶여 있다
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                // ⚠️ STATELESS 만으로는 세션이 안 생기는 게 아니다. 401 이 나면 ExceptionTranslationFilter 가
+                // "로그인 뒤 돌아갈 요청"을 HttpSession 에 저장하려고 세션을 만든다(SPRING_SECURITY_SAVED_REQUEST).
+                // 그 세션 쿠키가 한 번 생기면 이후 모든 요청이 세션을 물고 다녔고, spring-session(redis) 이
+                // 동시 요청마다 세션 ID 를 바꾸다 RENAME 충돌("ERR no such key") → /error → 401 로 튀었다
+                // (2026-10-13: 멀쩡한 액세스 토큰이 요청 3개 중 2개만 401). JWT 앱엔 돌아갈 요청 저장이
+                // 필요 없다 — 세션을 만들 이유를 아예 없앤다. spring-session 의존성도 같은 이유로 걷어냈다.
+                .requestCache(rc -> rc.requestCache(new NullRequestCache()))
                 .exceptionHandling(e -> e
                         .authenticationEntryPoint(jsonAuthErrorHandler)
                         .accessDeniedHandler(jsonAuthErrorHandler))
