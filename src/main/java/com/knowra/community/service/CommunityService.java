@@ -144,6 +144,12 @@ public class CommunityService {
                 resultVO.setResultMessage(ResponseCode.COMMUNITY_NOT_FOUND.getMessage());
                 return resultVO;
             }
+            // 들어왔다 = 새 글을 봤다. 사이드바 타일의 점을 지운다(멤버일 때만).
+            if (userSn != null) {
+                QTblCommMbr v = QTblCommMbr.tblCommMbr;
+                new JPAQueryFactory(em).update(v).set(v.lastVisitAt, java.time.LocalDateTime.now())
+                        .where(v.commSn.eq(tblComm.getCommSn()), v.userSn.eq(userSn)).execute();
+            }
 
             TblComFile logoFile = new JPAQueryFactory(em)
                 .selectFrom(qLogoFile)
@@ -211,11 +217,21 @@ public class CommunityService {
                     .orderBy(qMbr.frstCrtDt.asc())
                     .fetch();
 
+            // 새 글 수 — 마지막 방문 뒤 남이 올린 살아 있는 글. 커뮤니티마다 한 번씩이 아니라 한 쿼리로 센다.
+            com.knowra.post.entity.QTblPost qp = com.knowra.post.entity.QTblPost.tblPost;
+            Map<Long, Long> newCnt = new java.util.HashMap<>();
+            new JPAQueryFactory(em).select(qp.commSn, qp.count()).from(qp)
+                    .join(qMbr).on(qMbr.commSn.eq(qp.commSn).and(qMbr.userSn.eq(userSn)))
+                    .where(qp.actvtnYn.eq("Y"), qp.userSn.ne(userSn), qp.frstCrtDt.after(qMbr.lastVisitAt), qMbr.stat.eq("ACTIVE"))
+                    .groupBy(qp.commSn).fetch()
+                    .forEach(t -> newCnt.put(t.get(qp.commSn), t.get(qp.count())));
+
             List<Map<String, Object>> communities = tuples.stream()
                     .map(t -> {
                         TblComm c = t.get(qComm);
                         Map<String, Object> map = new java.util.LinkedHashMap<>();
                         map.put("commSn",     c.getCommSn());
+                        map.put("newCnt",     newCnt.getOrDefault(c.getCommSn(), 0L));
                         map.put("commNm",     c.getCommNm());
                         map.put("commDsplNm", c.getCommDsplNm());
                         map.put("commDesc",   c.getCommDesc());

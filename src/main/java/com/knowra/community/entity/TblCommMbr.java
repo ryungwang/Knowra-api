@@ -82,4 +82,9 @@ public class TblCommMbr {
     @Column(name = "MDFCN_DT")
     @Comment("수정일시")
     private LocalDateTime mdfcnDt;
+
+    /** 이 커뮤니티 화면을 마지막으로 연 시각 — 사이드바 「새 글」 수의 기준. */
+    @Builder.Default
+    @Column(name = "LAST_VISIT_AT", nullable = false)
+    private LocalDateTime lastVisitAt = LocalDateTime.now();
 }
