@@ -19,9 +19,14 @@ public class ChatController {
 
     private final ChatService chatService;
 
+    /** body: roomSn, accept */
+    @PostMapping("/respondRequest")
+    public ResultVO respondRequest(@RequestBody Map<String, Object> params, @CurrentUser Long me) { return chatService.respondRequest(params, me); }
+
+    /** body(선택): box = main | request */
     @PostMapping("/getRoomList")
-    public ResultVO getRoomList(@CurrentUser Long me) {
-        return chatService.getRoomList(me);
+    public ResultVO getRoomList(@RequestBody(required = false) Map<String, Object> params, @CurrentUser Long me) {
+        return chatService.getRoomList(me, params == null ? "main" : String.valueOf(params.getOrDefault("box", "main")));
     }
 
     /** params: nickName — 상대 닉네임. 방이 없으면 만든다. */

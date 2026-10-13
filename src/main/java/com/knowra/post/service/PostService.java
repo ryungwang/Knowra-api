@@ -81,6 +81,7 @@ public class PostService {
     private final TblPostCmtRepository tblPostCmtRepository;
     private final TblPostCmtReactRepository tblPostCmtReactRepository;
     private final TblPostSaveRepository tblPostSaveRepository;
+    private final com.knowra.savefolder.TblPostSaveFolderRepository saveFolderRepository;
     private final TblCommRepository tblCommRepository;
     private final TblCommMbrRepository tblCommMbrRepository;
     private final ModelMapper modelMapper;
@@ -650,7 +651,7 @@ public class PostService {
      * 댓글 사진 경로 — 이 서버 업로드 모양(/upload/editor/yyyy/MM/dd/숫자_0.확장자)만 받는다.
      * 아무 URL 이나 받으면 남의 서버 이미지를 끌어와 열람자 IP 를 모으는 데 쓸 수 있다.
      */
-    static String cleanImgUrl(Object raw) {
+    public static String cleanImgUrl(Object raw) {
         if (raw == null) return null;
         String s = raw.toString().trim();
         if (s.isEmpty()) return null;
@@ -896,13 +897,20 @@ public class PostService {
             long    postSn = Long.parseLong(params.get("postSn").toString());
             boolean isSave = (boolean) params.get("isSave");
 
+            // folderSn: 저장하면서 폴더에 넣거나, 이미 저장한 글을 다른 폴더로 옮긴다. 남의 폴더면 무시하고 폴더 없이.
+            Long folderSn = params.get("folderSn") == null ? null : Long.valueOf(params.get("folderSn").toString());
+            if (folderSn != null && saveFolderRepository.findById(folderSn).filter(f -> f.getUserSn() == userSn).isEmpty()) folderSn = null;
+
             TblPostSave existing = tblPostSaveRepository.findByUserSnAndPostSn(userSn, postSn);
             if (isSave) {
-                if (existing == null) {
+                if (existing != null) {
+                    if (params.containsKey("folderSn")) { existing.setFolderSn(folderSn); tblPostSaveRepository.save(existing); }
+                } else {
                     TblPostSave save = new TblPostSave();
                     save.setUserSn(userSn);
                     save.setPostSn(postSn);
                     save.setCreatrSn(userSn);
+                    save.setFolderSn(folderSn);
                     tblPostSaveRepository.save(save);
                     actionLogService.log(userSn, TblUserActionLog.TARGET_POST, postSn, TblUserActionLog.ACTION_SCRAP);
                     interestScoreService.updateForTags(userSn, tagService.fetchTagSns(postSn), 5);
@@ -934,9 +942,15 @@ public class PostService {
 
             QTblPostSave qSave = QTblPostSave.tblPostSave;
             BooleanExpression condition = qSave.userSn.eq(userSn).and(qSave.actvtnYn.eq("Y"));
+            // folderSn: 숫자면 그 폴더만, "none" 이면 폴더 없는 것만, 없으면 전체
+            Object f = params.get("folderSn");
+            if (f != null && !String.valueOf(f).isBlank()) {
+                condition = "none".equals(String.valueOf(f)) ? condition.and(qSave.folderSn.isNull())
+                        : condition.and(qSave.folderSn.eq(Long.valueOf(String.valueOf(f))));
+            }
             if (cursor != null) condition = condition.and(qSave.postSaveSn.lt(cursor));
             List<Tuple> saves = new JPAQueryFactory(em)
-                    .select(qSave.postSaveSn, qSave.postSn)
+                    .select(qSave.postSaveSn, qSave.postSn, qSave.folderSn)
                     .from(qSave)
                     .where(condition)
                     .orderBy(qSave.postSaveSn.desc())
@@ -959,7 +973,10 @@ public class PostService {
             List<PostDTO> list = postQuery.decorate(ordered, userSn);
 
             Long nextCursor = saves.size() == size ? saves.get(saves.size() - 1).get(qSave.postSaveSn) : null;
+            Map<Long, Long> folderOf = new HashMap<>();
+            saves.forEach(t -> { if (t.get(qSave.folderSn) != null) folderOf.put(t.get(qSave.postSn), t.get(qSave.folderSn)); });
             resultVO.putResult("list", list);
+            resultVO.putResult("folderOf", folderOf);   // postSn → folderSn (화면의 「폴더」 표시·옮기기용)
             resultVO.putResult("nextCursor", nextCursor);
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
             resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());

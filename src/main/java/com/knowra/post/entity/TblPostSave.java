@@ -43,4 +43,8 @@ public class TblPostSave extends BaseAuditEntity {
     @Comment("활성화 여부")
     @lombok.Builder.Default
     private String actvtnYn = "Y";
+
+    /** 저장 폴더(없으면 NULL — 「전체」에만 보인다). */
+    @Column(name = "FOLDER_SN")
+    private Long folderSn;
 }

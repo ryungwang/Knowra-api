@@ -27,4 +27,8 @@ public class TblChatMsg {
     @Builder.Default
     @Column(name = "FRST_CRT_DT", nullable = false, updatable = false)
     private LocalDateTime frstCrtDt = LocalDateTime.now();
+
+    /** 사진 한 장 — 업로드 경로(/upload/editor/...)만. */
+    @Column(name = "IMG_URL", length = 300)
+    private String imgUrl;
 }

@@ -31,4 +31,9 @@ public class TblChatRoomMbr {
     @Builder.Default
     @Column(name = "FRST_CRT_DT", nullable = false, updatable = false)
     private LocalDateTime frstCrtDt = LocalDateTime.now();
+
+    /** ACTIVE · REQUEST(모르는 사람이 건 대화 — 요청함) · DECLINED(거절) */
+    @Builder.Default
+    @Column(name = "STAT", nullable = false, length = 10)
+    private String stat = "ACTIVE";
 }
