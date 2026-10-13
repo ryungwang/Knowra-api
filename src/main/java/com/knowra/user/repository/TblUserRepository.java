@@ -29,6 +29,9 @@ public interface TblUserRepository extends JpaRepository<TblUser, Long> {
 
     Optional<TblUser> findByNickName(String nickName);
 
+    /** 소셜 계정 매칭 — 제공자 + 제공자 안의 ID. */
+    Optional<TblUser> findBySnsNameAndSnsId(String snsName, String snsId);
+
     @Modifying
     @Query("UPDATE TblUser U SET U.lgnFailNmtm = :lgnFailNmtm WHERE U.userSn = :userSn")
     void setLgnFailNmtmUpd(@Param("userSn") long userSn, @Param("lgnFailNmtm") long lgnFailNmtm);

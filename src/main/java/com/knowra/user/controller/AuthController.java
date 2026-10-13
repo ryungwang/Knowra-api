@@ -3,6 +3,7 @@ package com.knowra.user.controller;
 import com.knowra.cmm.model.ResultVO;
 import com.knowra.common.util.ComUtil;
 import com.knowra.user.service.AuthService;
+import com.knowra.user.sns.SnsAuthService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +28,7 @@ import java.util.Map;
 public class AuthController {
 
     private final AuthService authService;
+    private final SnsAuthService snsAuthService;
 
     @PostMapping("/login")
     public ResultVO login(@RequestBody Map<String, String> params,
@@ -41,6 +43,15 @@ public class AuthController {
     }
 
     /** Authorization 헤더의 액세스 토큰과 쿠키의 리프레시 토큰을 폐기하고 쿠키를 지운다. */
+    /** 설정된 소셜 제공자와 인가 URL — 프론트가 버튼을 그릴 때 쓴다. 키는 서버에만 있다. */
+    @GetMapping("/sns/providers")
+    public ResultVO snsProviders() {
+        ResultVO r = new ResultVO();
+        r.putResult("providers", snsAuthService.providers());
+        r.setResultCode(com.knowra.cmm.model.ResponseCode.SUCCESS.getCode());
+        return r;
+    }
+
     @PostMapping("/logout")
     public ResultVO logout(HttpServletRequest request, HttpServletResponse response) {
         return authService.logout(request.getHeader("Authorization"), request, response);

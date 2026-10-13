@@ -18,6 +18,8 @@ import com.knowra.user.entity.TblUserStng;
 import com.knowra.user.repository.TblUserLgnHstryRepository;
 import com.knowra.user.repository.TblUserRepository;
 import com.knowra.user.repository.TblUserStngRepository;
+import com.knowra.user.sns.SnsAuthService;
+import com.knowra.user.sns.SnsIdentity;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.*;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -47,6 +49,7 @@ public class AuthService {
     private final JwtProvider jwtProvider;
     private final UserService userService;
     private final TblUserRepository tblUserRepository;
+    private final SnsAuthService snsAuthService;
     private final TblUserStngRepository tblUserStngRepository;
     private final PasswordEncoder passwordEncoder;
     private final RedisApiService redisApiService;
@@ -108,66 +111,52 @@ public class AuthService {
         return resultVO;
     }
 
+    /**
+     * 소셜 로그인. params: provider(GOOGLE|KAKAO|NAVER|APPLE, 없으면 GOOGLE) + 제공자별 자격
+     * (GOOGLE accessToken / KAKAO·NAVER code,state / APPLE idToken,userName).
+     *
+     * <p>계정 매칭: ① 제공자+ID ② (이메일이 있으면) loginId=이메일 — 예전 구글 가입은 ②로만
+     * 찾았으므로 남겨 둔다. 찾으면 토큰 발급, 못 찾으면 가입 티켓과 미리 채울 정보를 준다.
+     */
     public ResultVO snsLogin(Map<String, String> params, String clientIp, HttpServletResponse httpResponse) {
         ResultVO resultVO = new ResultVO();
         try {
-            String url = "https://www.googleapis.com/oauth2/v1/userinfo?access_token=" + ComUtil.getStrValue(params.get("accessToken"));
+            String provider = StringUtils.hasText(params.get("provider")) ? params.get("provider").toUpperCase() : SnsAuthService.GOOGLE;
+            SnsIdentity id = snsAuthService.fetchIdentity(provider, params);
 
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
+            Optional<TblUser> tblUser = tblUserRepository.findBySnsNameAndSnsId(id.provider(), id.id());
+            if (tblUser.isEmpty() && StringUtils.hasText(id.email())) tblUser = tblUserRepository.findByLoginId(id.email());
 
-            HttpEntity<String> entity = new HttpEntity<>(headers);
-
-            ResponseEntity<Map> response = restTemplate.exchange(
-                    url,
-                    HttpMethod.GET,
-                    entity,
-                    Map.class
-            );
-
-            Map<String, Object> userInfo = response.getBody();
-
-            if (userInfo == null) {
-                throw new RuntimeException("구글 사용자 정보 조회 실패");
-            }
-
-            String googleId = (String) userInfo.get("id");
-            String email = (String) userInfo.get("email");
-            String name = (String) userInfo.get("name");
-            Boolean verifiedEmail = (Boolean) userInfo.get("verified_email");
-
-            if (email == null || email.isBlank()) {
-                throw new RuntimeException("이메일 정보가 없습니다.");
-            }
-
-            if (Boolean.FALSE.equals(verifiedEmail)) {
-                throw new RuntimeException("검증되지 않은 이메일입니다.");
-            }
-
-            Optional<TblUser> tblUser = tblUserRepository.findByLoginId(email);
-
-            if(tblUser.isEmpty()){
+            if (tblUser.isEmpty()) {
                 resultVO.putResult("needsProfile", true);
-                resultVO.putResult("googleInfo", userInfo);
-            }else{
-                String accessToken = jwtProvider.generateAccessToken(tblUser.get().getUserSn(), email);
-                String refreshToken = jwtProvider.generateRefreshToken(tblUser.get().getUserSn(), email);
-
+                resultVO.putResult("ticket", snsAuthService.issueTicket(id));
+                Map<String, Object> info = new java.util.LinkedHashMap<>();
+                info.put("provider", id.provider()); info.put("email", id.email()); info.put("name", id.name()); info.put("picture", id.picture());
+                resultVO.putResult("snsInfo", info);
+                resultVO.putResult("googleInfo", info); // 예전 프론트 호환
+            } else {
+                TblUser u = tblUser.get();
+                if ("S".equals(u.getStatus())) {
+                    resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
+                    resultVO.setResultMessage("이용이 정지된 계정입니다. 문의해 주세요.");
+                    return resultVO;
+                }
+                // 이메일로만 찾은 예전 계정은 제공자 ID 를 이번에 묶어 둔다 — 다음부터 ①로 바로 찾는다.
+                if (!StringUtils.hasText(u.getSnsId())) { u.setSnsYn("Y"); u.setSnsName(id.provider()); u.setSnsId(id.id()); tblUserRepository.save(u); }
+                String accessToken = jwtProvider.generateAccessToken(u.getUserSn(), u.getLoginId());
+                String refreshToken = jwtProvider.generateRefreshToken(u.getUserSn(), u.getLoginId());
                 resultVO.putResult("accessToken", accessToken);
                 httpResponse.addHeader("Set-Cookie", refreshCookie.issue(refreshToken));
 
                 TblUserLgnHstry tblUserLgnHstry = new TblUserLgnHstry();
-                tblUserLgnHstry.setUserSn(tblUser.get().getUserSn());
+                tblUserLgnHstry.setUserSn(u.getUserSn());
                 tblUserLgnHstry.setLgnIp(clientIp);
                 tblUserLgnHstryRepository.save(tblUserLgnHstry);
             }
-
-
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
-        } catch (BadCredentialsException e) {
-            e.printStackTrace();
+        } catch (IllegalArgumentException | IllegalStateException e) {
             resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
-            resultVO.setResultMessage("이메일 또는 비밀번호가 올바르지 않습니다.");
+            resultVO.setResultMessage(e.getMessage());
         } catch (Exception e) {
             e.printStackTrace();
             resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
@@ -303,9 +292,30 @@ public class AuthService {
             tblUser.setInterest(ComUtil.getStrValue(params.get("interest")));
 
             if(snsYn.equals("Y")){
-                tblUser.setSnsYn(ComUtil.getStrValue(params.get("snsYn")));
-                tblUser.setSnsId(ComUtil.getStrValue(params.get("snsId")));
-                tblUser.setSnsName(ComUtil.getStrValue(params.get("snsName")));
+                // 신원은 폼이 아니라 티켓(서버가 제공자에게 확인한 것)에서 — 폼 값을 믿으면 남의 이메일로 계정을 만들 수 있다.
+                SnsIdentity id = snsAuthService.consumeTicket(ComUtil.getStrValue(params.get("snsTicket")));
+                if (id == null) {
+                    resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
+                    resultVO.setResultMessage("소셜 인증이 만료됐어요. 처음부터 다시 시도해 주세요.");
+                    return resultVO;
+                }
+                if (tblUserRepository.findBySnsNameAndSnsId(id.provider(), id.id()).isPresent()) {
+                    resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
+                    resultVO.setResultMessage("이미 가입된 소셜 계정이에요. 로그인해 주세요.");
+                    return resultVO;
+                }
+                String snsLoginId = StringUtils.hasText(id.email()) ? id.email() : id.provider().toLowerCase() + "_" + id.id();
+                if (tblUserRepository.findByLoginId(snsLoginId).isPresent()) {
+                    resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
+                    resultVO.setResultMessage("이미 가입된 이메일이에요. 로그인해 주세요.");
+                    return resultVO;
+                }
+                loginId = snsLoginId;
+                tblUser.setLoginId(snsLoginId);
+                tblUser.setEmail(StringUtils.hasText(id.email()) ? id.email() : null);
+                tblUser.setSnsYn("Y");
+                tblUser.setSnsId(id.id());
+                tblUser.setSnsName(id.provider());
                 tblUser.setPassword("SNS 연동");
             }
             tblUserRepository.save(tblUser);

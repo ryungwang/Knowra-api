@@ -83,6 +83,7 @@ public class SecurityConfig {
                                 "/api/auth/password/forgot", "/api/auth/password/reset").permitAll()
 
                         // 비로그인 열람 — 피드·글·댓글
+                        .requestMatchers(HttpMethod.GET, "/api/auth/sns/providers").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/feed/**", "/api/post/getPost", "/api/search").permitAll()
                         .requestMatchers(HttpMethod.POST,
                                 "/api/post/getPostCmtList", "/api/post/viewPost", "/api/post/getCommPostList").permitAll()
