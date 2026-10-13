@@ -149,11 +149,12 @@ public class PostService {
                 }
                 // updatable=false 컬럼(creatrSn, frstCrtDt, userSn)은 건드리지 않는다. 소속 커뮤니티도 바꾸지 않는다.
                 tblPost.setPostTtl(params.get("postTtl").toString());
-                tblPost.setPostCntnt(params.get("postCntnt").toString());
+                tblPost.setPostCntnt(com.knowra.cmm.util.HtmlSanitizer.clean(params.get("postCntnt").toString()));
                 tblPost.setPostTyp(resolvePostTyp(params, tblPost.getCommSn(), userSn, tblPost.getPostTyp()));
                 tblPost.setMdfrSn(userSn);
             } else {
                 tblPost = modelMapper.map(params, TblPost.class);
+                tblPost.setPostCntnt(com.knowra.cmm.util.HtmlSanitizer.clean(tblPost.getPostCntnt()));   // XSS — HtmlSanitizer 주석
                 // 커뮤니티 글은 활성 멤버만 쓴다. 예전엔 이 검사가 없어 가입 대기(PENDING)·비멤버도
                 // API 로는 아무 커뮤니티에나 글을 넣을 수 있었다.
                 if (tblPost.getCommSn() != null && roleIn(tblPost.getCommSn(), userSn) == null) {

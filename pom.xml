@@ -22,6 +22,12 @@
     </properties>
 
     <dependencies>
+        <!-- HTML 정리(XSS) — 글 본문·위키는 HTML 이라 허용 목록 밖은 저장 전에 걷어낸다 -->
+        <dependency>
+            <groupId>org.jsoup</groupId>
+            <artifactId>jsoup</artifactId>
+            <version>1.18.3</version>
+        </dependency>
         <!-- Web -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

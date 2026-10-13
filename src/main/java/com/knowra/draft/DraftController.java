@@ -56,7 +56,7 @@ public class DraftController {
             if (repo.countByUserSn(me) >= MAX_DRAFTS) return fail("임시 저장함이 가득 찼어요(" + MAX_DRAFTS + "개). 안 쓰는 글을 지워 주세요.");
             d = TblPostDraft.builder().userSn(me).build();
         }
-        d.setTitle(title); d.setContent(content); d.setTags(String.join(",", tags)); d.setCommSn(commSn);
+        d.setTitle(title); d.setContent(com.knowra.cmm.util.HtmlSanitizer.clean(content)); d.setTags(String.join(",", tags)); d.setCommSn(commSn);
         d.setUpdatedAt(LocalDateTime.now());
         repo.save(d);
         ResultVO r = ok("draftSn", d.getDraftSn());
