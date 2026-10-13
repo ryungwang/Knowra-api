@@ -21,7 +21,15 @@ public class NotifDTO {
     @JsonProperty("isRead")
     private final boolean isRead;
 
+    /** 눌렀을 때 갈 곳 — 글·팔로워 프로필·커뮤니티. 없으면 null(그냥 읽음 처리만). */
+    private final String link;
+
     public NotifDTO(TblUserNotif entity, String senderNickName, String senderPfpUrl) {
+        this(entity, senderNickName, senderPfpUrl, null);
+    }
+
+    /** commNm: COMM 알림의 커뮤니티 주소 이름(호출부가 미리 찾아 준다). 예전엔 커뮤니티 알림을 눌러도 아무 데도 안 갔다. */
+    public NotifDTO(TblUserNotif entity, String senderNickName, String senderPfpUrl, String commNm) {
         this.notifSn        = entity.getNotifSn();
         this.notifTyp       = entity.getNotifTyp();
         this.message        = entity.getMessage();
@@ -32,5 +40,9 @@ public class NotifDTO {
         this.createdAt      = entity.getFrstCrtDt()
                 .format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"));
         this.isRead         = "Y".equals(entity.getIsRead());
+        if ("POST".equals(entity.getTargetKind()) && entity.getTargetSn() != null) this.link = "/posts/" + entity.getTargetSn();
+        else if ("FOLLOW".equals(entity.getNotifTyp()) && senderNickName != null) this.link = "/user/" + senderNickName;
+        else if ("COMM".equals(entity.getTargetKind()) && commNm != null) this.link = "/community/" + commNm;
+        else this.link = null;
     }
 }

@@ -51,11 +51,14 @@ public class NotificationWebSocketHandler extends TextWebSocketHandler {
         long unreadCnt = notifService.countUnread(userSn);
 
         Map<Long, String[]> senderInfoMap = fetchSenderInfoMap(entities);
+        Map<Long, String> commNames = fetchCommNames(entities);
 
         List<NotifDTO> list = entities.stream()
                 .map(e -> {
                     String[] info = senderInfoMap.getOrDefault(e.getSenderSn(), new String[]{null, null});
-                    return new NotifDTO(e, info[0], info[1]);
+                    // ⚠️ Map.of().get(null) 은 NPE — 팔로우 알림은 targetSn 이 null 이다(연결이 끊기며 알림이 통째로 안 왔다)
+                    String commNm = "COMM".equals(e.getTargetKind()) && e.getTargetSn() != null ? commNames.get(e.getTargetSn()) : null;
+                    return new NotifDTO(e, info[0], info[1], commNm);
                 })
                 .collect(Collectors.toList());
 
@@ -145,7 +148,20 @@ public class NotificationWebSocketHandler extends TextWebSocketHandler {
         }
     }
 
-    private Map<Long, String[]> fetchSenderInfoMap(List<TblUserNotif> entities) {
+    /** COMM 알림의 commSn → 커뮤니티 주소 이름. 알림 링크용. */
+    public Map<Long, String> fetchCommNames(List<TblUserNotif> entities) {
+        List<Long> sns = entities.stream().filter(e -> "COMM".equals(e.getTargetKind()) && e.getTargetSn() != null)
+                .map(TblUserNotif::getTargetSn).distinct().collect(Collectors.toList());
+        if (sns.isEmpty()) return Map.of();
+        com.knowra.community.entity.QTblComm c = com.knowra.community.entity.QTblComm.tblComm;
+        Map<Long, String> out = new HashMap<>();
+        new JPAQueryFactory(em).select(c.commSn, c.commNm).from(c).where(c.commSn.in(sns)).fetch()
+                .forEach(t -> out.put(t.get(c.commSn), t.get(c.commNm)));
+        return out;
+    }
+
+    /** 보낸 사람 닉네임·프로필 사진 — 알림 페이지(NotifController)도 같이 쓴다. */
+    public Map<Long, String[]> fetchSenderInfoMap(List<TblUserNotif> entities) {
         List<Long> senderSns = entities.stream()
                 .map(TblUserNotif::getSenderSn)
                 .filter(Objects::nonNull)

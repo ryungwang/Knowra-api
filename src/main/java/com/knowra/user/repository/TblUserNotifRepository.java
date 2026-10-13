@@ -12,6 +12,8 @@ public interface TblUserNotifRepository extends JpaRepository<TblUserNotif, Long
 
     // 표시 중인 알림 전체 조회
     List<TblUserNotif> findAllByUserSnAndIsDisplayOrderByFrstCrtDtDesc(Long userSn, String isDisplay);
+    List<TblUserNotif> findTop30ByUserSnAndIsDisplayOrderByNotifSnDesc(Long userSn, String isDisplay);
+    long countByUserSnAndIsReadAndIsDisplay(Long userSn, String isRead, String isDisplay);
 
     long countByUserSnAndIsRead(Long userSn, String isRead);
 

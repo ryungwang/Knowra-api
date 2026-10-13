@@ -74,7 +74,12 @@ public class NotificationEventListener {
                 .build();
         notifRepository.save(entity);
 
-        wsHandler.push(event.receiverSn(), new NotifDTO(entity, nickName, pfpUrl));
+        String commNm = null;
+        if ("COMM".equals(event.targetKind()) && event.targetSn() != null) {
+            com.knowra.community.entity.TblComm c = commRepository.findByCommSn(event.targetSn());
+            if (c != null) commNm = c.getCommNm();
+        }
+        wsHandler.push(event.receiverSn(), new NotifDTO(entity, nickName, pfpUrl, commNm));
 
         // 웹 푸시 — 설정의 알림 종류 스위치를 따른다. 실패해도 인앱 알림은 이미 저장됐다.
         if (wantsPush(event.receiverSn(), event.notifTyp())) {
