@@ -373,7 +373,14 @@ public class PostService {
             long   userSn   = me;
             long   postSn   = Long.parseLong(params.get("postSn").toString());
             String postLike = params.get("postLike").toString().toUpperCase();
-            boolean up      = "UP".equals(postLike);
+            // 좋아요 하나뿐이다. 화면은 'up' 만 보내지만 API 로 'DOWN' 을 넣으면 옛 비추천 경로가
+            // 살아 있어 수가 음수로 내려갔다(저장됨 화면의 -1 이 그 흔적). 여기서 막는다.
+            if (!"UP".equals(postLike)) {
+                resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
+                resultVO.setResultMessage("지원하지 않는 반응입니다.");
+                return resultVO;
+            }
+            boolean up      = true;
 
             TblPostLike like = tblPostLikeRepository.findByPostSnAndUserSn(postSn, userSn);
             int delta;
