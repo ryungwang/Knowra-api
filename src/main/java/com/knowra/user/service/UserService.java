@@ -54,6 +54,7 @@ public class UserService {
 
     private static final Logger logger = LoggerFactory.getLogger(UserService.class);
     private final TblUserRepository tblUserRepository;
+    private final com.knowra.safety.repository.TblUserBlockRepository tblUserBlockRepository;
     private final TblUserFlwrRepository tblUserFlwrRepository;
     private final JwtProvider jwtProvider;
     private final PostService postService;
@@ -96,7 +97,9 @@ public class UserService {
 
             if(userSn == null){
                 resultVO.putResult("isFollowing", false);
+                resultVO.putResult("isBlocked", false);
             }else{
+                resultVO.putResult("isBlocked", tblUserBlockRepository.existsByUserSnAndBlockedSn(userSn, tblUser.getUserSn()));
                 TblUserFlwr usrFlwr = q.selectFrom(qFlwr)
                         .where(qFlwr.flwrUserSn.eq(userSn).and(qFlwr.flwngUserSn.eq(tblUser.getUserSn()))
                                 .and(qFlwr.actvtnYn.eq("Y"))).fetchOne();

@@ -23,6 +23,7 @@ public class NotificationEventListener {
 
     private final TblUserNotifRepository notifRepository;
     private final NotificationWebSocketHandler wsHandler;
+    private final com.knowra.safety.service.SafetyService safetyService;
 
     @PersistenceContext
     private EntityManager em;
@@ -33,6 +34,8 @@ public class NotificationEventListener {
     public void onNotifTrigger(NotifTriggerEvent event) {
         // 자기 자신에게는 알림 미발송
         if (event.senderSn() != null && event.receiverSn() == event.senderSn()) return;
+        // 차단 관계면 양쪽 다 조용히 — 차단한 사람의 반응이 알림으로 새면 차단의 의미가 없다
+        if (event.senderSn() != null && safetyService.blockedEitherWay(event.receiverSn(), event.senderSn())) return;
 
         // 발신자 닉네임·프로필 조회
         String nickName = null;

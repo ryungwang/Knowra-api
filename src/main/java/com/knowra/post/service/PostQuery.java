@@ -13,6 +13,7 @@ import com.knowra.user.entity.QTblUser;
 import com.querydsl.core.Tuple;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQuery;
+import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -58,7 +59,15 @@ public class PostQuery {
      * 커뮤니티의 글. {@link #base()} 가 커뮤니티를 left join 하므로 그 alias 를 쓴다.
      */
     public static BooleanExpression visibleTo(Long viewerSn) {
-        return POST.commSn.isNull().or(CommunityQueryHelper.accessCondition(COMM, viewerSn));
+        BooleanExpression access = POST.commSn.isNull().or(CommunityQueryHelper.accessCondition(COMM, viewerSn));
+        if (viewerSn == null) return access;
+        // 차단은 양방향 — 내가 차단한 사람의 글도, 나를 차단한 사람의 글도 안 보인다. 숨긴 글은 내게만 안 보인다.
+        com.knowra.safety.entity.QTblUserBlock blk  = com.knowra.safety.entity.QTblUserBlock.tblUserBlock;
+        com.knowra.safety.entity.QTblPostHide  hide = com.knowra.safety.entity.QTblPostHide.tblPostHide;
+        return access
+                .and(POST.userSn.notIn(JPAExpressions.select(blk.blockedSn).from(blk).where(blk.userSn.eq(viewerSn))))
+                .and(POST.userSn.notIn(JPAExpressions.select(blk.userSn).from(blk).where(blk.blockedSn.eq(viewerSn))))
+                .and(POST.postSn.notIn(JPAExpressions.select(hide.postSn).from(hide).where(hide.userSn.eq(viewerSn))));
     }
 
     public JPAQuery<Tuple> base() {

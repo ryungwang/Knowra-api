@@ -639,6 +639,14 @@ public class PostService {
             BooleanExpression rootCondition = cmt.postSn.eq(postSn)
                     .and(cmt.actvtnYn.eq("Y"))
                     .and(cmt.prntCmtSn.isNull());
+            // 차단한·차단당한 사람의 댓글은 뺀다(양방향). 글 목록(PostQuery.visibleTo)과 같은 규칙.
+            BooleanExpression notBlocked = null;
+            if (userSn != null) {
+                com.knowra.safety.entity.QTblUserBlock blk = com.knowra.safety.entity.QTblUserBlock.tblUserBlock;
+                notBlocked = cmt.userSn.notIn(JPAExpressions.select(blk.blockedSn).from(blk).where(blk.userSn.eq(userSn)))
+                        .and(cmt.userSn.notIn(JPAExpressions.select(blk.userSn).from(blk).where(blk.blockedSn.eq(userSn))));
+                rootCondition = rootCondition.and(notBlocked);
+            }
             if (cursor != null) rootCondition = rootCondition.and(cmt.postCmtSn.gt(cursor));
 
             List<Tuple> rootTuples = q.select(cmt, cmtUser.nickName, cmtUser.name,
@@ -666,8 +674,9 @@ public class PostService {
                     .from(cmt)
                     .join(cmtUser).on(cmt.userSn.eq(cmtUser.userSn))
                     .leftJoin(cmtUser.pfp, cmtPfpFile)
-                    .where(cmt.prntCmtSn.in(rootSns)
-                            .and(cmt.actvtnYn.eq("Y")))
+                    .where(notBlocked == null
+                            ? cmt.prntCmtSn.in(rootSns).and(cmt.actvtnYn.eq("Y"))
+                            : cmt.prntCmtSn.in(rootSns).and(cmt.actvtnYn.eq("Y")).and(notBlocked))
                     .orderBy(cmt.postCmtSn.asc())
                     .fetch();
 

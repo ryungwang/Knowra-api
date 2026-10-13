@@ -46,6 +46,7 @@ public class ChatService {
     private final TblChatMsgRepository msgRepository;
     private final TblUserRepository userRepository;
     private final NotificationWebSocketHandler wsHandler;
+    private final com.knowra.safety.service.SafetyService safetyService;
 
     @PersistenceContext
     private EntityManager em;
@@ -140,6 +141,7 @@ public class ChatService {
             TblUser peer = userRepository.findByNickName(nickName)
                     .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
             if (peer.getUserSn() == userSn) throw new IllegalArgumentException("자기 자신과는 대화할 수 없습니다.");
+            if (safetyService.blockedEitherWay(userSn, peer.getUserSn())) throw new IllegalArgumentException("대화할 수 없는 상대예요.");
 
             String key = TblChatRoom.dmKeyOf(userSn, peer.getUserSn());
             TblChatRoom room = roomRepository.findByDmKey(key).orElseGet(() -> {
@@ -205,6 +207,10 @@ public class ChatService {
             if (text.isEmpty()) throw new IllegalArgumentException("메시지가 비어 있습니다.");
             if (text.length() > MAX_LEN) text = text.substring(0, MAX_LEN);
             requireMember(roomSn, userSn);
+            for (TblChatRoomMbr other : roomMbrRepository.findAllByRoomSn(roomSn)) {
+                if (other.getUserSn() != userSn && safetyService.blockedEitherWay(userSn, other.getUserSn()))
+                    throw new IllegalArgumentException("대화할 수 없는 상대예요.");
+            }
 
             TblChatMsg saved = msgRepository.save(TblChatMsg.builder().roomSn(roomSn).userSn(userSn).msgCntnt(text).build());
             TblChatRoom room = roomRepository.findById(roomSn).orElseThrow();

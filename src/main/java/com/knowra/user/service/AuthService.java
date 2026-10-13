@@ -78,6 +78,10 @@ public class AuthService {
             }
 
             long userSn = userService.getUserSn(loginId);
+            // 정지(status='S')된 계정은 비밀번호가 맞아도 들여보내지 않는다 — 관리자 콘솔이 정지한다
+            tblUserRepository.findById(userSn).ifPresent(u -> {
+                if ("S".equals(u.getStatus())) throw new IllegalStateException("SUSPENDED");
+            });
             String accessToken = jwtProvider.generateAccessToken(userSn, loginId);
             String refreshToken = jwtProvider.generateRefreshToken(userSn, loginId);
 
@@ -91,9 +95,11 @@ public class AuthService {
 
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
         } catch (BadCredentialsException e) {
-            e.printStackTrace();
             resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
             resultVO.setResultMessage("이메일 또는 비밀번호가 올바르지 않습니다.");
+        } catch (IllegalStateException e) {
+            resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
+            resultVO.setResultMessage("이용이 정지된 계정입니다. 문의해 주세요.");
         } catch (Exception e) {
             e.printStackTrace();
             resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
