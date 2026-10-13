@@ -32,4 +32,7 @@ public class CmtDTO {
     private String stat;
     /** 수정 시각. 생성 시각과 다르면 화면이 "수정됨"을 붙인다. */
     private LocalDateTime mdfcnDt;
+
+    /** 댓글 사진(없으면 null). 지워진 댓글은 사진도 내보내지 않는다. */
+    private String imgUrl;
 }

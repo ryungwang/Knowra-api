@@ -33,4 +33,8 @@ public class TblPostCmt extends BaseCmtEntity {
     @Column(name = "POST_SN", nullable = false)
     @Comment("게시글 SN (tbl_post FK)")
     private long postSn;
+
+    /** 댓글 사진 — 업로드 경로(/upload/editor/...) 하나. 없으면 null. */
+    @Column(name = "IMG_URL", length = 300)
+    private String imgUrl;
 }

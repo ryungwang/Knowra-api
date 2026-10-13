@@ -49,6 +49,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -458,13 +459,16 @@ public class PostService {
                 resultVO.setResultMessage("댓글을 달 수 없는 글이에요.");
                 return resultVO;
             }
-            String cmtText = params.get("cmtCntnt").toString();
+            String cmtText = params.get("cmtCntnt") == null ? "" : params.get("cmtCntnt").toString().trim();
+            String imgUrl  = cleanImgUrl(params.get("imgUrl"));
+            if (cmtText.isEmpty() && imgUrl == null) throw new IllegalArgumentException("내용이나 사진을 넣어 주세요.");
 
             tblPostCmtRepository.save(TblPostCmt.builder()
                     .postSn(postSn)
                     .userSn(userSn)
                     .prntCmtSn(prntCmtSn)
                     .cmtCntnt(cmtText)
+                    .imgUrl(imgUrl)
                     .creatrSn(userSn)
                     .build());
             actionLogService.log(userSn, TblUserActionLog.TARGET_POST, postSn, TblUserActionLog.ACTION_COMMENT);
@@ -494,6 +498,9 @@ public class PostService {
             if (parentSn != null) notified.add(parentSn);
             mentionService.notify(postSn, userSn, cmtText, null, notified);
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
+        } catch (IllegalArgumentException e) {
+            resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
+            resultVO.setResultMessage(e.getMessage());
         } catch (Exception e) {
             e.printStackTrace();
             resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
@@ -509,7 +516,6 @@ public class PostService {
             long userSn    = me;
             long postCmtSn = Long.parseLong(params.get("postCmtSn").toString());
             String cntnt   = params.get("cmtCntnt") == null ? "" : params.get("cmtCntnt").toString().trim();
-            if (cntnt.isEmpty()) throw new IllegalArgumentException("내용이 비어 있습니다.");
 
             TblPostCmt cmt = tblPostCmtRepository.findById(postCmtSn)
                     .orElseThrow(() -> new IllegalArgumentException("댓글을 찾을 수 없습니다."));
@@ -519,11 +525,20 @@ public class PostService {
                 return resultVO;
             }
             String beforeText = cmt.getCmtCntnt();
+            // imgUrl 키가 오면 바꾼다(null·빈 값이면 사진 빼기). 안 오면 그대로 둔다.
+            // ⚠️ 검사를 먼저 끝내고 나서 엔티티를 고친다 — 이 클래스는 트랜잭션 안이라, 고친 뒤에 예외를 잡아
+            // 실패로 답해도 바뀐 값이 그대로 커밋됐다(거절된 수정이 사진을 지워 버렸다).
+            String nextImg = params.containsKey("imgUrl") ? cleanImgUrl(params.get("imgUrl")) : cmt.getImgUrl();
+            if (cntnt.isEmpty() && nextImg == null) throw new IllegalArgumentException("내용이 비어 있습니다.");
+            cmt.setImgUrl(nextImg);
             cmt.setCmtCntnt(cntnt);
             cmt.setMdfrSn(userSn);
             tblPostCmtRepository.save(cmt);
             mentionService.notify(cmt.getPostSn(), userSn, cntnt, beforeText, List.of());   // 새로 넣은 멘션만
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
+        } catch (IllegalArgumentException e) {
+            resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
+            resultVO.setResultMessage(e.getMessage());
         } catch (Exception e) {
             e.printStackTrace();
             resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
@@ -590,6 +605,18 @@ public class PostService {
             resultVO.setResultMessage(ResponseCode.SAVE_ERROR.getMessage());
         }
         return resultVO;
+    }
+
+    /**
+     * 댓글 사진 경로 — 이 서버 업로드 모양(/upload/editor/yyyy/MM/dd/숫자_0.확장자)만 받는다.
+     * 아무 URL 이나 받으면 남의 서버 이미지를 끌어와 열람자 IP 를 모으는 데 쓸 수 있다.
+     */
+    static String cleanImgUrl(Object raw) {
+        if (raw == null) return null;
+        String s = raw.toString().trim();
+        if (s.isEmpty()) return null;
+        if (!s.matches("^/upload/editor/\\d{4}/\\d{2}/\\d{2}/\\d+_\\d+\\.(png|jpe?g|gif|webp)$")) throw new IllegalArgumentException("사진 경로가 올바르지 않아요.");
+        return s;
     }
 
     private Long ownerOf(long postSn) {
@@ -700,17 +727,44 @@ public class PostService {
                         .and(cmt.userSn.notIn(JPAExpressions.select(blk.userSn).from(blk).where(blk.blockedSn.eq(userSn))));
                 rootCondition = rootCondition.and(notBlocked);
             }
-            if (cursor != null) rootCondition = rootCondition.and(cmt.postCmtSn.gt(cursor));
-
-            List<Tuple> rootTuples = q.select(cmt, cmtUser.nickName, cmtUser.name,
-                            cmtPfpFile.atchFilePathNm, cmtPfpFile.strgFileNm, cmtPfpFile.atchFileExtnNm)
-                    .from(cmt)
-                    .join(cmtUser).on(cmt.userSn.eq(cmtUser.userSn))
-                    .leftJoin(cmtUser.pfp, cmtPfpFile)
-                    .where(rootCondition)
-                    .orderBy(cmt.postCmtSn.asc())
-                    .limit(size)
-                    .fetch();
+            // 정렬: old(등록순, 기본) · new(최신순) — postCmtSn 커서 / top(인기순) — 반응+답글 점수라 단조롭지 않아
+            // 커서 대신 오프셋을 쓴다. 한 글의 루트 댓글은 많아야 수백이라 점수는 메모리에서 매긴다.
+            String sort = params.get("sort") == null ? "old" : params.get("sort").toString();
+            Long nextCursorOverride = null;
+            List<Tuple> rootTuples;
+            com.querydsl.core.types.Expression<?>[] cols = { cmt, cmtUser.nickName, cmtUser.name,
+                    cmtPfpFile.atchFilePathNm, cmtPfpFile.strgFileNm, cmtPfpFile.atchFileExtnNm };
+            if ("top".equals(sort)) {
+                List<Long> allRoots = q.select(cmt.postCmtSn).from(cmt).where(rootCondition).orderBy(cmt.postCmtSn.asc()).fetch();
+                Map<Long, Long> score = new HashMap<>();
+                tblPostCmtReactRepository.countByCmtSns(allRoots).forEach(row ->
+                        score.merge(((Number) row[0]).longValue(), ((Number) row[2]).longValue(), Long::sum));
+                q.select(cmt.prntCmtSn, cmt.count()).from(cmt)
+                        .where(cmt.prntCmtSn.in(allRoots), cmt.actvtnYn.eq("Y")).groupBy(cmt.prntCmtSn).fetch()
+                        .forEach(t -> score.merge(t.get(cmt.prntCmtSn), 2 * t.get(cmt.count()), Long::sum));
+                List<Long> ordered = new ArrayList<>(allRoots);
+                ordered.sort(Comparator.comparingLong((Long sn) -> score.getOrDefault(sn, 0L)).reversed().thenComparingLong(sn -> sn));
+                int from = cursor == null ? 0 : (int) Math.max(0, cursor);
+                List<Long> pageSns = from >= ordered.size() ? List.of() : ordered.subList(from, Math.min(ordered.size(), from + size));
+                Map<Long, Tuple> byId = new HashMap<>();
+                if (!pageSns.isEmpty()) {
+                    q.select(cols).from(cmt).join(cmtUser).on(cmt.userSn.eq(cmtUser.userSn)).leftJoin(cmtUser.pfp, cmtPfpFile)
+                            .where(cmt.postCmtSn.in(pageSns)).fetch().forEach(t -> byId.put(t.get(cmt).getPostCmtSn(), t));
+                }
+                rootTuples = pageSns.stream().map(byId::get).filter(java.util.Objects::nonNull).toList();
+                nextCursorOverride = from + size < ordered.size() ? (long) (from + size) : -1L;
+            } else {
+                boolean desc = "new".equals(sort);
+                if (cursor != null) rootCondition = rootCondition.and(desc ? cmt.postCmtSn.lt(cursor) : cmt.postCmtSn.gt(cursor));
+                rootTuples = q.select(cols)
+                        .from(cmt)
+                        .join(cmtUser).on(cmt.userSn.eq(cmtUser.userSn))
+                        .leftJoin(cmtUser.pfp, cmtPfpFile)
+                        .where(rootCondition)
+                        .orderBy(desc ? cmt.postCmtSn.desc() : cmt.postCmtSn.asc())
+                        .limit(size)
+                        .fetch();
+            }
 
             if (rootTuples.isEmpty()) {
                 resultVO.putResult("list", List.of());
@@ -764,7 +818,8 @@ public class PostService {
                         c.getLikeCnt(), c.getFrstCrtDt(), new ArrayList<>(),
                         reactionsMap.getOrDefault(sn, new HashMap<>()),
                         myReactMap.get(sn), pfpUrl,
-                        deleted ? "DELETED" : "ACTIVE", c.getMdfcnDt());
+                        deleted ? "DELETED" : "ACTIVE", c.getMdfcnDt(),
+                        deleted ? null : c.getImgUrl());
             };
             Map<Long, CmtDTO> rootMap = new LinkedHashMap<>();
             rootTuples.forEach(t -> rootMap.put(t.get(cmt).getPostCmtSn(), toDto.apply(t)));
@@ -775,7 +830,9 @@ public class PostService {
             List<CmtDTO> list = new ArrayList<>(rootMap.values());
 
             // ── 5. nextCursor: 마지막 루트 댓글 SN (size 미달이면 null) ────────
-            Long nextCursor = list.size() == size ? rootSns.get(rootSns.size() - 1) : null;
+            Long nextCursor = nextCursorOverride != null
+                    ? (nextCursorOverride < 0 ? null : nextCursorOverride)
+                    : (list.size() == size ? rootSns.get(rootSns.size() - 1) : null);
             resultVO.putResult("list", list);
             resultVO.putResult("nextCursor", nextCursor);
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());

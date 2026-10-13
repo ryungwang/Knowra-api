@@ -2,3 +2,6 @@
 /target/
 /.github.bak-*/
 /.github/.github/
+
+# 로컬 업로드 — macOS 에선 File.Store.Path=C:/home/upload 가 프로젝트 안 상대 경로가 된다
+/C:/
