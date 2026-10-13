@@ -175,6 +175,12 @@ public class CommunityService {
             resultVO.putResult("isMember", myMember != null);
             resultVO.putResult("memberStatus", myMember != null ? myMember.getStat() : null);
             resultVO.putResult("notifOn", myMember != null && "Y".equals(myMember.getNotifYn()));
+            resultVO.putResult("myRole", myMember != null && "ACTIVE".equals(myMember.getStat()) ? myMember.getRole() : null);
+            // 운영진에겐 가입 대기 수를 같이 준다 — 탭에 숫자를 달아 놓치지 않게
+            if (myMember != null && "ACTIVE".equals(myMember.getStat()) && isManager(myMember.getRole())) {
+                long pending = tblComm.getMembers().stream().filter(x -> "PENDING".equals(x.getStat()) && "Y".equals(x.getActvtnYn())).count();
+                resultVO.putResult("pendingCnt", pending);
+            }
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
             resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
         } catch (Exception e) {
@@ -478,6 +484,214 @@ public class CommunityService {
             resultVO.setResultMessage(ResponseCode.COMMUNITY_SELECT_ERROR.getMessage());
         }
 
+        return resultVO;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // 멤버 관리 — 가입 승인·거절, 강퇴, 운영진 지정, 커뮤니티 정보 수정
+    // ─────────────────────────────────────────────────────────────────────
+
+    /** 호출자의 역할(ACTIVE 멤버만). 아니면 null. */
+    private String roleOf(long commSn, long userSn) {
+        return tblCommMbrRepository.findByCommSnAndUserSn(commSn, userSn)
+                .filter(m -> "ACTIVE".equals(m.getStat()) && "Y".equals(m.getActvtnYn()))
+                .map(TblCommMbr::getRole).orElse(null);
+    }
+    private static boolean isManager(String role) { return "OWNER".equals(role) || "ADMIN".equals(role); }
+
+    /**
+     * 멤버 목록. params: commSn, stat(ACTIVE|PENDING|BANNED, 기본 ACTIVE).
+     * ACTIVE 는 누구나(비공개 커뮤니티는 멤버만), PENDING·BANNED 는 운영진만 본다.
+     */
+    public ResultVO getMemberList(Map<String, Object> params, Long me) {
+        ResultVO resultVO = new ResultVO();
+        try {
+            long commSn = Long.parseLong(params.get("commSn").toString());
+            String stat = params.get("stat") == null ? "ACTIVE" : params.get("stat").toString();
+            TblComm comm = tblCommRepository.findByCommSn(commSn);
+            if (comm == null) {
+                resultVO.setResultCode(ResponseCode.COMMUNITY_NOT_FOUND.getCode());
+                resultVO.setResultMessage(ResponseCode.COMMUNITY_NOT_FOUND.getMessage());
+                return resultVO;
+            }
+            String myRole = me == null ? null : roleOf(commSn, me);
+            boolean privateComm = "private".equals(comm.getPrvcyStng());
+            if (!"ACTIVE".equals(stat) && !isManager(myRole)) {
+                resultVO.setResultCode(ResponseCode.COMMUNITY_MEMBER_ERROR.getCode());
+                resultVO.setResultMessage("운영진만 볼 수 있습니다.");
+                return resultVO;
+            }
+            if (privateComm && myRole == null) {
+                resultVO.setResultCode(ResponseCode.COMMUNITY_MEMBER_ERROR.getCode());
+                resultVO.setResultMessage("멤버만 볼 수 있습니다.");
+                return resultVO;
+            }
+
+            QTblCommMbr m = QTblCommMbr.tblCommMbr;
+            com.knowra.user.entity.QTblUser u = com.knowra.user.entity.QTblUser.tblUser;
+            QTblComFile pfp = new QTblComFile("pfp");
+            List<com.querydsl.core.Tuple> rows = new JPAQueryFactory(em)
+                    .select(m, u.nickName, u.name, pfp.atchFilePathNm, pfp.strgFileNm, pfp.atchFileExtnNm)
+                    .from(m).join(u).on(m.userSn.eq(u.userSn)).leftJoin(u.pfp, pfp)
+                    .where(m.commSn.eq(commSn).and(m.stat.eq(stat)).and(m.actvtnYn.eq("Y")))
+                    .orderBy(m.role.asc(), m.frstCrtDt.asc())
+                    .fetch();
+            List<Map<String, Object>> list = new java.util.ArrayList<>();
+            for (com.querydsl.core.Tuple t : rows) {
+                TblCommMbr mb = t.get(m);
+                String path = t.get(pfp.atchFilePathNm);
+                Map<String, Object> row = new java.util.LinkedHashMap<>();
+                row.put("userSn",   mb.getUserSn());
+                row.put("nickName", t.get(u.nickName));
+                row.put("name",     t.get(u.name));
+                row.put("pfpUrl",   path != null ? path + "/" + t.get(pfp.strgFileNm) + "." + t.get(pfp.atchFileExtnNm) : null);
+                row.put("role",     mb.getRole());
+                row.put("stat",     mb.getStat());
+                row.put("joinedAt", mb.getFrstCrtDt());
+                list.add(row);
+            }
+            resultVO.putResult("list", list);
+            resultVO.putResult("myRole", myRole);
+            resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
+        } catch (Exception e) {
+            e.printStackTrace();
+            resultVO.setResultCode(ResponseCode.COMMUNITY_SELECT_ERROR.getCode());
+            resultVO.setResultMessage(ResponseCode.COMMUNITY_SELECT_ERROR.getMessage());
+        }
+        return resultVO;
+    }
+
+    /**
+     * 멤버 상태 변경. params: commSn, userSn, stat(ACTIVE=승인 | REJECTED=거절 | BANNED=강퇴 | WITHDRAWN=제명해제 없이 내보내기).
+     * 운영진만. OWNER 는 바꿀 수 없고, ADMIN 은 다른 ADMIN 을 건드리지 못한다(OWNER 만 가능).
+     */
+    @Transactional
+    public ResultVO setMemberStat(Map<String, Object> params, Long me) {
+        ResultVO resultVO = new ResultVO();
+        try {
+            long commSn = Long.parseLong(params.get("commSn").toString());
+            long target = Long.parseLong(params.get("userSn").toString());
+            String stat = params.get("stat").toString();
+            if (!java.util.Set.of("ACTIVE", "REJECTED", "BANNED", "WITHDRAWN").contains(stat)) {
+                throw new IllegalArgumentException("지원하지 않는 상태입니다.");
+            }
+            String myRole = roleOf(commSn, me);
+            if (!isManager(myRole)) throw new IllegalArgumentException("운영진만 할 수 있습니다.");
+            TblCommMbr mb = tblCommMbrRepository.findByCommSnAndUserSn(commSn, target)
+                    .orElseThrow(() -> new IllegalArgumentException("멤버가 아닙니다."));
+            if ("OWNER".equals(mb.getRole())) throw new IllegalArgumentException("만든 사람은 내보낼 수 없습니다.");
+            if ("ADMIN".equals(mb.getRole()) && !"OWNER".equals(myRole)) throw new IllegalArgumentException("운영진은 만든 사람만 바꿀 수 있습니다.");
+
+            TblComm comm = tblCommRepository.findByCommSn(commSn);
+            boolean wasActive = "ACTIVE".equals(mb.getStat());
+            boolean nowActive = "ACTIVE".equals(stat);
+            mb.setStat(stat);
+            mb.setMdfrSn(me);
+            if (nowActive && !wasActive) { mb.setJoinTyp("APPROVE"); mb.setNotifYn("Y"); }
+            if (!nowActive) mb.setRole("MEMBER");
+            tblCommMbrRepository.save(mb);
+            if (wasActive != nowActive) {
+                comm.setMemberCnt(Math.max(0, comm.getMemberCnt() + (nowActive ? 1 : -1)));
+                tblCommRepository.save(comm);
+            }
+            if (nowActive && !wasActive) {
+                actionLogService.log(target, TblUserActionLog.TARGET_COMM, commSn, TblUserActionLog.ACTION_JOIN);
+                interestScoreService.update(target, TblUserActionLog.TARGET_COMM, commSn, 8);
+            }
+            eventPublisher.publishEvent(new CommunityMemberChangedEvent(target, commSn, nowActive));
+            String typ = switch (stat) { case "ACTIVE" -> "COMM_APPROVED"; case "REJECTED" -> "COMM_REJECTED"; default -> "COMM_REMOVED"; };
+            eventPublisher.publishEvent(new com.knowra.cmm.event.NotifTriggerEvent(target, me, typ, commSn, "COMM", comm.getCommDsplNm()));
+
+            resultVO.putResult("stat", stat);
+            resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
+        } catch (IllegalArgumentException e) {
+            resultVO.setResultCode(ResponseCode.COMMUNITY_MEMBER_ERROR.getCode());
+            resultVO.setResultMessage(e.getMessage());
+        } catch (Exception e) {
+            e.printStackTrace();
+            resultVO.setResultCode(ResponseCode.COMMUNITY_MEMBER_ERROR.getCode());
+            resultVO.setResultMessage(ResponseCode.COMMUNITY_MEMBER_ERROR.getMessage());
+        }
+        return resultVO;
+    }
+
+    /** 운영진 지정·해제. params: commSn, userSn, role(ADMIN|MEMBER). OWNER 만. */
+    @Transactional
+    public ResultVO setMemberRole(Map<String, Object> params, Long me) {
+        ResultVO resultVO = new ResultVO();
+        try {
+            long commSn = Long.parseLong(params.get("commSn").toString());
+            long target = Long.parseLong(params.get("userSn").toString());
+            String role = params.get("role").toString();
+            if (!"ADMIN".equals(role) && !"MEMBER".equals(role)) throw new IllegalArgumentException("지원하지 않는 역할입니다.");
+            if (!"OWNER".equals(roleOf(commSn, me))) throw new IllegalArgumentException("만든 사람만 운영진을 정할 수 있습니다.");
+            TblCommMbr mb = tblCommMbrRepository.findByCommSnAndUserSn(commSn, target)
+                    .filter(x -> "ACTIVE".equals(x.getStat()))
+                    .orElseThrow(() -> new IllegalArgumentException("활성 멤버가 아닙니다."));
+            if ("OWNER".equals(mb.getRole())) throw new IllegalArgumentException("만든 사람의 역할은 바꿀 수 없습니다.");
+            mb.setRole(role); mb.setMdfrSn(me);
+            tblCommMbrRepository.save(mb);
+            TblComm comm = tblCommRepository.findByCommSn(commSn);
+            eventPublisher.publishEvent(new com.knowra.cmm.event.NotifTriggerEvent(target, me, "ADMIN".equals(role) ? "COMM_ADMIN" : "COMM_ADMIN_OFF", commSn, "COMM", comm.getCommDsplNm()));
+            resultVO.putResult("role", role);
+            resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
+        } catch (IllegalArgumentException e) {
+            resultVO.setResultCode(ResponseCode.COMMUNITY_MEMBER_ERROR.getCode());
+            resultVO.setResultMessage(e.getMessage());
+        } catch (Exception e) {
+            e.printStackTrace();
+            resultVO.setResultCode(ResponseCode.COMMUNITY_MEMBER_ERROR.getCode());
+            resultVO.setResultMessage(ResponseCode.COMMUNITY_MEMBER_ERROR.getMessage());
+        }
+        return resultVO;
+    }
+
+    /**
+     * 커뮤니티 정보 수정 — 표시 이름·설명·공개 범위·로고·배너. 운영진만. slug(commNm)는 주소라 바꾸지 않는다.
+     * 멀티파트: commSn, commDsplNm, commDesc, prvcyStng, logoImage?, bannerImage?, removeLogo?, removeBanner?
+     */
+    @Transactional
+    public ResultVO updateCommunity(MultipartHttpServletRequest request, Long me) {
+        ResultVO resultVO = new ResultVO();
+        try {
+            long commSn = Long.parseLong(request.getParameter("commSn"));
+            if (!isManager(roleOf(commSn, me))) throw new IllegalArgumentException("운영진만 고칠 수 있습니다.");
+            TblComm comm = tblCommRepository.findByCommSn(commSn);
+            if (comm == null) throw new IllegalArgumentException("존재하지 않는 커뮤니티입니다.");
+
+            String dspl = request.getParameter("commDsplNm");
+            if (dspl != null && dspl.trim().length() >= 2) comm.setCommDsplNm(dspl.trim());
+            if (request.getParameter("commDesc") != null) comm.setCommDesc(request.getParameter("commDesc").trim());
+            String prv = request.getParameter("prvcyStng");
+            if (prv != null && java.util.Set.of("public", "restricted", "anonymous", "private").contains(prv)) comm.setPrvcyStng(prv);
+
+            String psnTblSn = "community_" + commSn;
+            if (request.getFile("logoImage") != null) {
+                TblComFile f = fileUtil.devFileInf(request.getFile("logoImage"), "/communities/" + commSn + "/logo", psnTblSn);
+                f.setCreatrSn(me);
+                comm.setLogoFileSn(tblComFileRepository.save(f).getAtchFileSn());
+            } else if ("true".equals(request.getParameter("removeLogo"))) {
+                comm.setLogoFileSn(null);
+            }
+            if (request.getFile("bannerImage") != null) {
+                TblComFile f = fileUtil.devFileInf(request.getFile("bannerImage"), "/communities/" + commSn + "/banner", psnTblSn);
+                f.setCreatrSn(me);
+                comm.setBnrFileSn(tblComFileRepository.save(f).getAtchFileSn());
+            } else if ("true".equals(request.getParameter("removeBanner"))) {
+                comm.setBnrFileSn(null);
+            }
+            comm.setMdfrSn(me);
+            tblCommRepository.save(comm);
+            resultVO.setResultCode(ResponseCode.COMMUNITY_UPDATE_SUCCESS.getCode());
+            resultVO.setResultMessage(ResponseCode.COMMUNITY_UPDATE_SUCCESS.getMessage());
+        } catch (IllegalArgumentException e) {
+            resultVO.setResultCode(ResponseCode.COMMUNITY_UPDATE_ERROR.getCode());
+            resultVO.setResultMessage(e.getMessage());
+        } catch (Exception e) {
+            e.printStackTrace();
+            resultVO.setResultCode(ResponseCode.COMMUNITY_UPDATE_ERROR.getCode());
+            resultVO.setResultMessage(ResponseCode.COMMUNITY_UPDATE_ERROR.getMessage());
+        }
         return resultVO;
     }
 }

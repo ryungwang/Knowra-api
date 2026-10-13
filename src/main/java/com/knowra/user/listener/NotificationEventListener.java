@@ -81,6 +81,11 @@ public class NotificationEventListener {
             case "FOLLOW"      -> sender + "이 팔로우를 시작했습니다.";
             case "COMM_POST"   -> sender + "이 " + place + "에 새 글을 올렸습니다.";
             case "COMM_NOTICE" -> place + "에 새 공지가 올라왔습니다.";
+            case "COMM_APPROVED"  -> place + " 가입이 승인됐습니다. 환영해요!";
+            case "COMM_REJECTED"  -> place + " 가입 신청이 받아들여지지 않았습니다.";
+            case "COMM_REMOVED"   -> place + "에서 내보내졌습니다.";
+            case "COMM_ADMIN"     -> place + "의 운영진이 됐습니다.";
+            case "COMM_ADMIN_OFF" -> place + "의 운영진에서 해제됐습니다.";
             default            -> "새 알림이 있습니다. (" + notifTyp + ")";
         };
         // MESSAGE 컬럼은 255자다 — 커뮤니티 이름이 길어도 넘치지 않게 자른다.

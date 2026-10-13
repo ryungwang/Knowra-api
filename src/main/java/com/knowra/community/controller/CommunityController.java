@@ -42,6 +42,30 @@ public class CommunityController {
         return communityService.getMyCommunityList(me);
     }
 
+    /** 멤버 목록. params: commSn, stat(ACTIVE|PENDING|BANNED) */
+    @PostMapping("/api/community/getMemberList")
+    public ResultVO getMemberList(@RequestBody Map<String, Object> params, @CurrentUser Long me) {
+        return communityService.getMemberList(params, me);
+    }
+
+    /** 가입 승인·거절·강퇴. params: commSn, userSn, stat */
+    @PostMapping("/api/community/setMemberStat")
+    public ResultVO setMemberStat(@RequestBody Map<String, Object> params, @CurrentUser Long me) {
+        return communityService.setMemberStat(params, me);
+    }
+
+    /** 운영진 지정·해제. params: commSn, userSn, role */
+    @PostMapping("/api/community/setMemberRole")
+    public ResultVO setMemberRole(@RequestBody Map<String, Object> params, @CurrentUser Long me) {
+        return communityService.setMemberRole(params, me);
+    }
+
+    /** 커뮤니티 정보 수정(멀티파트). */
+    @PostMapping("/api/community/updateCommunity")
+    public ResultVO updateCommunity(MultipartHttpServletRequest request, @CurrentUser Long me) {
+        return communityService.updateCommunity(request, me);
+    }
+
     /** 새 글 알림 켜기/끄기 — 활성 멤버만. params: commSn, notifOn */
     @PostMapping("/api/community/setNotif")
     public ResultVO setNotif(@RequestBody Map<String, Object> params, @CurrentUser Long me) {
