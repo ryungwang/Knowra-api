@@ -25,6 +25,11 @@ public class RedisApiService {
         }
     }
 
+    /** 없을 때만 넣는다(원자적). 넣었으면 true — 같은 일을 두 번 하지 않으려는 자리에 쓴다. */
+    public boolean setIfAbsent(int templateIndex, String key, Object value, long ttlSeconds) {
+        return Boolean.TRUE.equals(getRedisTemplate(templateIndex).opsForValue().setIfAbsent(key, value, ttlSeconds, TimeUnit.SECONDS));
+    }
+
     public Object getRedis(int templateIndex, String key) {
         RedisTemplate<String, Object> redisTemplate = getRedisTemplate(templateIndex);
         return redisTemplate.opsForValue().get(key);

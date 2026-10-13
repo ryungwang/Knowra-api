@@ -36,7 +36,7 @@ public class UserController {
     }
 
     @PostMapping("/api/user/setUserSetting")
-    public ResultVO setUserSetting(@RequestBody TblUserStng tblUserStng,
+    public ResultVO setUserSetting(@RequestBody Map<String, Object> tblUserStng,
                                    @CurrentUser Long me) {
         return userService.setUserSetting(tblUserStng, me);
     }

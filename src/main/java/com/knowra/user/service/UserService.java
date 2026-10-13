@@ -179,22 +179,28 @@ public class UserService {
         return resultVO;
     }
 
-    public ResultVO setUserSetting(TblUserStng tblUserStng, Long me) {
+    private static boolean isYn(Object v) { return "Y".equals(v) || "N".equals(v); }
+
+    public ResultVO setUserSetting(java.util.Map<String, Object> b, Long me) {
         ResultVO resultVO = new ResultVO();
 
         try {
             Long userSn = me;
 
-            if(tblUserStng.getUserStngSn() == null){
-                /** 헤더에서 테마 변견시 */
-                TblUserStng orgUserStng = tblUserStngRepository.findByUserSn(userSn);
-                orgUserStng.setThemeTyp(tblUserStng.getThemeTyp());
-                orgUserStng.setMdfrSn(userSn);
-                tblUserStngRepository.save(orgUserStng);
-            }else{
-                tblUserStng.setMdfrSn(userSn);
-                tblUserStngRepository.save(tblUserStng);
-            }
+            // ⚠️ 받은 엔티티를 그대로 save 하지 않는다 — 예전엔 본문의 userStngSn·userSn 을 믿어서
+            //    남의 설정 행 번호를 보내면 그 사람 설정을 덮어쓸 수 있었다. 내 행을 찾아 값만 옮긴다.
+            TblUserStng org = tblUserStngRepository.findByUserSn(userSn);
+            if (org == null) { org = new TblUserStng(); org.setUserSn(userSn); org.setCreatrSn(userSn); }
+            // 보낸 칸만 바꾼다 — 헤더의 테마 전환은 themeTyp 하나만 보낸다
+            Object theme = b.get("themeTyp");
+            if (theme != null && java.util.Set.of("light", "dark", "system").contains(String.valueOf(theme))) org.setThemeTyp(String.valueOf(theme));
+            if (isYn(b.get("cmtNtfctnYn")))  org.setCmtNtfctnYn(String.valueOf(b.get("cmtNtfctnYn")));
+            if (isYn(b.get("flwrNtfctnYn"))) org.setFlwrNtfctnYn(String.valueOf(b.get("flwrNtfctnYn")));
+            if (isYn(b.get("likeNtfctnYn"))) org.setLikeNtfctnYn(String.valueOf(b.get("likeNtfctnYn")));
+            if (isYn(b.get("sysNtfctnYn")))  org.setSysNtfctnYn(String.valueOf(b.get("sysNtfctnYn")));
+            if (isYn(b.get("digestYn")))     org.setDigestYn(String.valueOf(b.get("digestYn")));
+            org.setMdfrSn(userSn);
+            tblUserStngRepository.save(org);
 
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
             resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
