@@ -91,6 +91,7 @@ public class PostService {
     private final ApplicationEventPublisher eventPublisher;
     private final com.knowra.poll.service.PollService pollService;
     private final com.knowra.mention.MentionService mentionService;
+    private final com.knowra.badge.BadgeService badgeService;
 
     private static final int REDIS_DB  = 15;
     private static final int PAGE_SIZE = 50;
@@ -170,6 +171,7 @@ public class PostService {
                         tblPost.getPostSn(), userSn, tblPost.getCommSn(), tblPost.getFrstCrtDt()));
                 notifyCommunityMembers(tblPost, userSn);
                 mentionService.notify(tblPost.getPostSn(), userSn, tblPost.getPostCntnt(), null, List.of());
+                badgeService.evaluate(userSn);   // 첫 글·글 10개·첫 투표 같은 뱃지
             }
 
             @SuppressWarnings("unchecked")
@@ -503,6 +505,7 @@ public class PostService {
             if (ownerSn != null) notified.add(ownerSn);
             if (parentSn != null) notified.add(parentSn);
             mentionService.notify(postSn, userSn, cmtText, null, notified);
+            badgeService.evaluate(userSn);   // 첫 댓글·수다쟁이
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
         } catch (IllegalArgumentException e) {
             resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());

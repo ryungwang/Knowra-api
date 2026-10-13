@@ -43,6 +43,7 @@ public class NotifDTO {
         if ("POST".equals(entity.getTargetKind()) && entity.getTargetSn() != null) this.link = "/posts/" + entity.getTargetSn();
         else if ("FOLLOW".equals(entity.getNotifTyp()) && senderNickName != null) this.link = "/user/" + senderNickName;
         else if ("COMM".equals(entity.getTargetKind()) && commNm != null) this.link = "/community/" + commNm;
+        else if ("BADGE".equals(entity.getTargetKind())) this.link = "/me/badges";   // 내 프로필 뱃지 칸(프론트가 내 닉네임으로 바꾼다)
         else this.link = null;
     }
 }

@@ -126,6 +126,7 @@ public class NotificationEventListener {
             case "COMMENT"     -> sender + "이 내 게시글에 댓글을 달았습니다.";
             case "REPLY"       -> sender + "이 내 댓글에 답글을 달았습니다.";
             case "MENTION"     -> sender + "이 회원님을 언급했습니다.";
+            case "BADGE"       -> "새 뱃지 " + (extra == null ? "" : extra) + objectJosa(extra) + " 얻었어요!";
             case "FOLLOW"      -> sender + "이 팔로우를 시작했습니다.";
             case "COMM_POST"   -> sender + "이 " + place + "에 새 글을 올렸습니다.";
             case "COMM_NOTICE" -> place + "에 새 공지가 올라왔습니다.";
@@ -138,5 +139,16 @@ public class NotificationEventListener {
         };
         // MESSAGE 컬럼은 255자다 — 커뮤니티 이름이 길어도 넘치지 않게 자른다.
         return msg.length() > 250 ? msg.substring(0, 250) + "…" : msg;
+    }
+
+    /** 을/를 — 마지막 한글 글자에 받침이 있으면 「을」. 「첫 글」을 · 「작은 박수」를 · 외 3개를 */
+    static String objectJosa(String word) {
+        if (word == null) return "를";
+        for (int k = word.length() - 1; k >= 0; k--) {
+            char ch = word.charAt(k);
+            if (ch >= 0xAC00 && ch <= 0xD7A3) return ((ch - 0xAC00) % 28) == 0 ? "를" : "을";
+            if (Character.isDigit(ch)) return "013678".indexOf(ch) >= 0 ? "을" : "를";
+        }
+        return "를";
     }
 }
