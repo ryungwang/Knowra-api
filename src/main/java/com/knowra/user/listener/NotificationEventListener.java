@@ -95,7 +95,7 @@ public class NotificationEventListener {
         if (st == null) return !"LIKE".equals(typ);
         String yn = switch (typ) {
             case "LIKE" -> st.getLikeNtfctnYn();
-            case "COMMENT", "REPLY" -> st.getCmtNtfctnYn();
+            case "COMMENT", "REPLY", "MENTION" -> st.getCmtNtfctnYn();
             case "FOLLOW" -> st.getFlwrNtfctnYn();
             default -> st.getSysNtfctnYn();
         };
@@ -120,6 +120,7 @@ public class NotificationEventListener {
             case "LIKE"        -> sender + "이 내 게시글을 좋아합니다.";
             case "COMMENT"     -> sender + "이 내 게시글에 댓글을 달았습니다.";
             case "REPLY"       -> sender + "이 내 댓글에 답글을 달았습니다.";
+            case "MENTION"     -> sender + "이 회원님을 언급했습니다.";
             case "FOLLOW"      -> sender + "이 팔로우를 시작했습니다.";
             case "COMM_POST"   -> sender + "이 " + place + "에 새 글을 올렸습니다.";
             case "COMM_NOTICE" -> place + "에 새 공지가 올라왔습니다.";

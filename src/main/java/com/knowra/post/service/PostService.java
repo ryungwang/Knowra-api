@@ -88,6 +88,7 @@ public class PostService {
     private final InterestScoreService interestScoreService;
     private final ApplicationEventPublisher eventPublisher;
     private final com.knowra.poll.service.PollService pollService;
+    private final com.knowra.mention.MentionService mentionService;
 
     private static final int REDIS_DB  = 15;
     private static final int PAGE_SIZE = 50;
@@ -166,6 +167,7 @@ public class PostService {
                 eventPublisher.publishEvent(new PostCreatedEvent(
                         tblPost.getPostSn(), userSn, tblPost.getCommSn(), tblPost.getFrstCrtDt()));
                 notifyCommunityMembers(tblPost, userSn);
+                mentionService.notify(tblPost.getPostSn(), userSn, tblPost.getPostCntnt(), null, List.of());
             }
 
             @SuppressWarnings("unchecked")
@@ -450,12 +452,19 @@ public class PostService {
             long postSn    = Long.parseLong(params.get("postSn").toString());
             Long prntCmtSn = params.get("prntCmtSn") != null
                     ? Long.parseLong(params.get("prntCmtSn").toString()) : null;
+            // 볼 수 없는 글(비공개 커뮤니티·차단·숨김·삭제)에는 댓글도 못 단다 — 예전엔 postSn 만 알면 달 수 있었다
+            if (postQuery.base().where(POST.postSn.eq(postSn), PostQuery.alive(), PostQuery.visibleTo(userSn)).fetchFirst() == null) {
+                resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
+                resultVO.setResultMessage("댓글을 달 수 없는 글이에요.");
+                return resultVO;
+            }
+            String cmtText = params.get("cmtCntnt").toString();
 
             tblPostCmtRepository.save(TblPostCmt.builder()
                     .postSn(postSn)
                     .userSn(userSn)
                     .prntCmtSn(prntCmtSn)
-                    .cmtCntnt(params.get("cmtCntnt").toString())
+                    .cmtCntnt(cmtText)
                     .creatrSn(userSn)
                     .build());
             actionLogService.log(userSn, TblUserActionLog.TARGET_POST, postSn, TblUserActionLog.ACTION_COMMENT);
@@ -479,6 +488,11 @@ public class PostService {
             if (ownerSn != null && !ownerSn.equals(parentSn)) {
                 eventPublisher.publishEvent(new NotifTriggerEvent(ownerSn, userSn, "COMMENT", postSn, "POST"));
             }
+            // @멘션 — 이미 COMMENT/REPLY 를 받은 사람은 빼서 한 동작에 알림 하나만
+            List<Long> notified = new java.util.ArrayList<>();
+            if (ownerSn != null) notified.add(ownerSn);
+            if (parentSn != null) notified.add(parentSn);
+            mentionService.notify(postSn, userSn, cmtText, null, notified);
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
         } catch (Exception e) {
             e.printStackTrace();
@@ -504,9 +518,11 @@ public class PostService {
                 resultVO.setResultMessage("수정 권한이 없습니다.");
                 return resultVO;
             }
+            String beforeText = cmt.getCmtCntnt();
             cmt.setCmtCntnt(cntnt);
             cmt.setMdfrSn(userSn);
             tblPostCmtRepository.save(cmt);
+            mentionService.notify(cmt.getPostSn(), userSn, cntnt, beforeText, List.of());   // 새로 넣은 멘션만
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
         } catch (Exception e) {
             e.printStackTrace();
