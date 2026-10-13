@@ -84,6 +84,8 @@ public class SecurityConfig {
 
                         // 비로그인 열람 — 피드·글·댓글
                         .requestMatchers(HttpMethod.GET, "/api/auth/sns/providers").permitAll()
+                        // 공유 링크 미리보기 — 봇은 로그인하지 않는다. 비로그인 기준 공개 정보만 낸다(ShareController).
+                        .requestMatchers(HttpMethod.GET, "/s/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/feed/**", "/api/post/getPost", "/api/search").permitAll()
                         .requestMatchers(HttpMethod.POST,
                                 "/api/post/getPostCmtList", "/api/post/viewPost", "/api/post/getCommPostList").permitAll()
