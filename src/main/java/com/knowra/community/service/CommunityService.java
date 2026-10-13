@@ -43,6 +43,7 @@ public class CommunityService {
 
     private final TblCommRepository tblCommRepository;
     private final TblCommMbrRepository tblCommMbrRepository;
+    private final com.knowra.wiki.WikiService wikiService;
     private final TblComFileRepository tblComFileRepository;
     private final FileUtil fileUtil;
     private final RedisApiService redisApiService;
@@ -302,6 +303,12 @@ public class CommunityService {
                     memberStatus = "PENDING";
                 }
                 String joinTyp = "ACTIVE".equals(memberStatus) ? "AUTO" : "APPLY";
+                // 규칙이 있으면 동의해야 참여(가입 신청)할 수 있다 — 동의한 시각을 멤버 줄에 남긴다
+                boolean needAgree = wikiService.hasRules(tblComm.getCommSn());
+                if (needAgree && !Boolean.parseBoolean(String.valueOf(params.get("agreeRules")))) {
+                    throw new RuntimeException("커뮤니티 규칙에 동의해야 참여할 수 있어요.");
+                }
+                java.time.LocalDateTime agreedAt = needAgree ? java.time.LocalDateTime.now() : null;
 
                 if (existing.isPresent()) {
                     String currentStat = existing.get().getStat();
@@ -316,6 +323,7 @@ public class CommunityService {
                         .set(qTblCommMbr.stat, memberStatus)
                         .set(qTblCommMbr.joinTyp, joinTyp)
                         .set(qTblCommMbr.notifYn, "Y")
+                        .set(qTblCommMbr.rulesAgreedAt, agreedAt)
                         .where(
                             qTblCommMbr.commSn.eq(tblComm.getCommSn())
                             .and(qTblCommMbr.userSn.eq(userSn))
@@ -327,6 +335,7 @@ public class CommunityService {
                             .stat(memberStatus)
                             .joinTyp(joinTyp)
                             .notifYn("Y")   // 막 참여한 멤버는 새 글을 보고 싶어 한다. 끄는 건 종 버튼.
+                            .rulesAgreedAt(agreedAt)
                             .actvtnYn("Y")
                             .creatrSn(userSn)
                             .build();

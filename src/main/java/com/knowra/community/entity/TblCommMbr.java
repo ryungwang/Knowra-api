@@ -87,4 +87,8 @@ public class TblCommMbr {
     @Builder.Default
     @Column(name = "LAST_VISIT_AT", nullable = false)
     private LocalDateTime lastVisitAt = LocalDateTime.now();
+
+    /** 참여할 때 규칙에 동의한 시각(규칙이 없던 때 참여했으면 NULL). */
+    @Column(name = "RULES_AGREED_AT")
+    private LocalDateTime rulesAgreedAt;
 }

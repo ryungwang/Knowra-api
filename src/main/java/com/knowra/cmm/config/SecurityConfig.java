@@ -96,7 +96,8 @@ public class SecurityConfig {
                         // 비로그인 열람 — 커뮤니티
                         .requestMatchers(HttpMethod.GET,
                                 "/api/community/getCommunity", "/api/community/getCommunityList",
-                                "/api/community/explore", "/api/community/explore/filter").permitAll()
+                                "/api/community/explore", "/api/community/explore/filter",
+                                "/api/community/wiki/overview", "/api/community/wiki/page").permitAll()
 
                         // 비로그인 열람 — 공개 프로필
                         .requestMatchers(HttpMethod.POST,
