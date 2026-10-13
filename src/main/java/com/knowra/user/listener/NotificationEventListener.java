@@ -24,6 +24,9 @@ public class NotificationEventListener {
     private final TblUserNotifRepository notifRepository;
     private final NotificationWebSocketHandler wsHandler;
     private final com.knowra.safety.service.SafetyService safetyService;
+    private final com.knowra.push.service.WebPushService webPushService;
+    private final com.knowra.user.repository.TblUserStngRepository stngRepository;
+    private final com.knowra.community.repository.TblCommRepository commRepository;
 
     @PersistenceContext
     private EntityManager em;
@@ -72,6 +75,42 @@ public class NotificationEventListener {
         notifRepository.save(entity);
 
         wsHandler.push(event.receiverSn(), new NotifDTO(entity, nickName, pfpUrl));
+
+        // 웹 푸시 — 설정의 알림 종류 스위치를 따른다. 실패해도 인앱 알림은 이미 저장됐다.
+        if (wantsPush(event.receiverSn(), event.notifTyp())) {
+            try {
+                java.util.Map<String, Object> payload = new java.util.LinkedHashMap<>();
+                payload.put("title", "knowra");
+                payload.put("body", message);
+                payload.put("url", linkFor(event, nickName));
+                payload.put("tag", event.notifTyp() + ":" + event.targetSn());   // 같은 글의 좋아요가 쌓이지 않고 바뀐다
+                webPushService.sendToUser(event.receiverSn(), payload);
+            } catch (Exception ignore) { /* 푸시는 덤이다 */ }
+        }
+    }
+
+    /** 알림 설정: 좋아요=like, 댓글·답글=cmt, 팔로우=flwr, 나머지(커뮤니티 소식)=sys. 설정 행이 없으면 기본값. */
+    private boolean wantsPush(long userSn, String typ) {
+        com.knowra.user.entity.TblUserStng st = stngRepository.findByUserSn(userSn);
+        if (st == null) return !"LIKE".equals(typ);
+        String yn = switch (typ) {
+            case "LIKE" -> st.getLikeNtfctnYn();
+            case "COMMENT", "REPLY" -> st.getCmtNtfctnYn();
+            case "FOLLOW" -> st.getFlwrNtfctnYn();
+            default -> st.getSysNtfctnYn();
+        };
+        return "Y".equals(yn);
+    }
+
+    /** 알림을 눌렀을 때 갈 곳 — 헤더 알림 목록과 같은 규칙. */
+    private String linkFor(NotifTriggerEvent e, String senderNick) {
+        if ("POST".equals(e.targetKind()) && e.targetSn() != null) return "/posts/" + e.targetSn();
+        if ("FOLLOW".equals(e.notifTyp()) && senderNick != null) return "/user/" + senderNick;
+        if ("COMM".equals(e.targetKind()) && e.targetSn() != null) {
+            com.knowra.community.entity.TblComm c = commRepository.findByCommSn(e.targetSn());
+            if (c != null) return "/community/" + c.getCommNm();
+        }
+        return "/";
     }
 
     private String buildMessage(String notifTyp, String nickName, String extra) {
