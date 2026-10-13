@@ -39,6 +39,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtProvider jwtProvider;
     private final RedisApiService redisApiService;
     private final JsonAuthErrorHandler jsonAuthErrorHandler;
+    private final com.knowra.session.SessionService sessionService;
 
     public static final int REDIS_DB = 15;
 
@@ -55,7 +56,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         if (!jwtProvider.isValid(token)
                 || !jwtProvider.isAccessToken(token)
-                || redisApiService.isBlocklisted(REDIS_DB, token)) {
+                || redisApiService.isBlocklisted(REDIS_DB, token)
+                || sessionService.isRevoked(jwtProvider.extractSid(token))) {   // 다른 기기에서 끊은 세션
             jsonAuthErrorHandler.commence(request, response,
                     new BadCredentialsException("invalid or revoked access token"));
             return;

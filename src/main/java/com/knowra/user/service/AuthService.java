@@ -50,6 +50,7 @@ public class AuthService {
     private final UserService userService;
     private final TblUserRepository tblUserRepository;
     private final SnsAuthService snsAuthService;
+    private final com.knowra.session.SessionService sessionService;
     private final TblUserStngRepository tblUserStngRepository;
     private final PasswordEncoder passwordEncoder;
     private final RedisApiService redisApiService;
@@ -85,8 +86,9 @@ public class AuthService {
             tblUserRepository.findById(userSn).ifPresent(u -> {
                 if ("S".equals(u.getStatus())) throw new IllegalStateException("SUSPENDED");
             });
-            String accessToken = jwtProvider.generateAccessToken(userSn, loginId);
-            String refreshToken = jwtProvider.generateRefreshToken(userSn, loginId);
+            String sid = sessionService.start(userSn);   // 이 로그인 = 기기 목록의 한 줄
+            String accessToken = jwtProvider.generateAccessToken(userSn, loginId, sid);
+            String refreshToken = jwtProvider.generateRefreshToken(userSn, loginId, sid);
 
             resultVO.putResult("accessToken", accessToken);
             response.addHeader("Set-Cookie", refreshCookie.issue(refreshToken)); // 본문엔 안 싣는다
@@ -143,8 +145,9 @@ public class AuthService {
                 }
                 // 이메일로만 찾은 예전 계정은 제공자 ID 를 이번에 묶어 둔다 — 다음부터 ①로 바로 찾는다.
                 if (!StringUtils.hasText(u.getSnsId())) { u.setSnsYn("Y"); u.setSnsName(id.provider()); u.setSnsId(id.id()); tblUserRepository.save(u); }
-                String accessToken = jwtProvider.generateAccessToken(u.getUserSn(), u.getLoginId());
-                String refreshToken = jwtProvider.generateRefreshToken(u.getUserSn(), u.getLoginId());
+                String sid = sessionService.start(u.getUserSn());
+                String accessToken = jwtProvider.generateAccessToken(u.getUserSn(), u.getLoginId(), sid);
+                String refreshToken = jwtProvider.generateRefreshToken(u.getUserSn(), u.getLoginId(), sid);
                 resultVO.putResult("accessToken", accessToken);
                 httpResponse.addHeader("Set-Cookie", refreshCookie.issue(refreshToken));
 
@@ -176,7 +179,13 @@ public class AuthService {
             if (StringUtils.hasText(authorizationHeader) && authorizationHeader.startsWith("Bearer ")) {
                 revokeIfValid(authorizationHeader.substring(7));
             }
-            revokeIfValid(refreshCookie.read(request));
+            String rt = refreshCookie.read(request);
+            // 로그아웃한 기기는 기기 목록에서도 빠진다
+            if (StringUtils.hasText(rt) && jwtProvider.isValid(rt)) {
+                String sid = jwtProvider.extractSid(rt);
+                if (sid != null) sessionService.revoke(jwtProvider.extractUserSn(rt), sid);
+            }
+            revokeIfValid(rt);
             response.addHeader("Set-Cookie", refreshCookie.clear());
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
         } catch (Exception e) {
@@ -225,9 +234,21 @@ public class AuthService {
                 return resultVO;
             }
 
+            // 세션: 토큰의 sid 가 살아 있어야 갱신된다(다른 기기에서 「로그아웃」 하면 여기서 끊긴다).
+            // 세션 도입 전 토큰(sid 없음)은 이번 갱신에서 새 세션을 받아 옮겨 탄다.
+            String sid = jwtProvider.extractSid(refreshToken);
+            if (sid == null) sid = sessionService.start(userSn);
+            else if (!sessionService.touch(sid, userSn)) {
+                revokeIfValid(refreshToken);
+                response.addHeader("Set-Cookie", refreshCookie.clear());
+                resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
+                resultVO.setResultMessage("이 기기에서 로그아웃됐어요. 다시 로그인해 주세요.");
+                return resultVO;
+            }
+
             revokeIfValid(refreshToken);
-            String newAccessToken = jwtProvider.generateAccessToken(userSn, loginId);
-            String newRefreshToken = jwtProvider.generateRefreshToken(userSn, loginId);
+            String newAccessToken = jwtProvider.generateAccessToken(userSn, loginId, sid);
+            String newRefreshToken = jwtProvider.generateRefreshToken(userSn, loginId, sid);
 
             resultVO.putResult("accessToken", newAccessToken);
             response.addHeader("Set-Cookie", refreshCookie.issue(newRefreshToken));

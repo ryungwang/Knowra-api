@@ -48,14 +48,28 @@ public class JwtProvider {
     }
 
     public String generateAccessToken(long userSn, String loginId) {
-        return buildToken(userSn, loginId, accessTokenExpiration, TYP_ACCESS);
+        return buildToken(userSn, loginId, accessTokenExpiration, TYP_ACCESS, null);
     }
 
     public String generateRefreshToken(long userSn, String loginId) {
-        return buildToken(userSn, loginId, refreshTokenExpiration, TYP_REFRESH);
+        return buildToken(userSn, loginId, refreshTokenExpiration, TYP_REFRESH, null);
     }
 
-    private String buildToken(long userSn, String loginId, long expiration, String typ) {
+    /** 세션(로그인한 기기) id 를 싣는다 — 기기 목록·「이 기기 로그아웃」이 이걸로 끊는다(SessionService). */
+    public String generateAccessToken(long userSn, String loginId, String sid) {
+        return buildToken(userSn, loginId, accessTokenExpiration, TYP_ACCESS, sid);
+    }
+
+    public String generateRefreshToken(long userSn, String loginId, String sid) {
+        return buildToken(userSn, loginId, refreshTokenExpiration, TYP_REFRESH, sid);
+    }
+
+    /** 토큰의 세션 id. 세션 도입 전에 발급된 토큰은 null. */
+    public String extractSid(String token) {
+        return parseClaims(token).get("sid", String.class);
+    }
+
+    private String buildToken(long userSn, String loginId, long expiration, String typ, String sid) {
         Date now = new Date();
         TblUser tblUser = tblUserRepository.findByUserSn(userSn);
 
@@ -70,6 +84,7 @@ public class JwtProvider {
                 // TODO 역할을 DB 컬럼으로 — 지금은 1번 사용자만 관리자라는 암묵 규칙이다.
                 .claim("role", userSn == 1 ? "ADMIN" : "USER")
                 .claim("typ", typ)
+                .claim("sid", sid)
                 .issuedAt(now)
                 .expiration(new Date(now.getTime() + expiration))
                 .signWith(secretKey)
