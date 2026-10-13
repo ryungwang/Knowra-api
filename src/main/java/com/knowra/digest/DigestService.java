@@ -212,7 +212,8 @@ public class DigestService {
         QTblUser u = QTblUser.tblUser;
         QTblUserStng s = QTblUserStng.tblUserStng;
         List<Tuple> rows = q().select(u.userSn, u.email).from(u).join(s).on(s.userSn.eq(u.userSn))
-                .where(s.digestYn.eq("Y"), u.status.eq("Y"), u.actvtnYn.eq("Y"), u.email.isNotNull(), u.email.ne(""))
+                .where(s.digestYn.eq("Y"), u.status.eq("Y"), u.actvtnYn.eq("Y"), u.email.isNotNull(),
+                        u.email.like("%_@_%.__%"))   // 주소 꼴이 아닌 값(옛 시드의 'deer' 등)은 보내 봐야 실패만 쌓인다
                 .fetch();
         String week = now.get(IsoFields.WEEK_BASED_YEAR) + "-W" + now.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR);
         int sent = 0, empty = 0, dup = 0, failed = 0;
