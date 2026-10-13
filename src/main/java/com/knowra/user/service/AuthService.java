@@ -71,7 +71,7 @@ public class AuthService {
         try {
             String loginId = params.get("loginId");
 
-            if(!params.get("snsYn").equals("Y")){
+            if(!"Y".equals(params.get("snsYn"))){ // snsYn 이 안 오면 일반 로그인 — 예전엔 NPE 로 "조회 오류"가 났다
                 authenticationManager.authenticate(
                         new UsernamePasswordAuthenticationToken(loginId, params.get("password"))
                 );
@@ -226,6 +226,15 @@ public class AuthService {
 
             String loginId = jwtProvider.extractLoginId(refreshToken);
             long userSn = jwtProvider.extractUserSn(refreshToken);
+
+            // 정지된 계정은 갱신으로도 살아나면 안 된다 — 로그인만 막으면 리프레시 쿠키로 7일을 더 쓴다.
+            if (tblUserRepository.findById(userSn).map(u -> "S".equals(u.getStatus())).orElse(true)) {
+                revokeIfValid(refreshToken);
+                response.addHeader("Set-Cookie", refreshCookie.clear());
+                resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
+                resultVO.setResultMessage("이용이 정지된 계정입니다.");
+                return resultVO;
+            }
 
             revokeIfValid(refreshToken);
             String newAccessToken = jwtProvider.generateAccessToken(userSn, loginId);

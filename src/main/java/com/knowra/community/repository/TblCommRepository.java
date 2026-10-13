@@ -19,4 +19,7 @@ public interface TblCommRepository extends JpaRepository<TblComm, Long> {
 
     @Query("SELECT c FROM TblComm c LEFT JOIN FETCH c.logoFile LEFT JOIN FETCH c.bnrFile JOIN c.members m WHERE m.userSn = :userSn AND m.stat = 'ACTIVE' AND m.actvtnYn = 'Y'")
     List<TblComm> findAllByMemberUserSn(@Param("userSn") long userSn);
+
+    // ── 관리자 콘솔 ──
+    long countByStat(String stat);
 }

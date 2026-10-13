@@ -533,20 +533,7 @@ public class PostService {
                 return resultVO;
             }
 
-            QTblPostCmt c = QTblPostCmt.tblPostCmt;
-            long liveReplies = new JPAQueryFactory(em).select(c.count()).from(c)
-                    .where(c.prntCmtSn.eq(postCmtSn).and(c.stat.eq("ACTIVE")).and(c.actvtnYn.eq("Y")))
-                    .fetchOne();
-            cmt.setStat("DELETED");
-            if (liveReplies == 0) cmt.setActvtnYn("N");
-            cmt.setMdfrSn(userSn);
-            tblPostCmtRepository.save(cmt);
-
-            new JPAQueryFactory(em).update(POST)
-                    .set(POST.cmtCnt, POST.cmtCnt.subtract(1))
-                    .where(POST.postSn.eq(cmt.getPostSn()).and(POST.cmtCnt.gt(0)))
-                    .execute();
-            eventPublisher.publishEvent(new PostReactedEvent(cmt.getPostSn(), "COMMENT", -1));
+            deleteCmtInternal(cmt, userSn);
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
         } catch (Exception e) {
             e.printStackTrace();
@@ -602,10 +589,7 @@ public class PostService {
                 resultVO.setResultMessage("삭제 권한이 없습니다.");
                 return resultVO;
             }
-            tblPost.setActvtnYn("N");
-            tblPost.setMdfrSn(userSn);
-            tblPostRepository.save(tblPost);
-            eventPublisher.publishEvent(new PostDeletedEvent(postSn));
+            deletePostInternal(tblPost, userSn);
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
             resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
         } catch (Exception e) {
@@ -614,6 +598,51 @@ public class PostService {
             resultVO.setResultMessage(ResponseCode.DELETE_ERROR.getMessage());
         }
         return resultVO;
+    }
+
+    /** 글 삭제 본문 — 작성자/커뮤니티 관리자(setPostDel)와 운영 관리자(adminDeletePost)가 같이 쓴다. */
+    private void deletePostInternal(TblPost tblPost, long by) {
+        tblPost.setActvtnYn("N");
+        tblPost.setMdfrSn(by);
+        tblPostRepository.save(tblPost);
+        eventPublisher.publishEvent(new PostDeletedEvent(tblPost.getPostSn()));
+    }
+
+    /** 댓글 삭제 본문. 답글이 살아 있으면 자리는 남긴다(stat=DELETED, actvtnYn 유지). */
+    private void deleteCmtInternal(TblPostCmt cmt, long by) {
+        QTblPostCmt c = QTblPostCmt.tblPostCmt;
+        long liveReplies = new JPAQueryFactory(em).select(c.count()).from(c)
+                .where(c.prntCmtSn.eq(cmt.getPostCmtSn()).and(c.stat.eq("ACTIVE")).and(c.actvtnYn.eq("Y")))
+                .fetchOne();
+        cmt.setStat("DELETED");
+        if (liveReplies == 0) cmt.setActvtnYn("N");
+        cmt.setMdfrSn(by);
+        tblPostCmtRepository.save(cmt);
+        new JPAQueryFactory(em).update(POST)
+                .set(POST.cmtCnt, POST.cmtCnt.subtract(1))
+                .where(POST.postSn.eq(cmt.getPostSn()).and(POST.cmtCnt.gt(0)))
+                .execute();
+        eventPublisher.publishEvent(new PostReactedEvent(cmt.getPostSn(), "COMMENT", -1));
+    }
+
+    /**
+     * 운영 관리자 삭제 — 권한 검사는 호출부(/api/admin/** 는 ROLE_ADMIN 만 통과)가 이미 했다.
+     * 작성자·커뮤니티 권한과 무관하게 지운다. 이미 지워진 글이면 false.
+     */
+    @Transactional
+    public boolean adminDeletePost(long postSn, long adminSn) {
+        TblPost tblPost = tblPostRepository.findByPostSn(postSn);
+        if (tblPost == null || !"Y".equals(tblPost.getActvtnYn())) return false;
+        deletePostInternal(tblPost, adminSn);
+        return true;
+    }
+
+    @Transactional
+    public boolean adminDeleteCmt(long postCmtSn, long adminSn) {
+        TblPostCmt cmt = tblPostCmtRepository.findById(postCmtSn).orElse(null);
+        if (cmt == null || !"ACTIVE".equals(cmt.getStat())) return false;
+        deleteCmtInternal(cmt, adminSn);
+        return true;
     }
 
     // ─────────────────────────────────────────────────────────────────────

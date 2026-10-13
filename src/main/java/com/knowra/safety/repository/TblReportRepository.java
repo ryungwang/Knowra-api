@@ -11,4 +11,5 @@ public interface TblReportRepository extends JpaRepository<TblReport, Long> {
     Page<TblReport> findAllByStatOrderByFrstCrtDtDesc(String stat, Pageable pageable);
     long countByStat(String stat);
     long countByTargetKindAndTargetSnAndStat(String targetKind, long targetSn, String stat);
+    long countByTargetKindAndTargetSn(String targetKind, long targetSn);
 }
