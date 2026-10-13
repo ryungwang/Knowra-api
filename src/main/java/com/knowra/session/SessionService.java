@@ -4,6 +4,7 @@ import com.knowra.cmm.service.RedisApiService;
 import com.knowra.common.util.ComUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.request.RequestContextHolder;
@@ -27,6 +28,7 @@ public class SessionService {
     private static final int ACCESS_TTL_SEC = 3600;
     private final TblUserSessionRepository repo;
     private final RedisApiService redis;
+    private final ApplicationEventPublisher publisher;
 
     private static HttpServletRequest currentRequest() {
         var attrs = RequestContextHolder.getRequestAttributes();
@@ -71,6 +73,7 @@ public class SessionService {
         if (s == null || s.getUserSn() != userSn) return false;
         repo.delete(s);
         redis.setRedis(REDIS_DB, REVOKED + sid, "1", ACCESS_TTL_SEC);
+        publisher.publishEvent(new SessionRevokedEvent(userSn, sid));
         return true;
     }
 
@@ -82,6 +85,7 @@ public class SessionService {
             if (s.getSid().equals(keepSid)) continue;
             repo.delete(s);
             redis.setRedis(REDIS_DB, REVOKED + s.getSid(), "1", ACCESS_TTL_SEC);
+            publisher.publishEvent(new SessionRevokedEvent(userSn, s.getSid()));
             n++;
         }
         return n;

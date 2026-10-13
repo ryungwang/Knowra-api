@@ -44,6 +44,7 @@ public class AdminConsoleService {
     private final TblPostCmtRepository cmtRepository;
     private final TblCommRepository commRepository;
     private final PostService postService;
+    private final org.springframework.context.ApplicationEventPublisher publisher;
 
     public ResultVO getStats() {
         ResultVO resultVO = new ResultVO();
@@ -237,6 +238,8 @@ public class AdminConsoleService {
             TblUser u = userRepository.findById(userSn).orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
             u.setStatus(suspend ? "S" : "Y");
             userRepository.save(u);
+            // 정지된 사람의 열린 알림 소켓도 닫는다(새 요청만 막으면 이미 열린 소켓으로 알림이 계속 간다)
+            if (suspend) publisher.publishEvent(new com.knowra.session.SessionRevokedEvent(userSn, null));
             resultVO.putResult("user", userBrief(u));
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
         } catch (IllegalArgumentException e) {

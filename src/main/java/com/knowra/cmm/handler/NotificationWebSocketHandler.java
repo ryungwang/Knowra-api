@@ -14,7 +14,9 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Scheduled;
+import com.knowra.session.SessionRevokedEvent;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.socket.*;
@@ -37,6 +39,7 @@ public class NotificationWebSocketHandler extends TextWebSocketHandler {
     private static final int REDIS_DB = 15;          // 로그아웃 토큰 블랙리스트 — JwtAuthenticationFilter 와 같은 DB
     private static final String ATTR_USER = "userSn";
     private static final String ATTR_OPENED = "openedAt";
+    private static final String ATTR_SID = "sid";
     private static final long AUTH_TIMEOUT_MS = 10_000;
 
     @PersistenceContext
@@ -65,7 +68,11 @@ public class NotificationWebSocketHandler extends TextWebSocketHandler {
         if (token == null || token.isBlank() || !jwtProvider.isValid(token) || !jwtProvider.isAccessToken(token)) return null;
         if (redisApiService.isBlocklisted(REDIS_DB, token)) return null;
         if (sessionService.isRevoked(jwtProvider.extractSid(token))) return null;
-        return jwtProvider.extractUserSn(token);
+        long userSn = jwtProvider.extractUserSn(token);
+        // 정지된 계정(STATUS=S)은 액세스 토큰이 아직 살아 있어도 소켓을 열어 주지 않는다
+        String status = new JPAQueryFactory(em).select(QTblUser.tblUser.status).from(QTblUser.tblUser)
+                .where(QTblUser.tblUser.userSn.eq(userSn)).fetchOne();
+        return "Y".equals(status) ? userSn : null;
     }
 
     private void onAuth(WebSocketSession session, Object token) throws Exception {
@@ -75,6 +82,8 @@ public class NotificationWebSocketHandler extends TextWebSocketHandler {
             return;
         }
         session.getAttributes().put(ATTR_USER, userSn);
+        String sid = jwtProvider.extractSid(String.valueOf(token));
+        if (sid != null) session.getAttributes().put(ATTR_SID, sid);
         sessions.computeIfAbsent(userSn, k -> ConcurrentHashMap.newKeySet()).add(session);
 
         List<TblUserNotif> entities = notifService.getAll(userSn);
@@ -103,7 +112,7 @@ public class NotificationWebSocketHandler extends TextWebSocketHandler {
     }
 
     /** 인증 없이 붙어만 있는 연결을 정리한다. */
-    @Scheduled(fixedDelay = 10_000)
+    @Scheduled(fixedDelay = 2_000)   // 메모리만 보는 가벼운 검사 — 10초 제한이 최대 12초 안에 지켜진다
     public void closeUnauthenticated() {
         // 세션 목록은 인증된 것만 들고 있으므로, 대기 중인 것은 열린 시각으로 따로 본다
         long now = System.currentTimeMillis();
@@ -119,6 +128,17 @@ public class NotificationWebSocketHandler extends TextWebSocketHandler {
     }
 
     private final Set<WebSocketSession> pending = ConcurrentHashMap.newKeySet();
+
+    /** 세션이 끊기면(다른 기기에서 로그아웃·모두 로그아웃·계정 정지) 그 세션으로 열린 소켓을 바로 닫는다. */
+    @EventListener
+    public void onSessionRevoked(SessionRevokedEvent ev) {
+        Set<WebSocketSession> set = sessions.get(ev.userSn());
+        if (set == null) return;
+        for (WebSocketSession ws : set) {
+            if (ev.sid() != null && !ev.sid().equals(ws.getAttributes().get(ATTR_SID))) continue;
+            try { ws.close(CloseStatus.POLICY_VIOLATION.withReason("revoked")); } catch (Exception ignored) {}
+        }
+    }
 
     // ── 클라이언트 메시지 수신 ────────────────────────────────────────────
     @Override
