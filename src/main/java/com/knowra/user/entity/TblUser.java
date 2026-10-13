@@ -38,7 +38,8 @@ public class TblUser {
 
   @Column(name = "PASSWORD", length = 200, nullable = false)
   @Comment("비밀번호")
-  private String password;
+  @com.fasterxml.jackson.annotation.JsonProperty(access = com.fasterxml.jackson.annotation.JsonProperty.Access.WRITE_ONLY)
+  private String password;   // 어떤 응답에도 실리지 않게 — 엔티티가 실수로 직렬화돼도 해시는 안 나간다
 
   @Column(name = "NAME", length = 100, nullable = false)
   @Comment("이름")
@@ -67,6 +68,7 @@ public class TblUser {
 
   @Column(name = "LGN_FAIL_NMTM", insertable = false, nullable = false)
   @Comment("로그인실패횟수")
+  @com.fasterxml.jackson.annotation.JsonIgnore
   private long lgnFailNmtm = 0;
 
   @Column(name = "STATUS", length = 20, nullable = false)
@@ -83,6 +85,7 @@ public class TblUser {
 
   @Column(name = "SNS_ID", length = 100, updatable = false)
   @Comment("SNS 고유아이디")
+  @com.fasterxml.jackson.annotation.JsonIgnore
   private String snsId;
 
   @Column(name = "ACTVTN_YN", nullable = false)

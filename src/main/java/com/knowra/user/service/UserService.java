@@ -106,7 +106,25 @@ public class UserService {
                 resultVO.putResult("isFollowing", usrFlwr != null);
             }
 
-            resultVO.putResult("userProfile", tblUserRepository.findByNickName(nickName));
+            // ⚠️ 엔티티를 통째로 내보내지 않는다 — 예전엔 비로그인 공개 API 가 비밀번호 해시·이메일·전화번호·
+            // 로그인 아이디·SNS ID 까지 그대로 내줬다. 공개 필드만 고르고, 연락처는 본인에게만.
+            Map<String, Object> profile = new java.util.LinkedHashMap<>();
+            profile.put("userSn", tblUser.getUserSn());
+            profile.put("nickName", tblUser.getNickName());
+            profile.put("name", tblUser.getName());
+            profile.put("bio", tblUser.getBio());
+            profile.put("interest", tblUser.getInterest());
+            profile.put("pfp", tblUser.getPfp());
+            profile.put("joinYmd", tblUser.getJoinYmd());
+            profile.put("frstCrtDt", tblUser.getFrstCrtDt());
+            if (userSn != null && userSn == tblUser.getUserSn()) {
+                profile.put("email", tblUser.getEmail());
+                profile.put("phone", tblUser.getPhone());
+                profile.put("loginId", tblUser.getLoginId());
+                profile.put("snsYn", tblUser.getSnsYn());
+                profile.put("snsName", tblUser.getSnsName());
+            }
+            resultVO.putResult("userProfile", profile);
             resultVO.putResult("userSetting", tblUserStngRepository.findByUserSn(userSn));
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
             resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
