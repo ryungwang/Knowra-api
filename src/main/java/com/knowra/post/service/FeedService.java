@@ -666,6 +666,28 @@ public class FeedService {
         return result.stream().limit(MAX_CANDIDATES).collect(Collectors.toList());
     }
 
+    /**
+     * since 뒤에 올라온, 이 사람이 이 피드에서 볼 수 있는 글 수(최대 99). 내 글은 세지 않는다(방금 쓴 글이 「새 글」로 뜬다).
+     * 팔로잉 피드는 팔로우한 사람(익명 글 제외)·가입한 커뮤니티의 글만, 나머지 피드는 볼 수 있는 글 전부.
+     */
+    public long newCount(LocalDateTime since, String type, Long me) {
+        com.querydsl.core.types.dsl.BooleanExpression cond = POST.frstCrtDt.gt(since).and(PostQuery.alive()).and(PostQuery.visibleTo(me));
+        if (me != null) cond = cond.and(POST.userSn.ne(me));
+        com.querydsl.core.types.dsl.BooleanExpression muted = PostQuery.notMuted(me);
+        if (muted != null) cond = cond.and(muted);
+        if ("following".equals(type)) {
+            if (me == null) return 0;
+            Set<Long> users = fetchFollowedUserSns(me), comms = fetchJoinedCommSns(me);
+            if (users.isEmpty() && comms.isEmpty()) return 0;
+            com.querydsl.core.types.dsl.BooleanExpression src = null;
+            if (!users.isEmpty()) src = POST.userSn.in(users).and(PostQuery.notAnonymous());
+            if (!comms.isEmpty()) src = src == null ? POST.commSn.in(comms) : src.or(POST.commSn.in(comms));
+            cond = cond.and(src);
+        }
+        Long n = postQuery.base().where(cond).select(POST.count()).fetchOne();
+        return Math.min(99, n == null ? 0 : n);
+    }
+
     // ─────────────────────────────────────────────────────────────────────
     // 팔로우/가입 집합 조회
     // ─────────────────────────────────────────────────────────────────────
