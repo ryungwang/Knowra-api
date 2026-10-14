@@ -31,4 +31,8 @@ public class TblChatMsg {
     /** 사진 한 장 — 업로드 경로(/upload/editor/...)만. */
     @Column(name = "IMG_URL", length = 300)
     private String imgUrl;
+
+    /** 운영 관리자가 가린 때 — 신고 처리. 내용은 남기고(재신고 때 다시 본다) 화면에만 안 보인다 */
+    @Column(name = "HIDDEN_AT")
+    private LocalDateTime hiddenAt;
 }

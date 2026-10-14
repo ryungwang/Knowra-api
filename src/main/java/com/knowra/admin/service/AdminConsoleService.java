@@ -125,6 +125,28 @@ public class AdminConsoleService {
                     userRepository.findById(c.getUserSn()).ifPresent(u -> t.put("author", userBrief(u)));
                 }
             }
+            case "MSG" -> {
+                // 신고된 메시지와 바로 앞 대화 몇 줄 — 앞뒤 없이는 괴롭힘인지 농담인지 판단할 수 없다. 그 이상은 보이지 않는다
+                List<Map<String, Object>> ctx = jdbc.queryForList("""
+                        SELECT m.msg_sn, m.user_sn, u.nick_name, u.name, m.msg_cntnt, m.img_url, m.hidden_at, m.frst_crt_dt
+                        FROM knowra_user.tbl_chat_msg m JOIN knowra_user.tbl_user u ON u.user_sn = m.user_sn
+                        WHERE m.room_sn = (SELECT room_sn FROM knowra_user.tbl_chat_msg WHERE msg_sn = ?) AND m.msg_sn <= ?
+                        ORDER BY m.msg_sn DESC LIMIT 4""", r.getTargetSn(), r.getTargetSn());
+                if (!ctx.isEmpty() && ((Number) ctx.get(0).get("msg_sn")).longValue() == r.getTargetSn()) {
+                    gone = false;
+                    Map<String, Object> msg = ctx.get(0);
+                    t.put("msgSn", r.getTargetSn());
+                    t.put("preview", snippet(String.valueOf(msg.get("msg_cntnt"))) + (msg.get("img_url") != null ? " [사진]" : ""));
+                    t.put("hidden", msg.get("hidden_at") != null);
+                    userRepository.findById(((Number) msg.get("user_sn")).longValue()).ifPresent(u -> t.put("author", userBrief(u)));
+                    List<Map<String, Object>> before = new ArrayList<>();
+                    for (int i = ctx.size() - 1; i >= 1; i--) {
+                        Map<String, Object> c = ctx.get(i);
+                        before.add(Map.of("nickName", c.get("nick_name"), "text", snippet(String.valueOf(c.get("msg_cntnt"))) + (c.get("img_url") != null ? " [사진]" : "")));
+                    }
+                    t.put("context", before);
+                }
+            }
             case "USER" -> {
                 TblUser u = userRepository.findById(r.getTargetSn()).orElse(null);
                 if (u != null) { gone = false; t.put("author", userBrief(u)); }
@@ -185,6 +207,23 @@ public class AdminConsoleService {
             ErrorLog.report(e);
             resultVO.setResultCode(ResponseCode.DELETE_ERROR.getCode());
             resultVO.setResultMessage(ResponseCode.DELETE_ERROR.getMessage());
+        }
+        return resultVO;
+    }
+
+    /** params: msgSn — DM 가리기(신고 처리). 지우지 않는다 — 재신고 때 다시 본다 */
+    public ResultVO hideMsg(Map<String, Object> params, Long admin) {
+        ResultVO resultVO = new ResultVO();
+        try {
+            long msgSn = Long.parseLong(String.valueOf(params.get("msgSn")));
+            int n = jdbc.update("UPDATE knowra_user.tbl_chat_msg SET hidden_at = ? WHERE msg_sn = ? AND hidden_at IS NULL", java.time.LocalDateTime.now(), msgSn);
+            resultVO.putResult("hidden", n == 1);
+            if (n == 0) resultVO.setResultMessage("이미 가려졌거나 없는 메시지예요.");
+            resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
+        } catch (Exception e) {
+            ErrorLog.report(e);
+            resultVO.setResultCode(ResponseCode.UPDATE_ERROR.getCode());
+            resultVO.setResultMessage(ResponseCode.UPDATE_ERROR.getMessage());
         }
         return resultVO;
     }

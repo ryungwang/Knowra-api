@@ -29,7 +29,7 @@ import java.util.*;
 public class SafetyService {
 
     public static final Set<String> REASONS = Set.of("SPAM", "ABUSE", "SEXUAL", "ILLEGAL", "PRIVACY", "OTHER");
-    public static final Set<String> KINDS   = Set.of("POST", "CMT", "USER");
+    public static final Set<String> KINDS   = Set.of("POST", "CMT", "USER", "MSG");
 
     private final TblReportRepository reportRepository;
     private final TblUserBlockRepository blockRepository;
@@ -37,8 +37,9 @@ public class SafetyService {
     private final TblUserRepository userRepository;
     private final TblPostRepository postRepository;
     private final com.knowra.post.service.PostQuery postQuery;
+    private final org.springframework.jdbc.core.JdbcTemplate jdbc;
 
-    /** params: targetKind(POST|CMT|USER), targetSn, reason, detail? — 같은 대상은 한 번만. */
+    /** params: targetKind(POST|CMT|USER|MSG), targetSn, reason, detail? — 같은 대상은 한 번만. */
     @Transactional
     public ResultVO setReport(Map<String, Object> params, Long me) {
         ResultVO resultVO = new ResultVO();
@@ -49,6 +50,15 @@ public class SafetyService {
             String detail = params.get("detail") == null ? null : String.valueOf(params.get("detail")).trim();
             if (!KINDS.contains(kind) || !REASONS.contains(reason)) throw new IllegalArgumentException("신고 종류나 사유가 올바르지 않습니다.");
             if ("USER".equals(kind) && target == me) throw new IllegalArgumentException("자기 자신은 신고할 수 없습니다.");
+            // DM 은 그 대화방에 있는 사람만 신고할 수 있다 — 남의 대화를 번호로 찔러 운영자 화면에 올리지 못하게
+            if ("MSG".equals(kind)) {
+                Long sender = jdbc.query("""
+                        SELECT m.user_sn FROM knowra_user.tbl_chat_msg m
+                        JOIN knowra_user.tbl_chat_room_mbr r ON r.room_sn = m.room_sn AND r.user_sn = ?
+                        WHERE m.msg_sn = ?""", rs -> rs.next() ? rs.getLong(1) : null, me, target);
+                if (sender == null) throw new IllegalArgumentException("메시지를 찾을 수 없습니다.");
+                if (sender == me) throw new IllegalArgumentException("내 메시지는 신고할 수 없습니다.");
+            }
             if (reportRepository.findByReporterSnAndTargetKindAndTargetSn(me, kind, target).isPresent()) {
                 resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
                 resultVO.setResultMessage("이미 신고한 대상이에요. 검토 중입니다.");

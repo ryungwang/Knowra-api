@@ -35,6 +35,10 @@ public class AdminConsoleController {
     @PostMapping("/deleteCmt")
     public ResultVO deleteCmt(@RequestBody Map<String, Object> params, @CurrentUser Long me) { return service.deleteCmt(params, me); }
 
+    /** body: msgSn — 신고된 DM 가리기 */
+    @PostMapping("/hideMsg")
+    public ResultVO hideMsg(@RequestBody Map<String, Object> params, @CurrentUser Long me) { return service.hideMsg(params, me); }
+
     /** body: q, page */
     @PostMapping("/userList")
     public ResultVO userList(@RequestBody(required = false) Map<String, Object> params) { return service.getUserList(params == null ? Map.of() : params); }

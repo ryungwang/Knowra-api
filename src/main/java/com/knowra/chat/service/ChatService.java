@@ -117,7 +117,7 @@ public class ChatService {
                 Map<String, Object> row = new HashMap<>();
                 row.put("roomSn",    room.getRoomSn());
                 row.put("peer",      peerByRoom.get(room.getRoomSn()));
-                row.put("lastMsg",   last == null ? null : (last.getMsgCntnt().isEmpty() && last.getImgUrl() != null ? "사진" : last.getMsgCntnt()));
+                row.put("lastMsg",   last == null ? null : last.getHiddenAt() != null ? "가려진 메시지" : (last.getMsgCntnt().isEmpty() && last.getImgUrl() != null ? "사진" : last.getMsgCntnt()));
                 row.put("stat",      mb.getStat());
                 row.put("lastMsgAt", room.getLastMsgAt() != null ? room.getLastMsgAt().format(ISO) : null);
                 row.put("unread",    unread);
@@ -313,8 +313,10 @@ public class ChatService {
         d.put("msgSn",     m.getMsgSn());
         d.put("roomSn",    m.getRoomSn());
         d.put("userSn",    m.getUserSn());
-        d.put("msgCntnt",  m.getMsgCntnt());
-        d.put("imgUrl",    m.getImgUrl());
+        boolean hidden = m.getHiddenAt() != null;   // 가려진 메시지는 내용을 아예 안 보낸다(화면이 숨기는 게 아니라)
+        d.put("msgCntnt",  hidden ? "" : m.getMsgCntnt());
+        d.put("imgUrl",    hidden ? null : m.getImgUrl());
+        d.put("hidden",    hidden);
         d.put("createdAt", m.getFrstCrtDt().format(ISO));
         return d;
     }
