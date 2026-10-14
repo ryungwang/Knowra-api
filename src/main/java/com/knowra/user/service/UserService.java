@@ -76,13 +76,13 @@ public class UserService {
     public Long getUserSn(String loginId) {
         return tblUserRepository.findByLoginId(loginId)
                 .or(() -> tblUserRepository.findByNickName(loginId))
-                .orElseThrow(() -> new IllegalStateException("User not found: " + loginId))
+                .orElseThrow(() -> new com.knowra.cmm.errlog.NotFoundException("없는 사용자예요: " + loginId))
                 .getUserSn();
     }
 
     public TblUser getUser(String loginId) {
         return tblUserRepository.findByLoginId(loginId)
-                .orElseThrow(() -> new IllegalStateException("User not found: " + loginId));
+                .orElseThrow(() -> new com.knowra.cmm.errlog.NotFoundException("없는 사용자예요: " + loginId));
     }
 
     public ResultVO getUserProfile(Map<String, Object> params, Long me) {
@@ -93,7 +93,7 @@ public class UserService {
             Long userSn = me;
             String nickName = params.get("nickName").toString();
 
-            TblUser tblUser = tblUserRepository.findByNickName(nickName).orElseThrow();
+            TblUser tblUser = tblUserRepository.findByNickName(nickName).orElseThrow(() -> new com.knowra.cmm.errlog.NotFoundException("없는 사용자예요: " + nickName));
             QTblUserFlwr qFlwr = QTblUserFlwr.tblUserFlwr;
 
             if(userSn == null){

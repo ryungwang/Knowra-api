@@ -12,6 +12,10 @@ public final class ErrorLog {
     private ErrorLog() { }
 
     public static void report(Throwable e) {
+        if (e instanceof NotFoundException) {   // 정상 결과 — 기록만 가볍게
+            LoggerFactory.getLogger(WALKER.getCallerClass()).debug("not found: {}", e.getMessage());
+            return;
+        }
         LoggerFactory.getLogger(WALKER.getCallerClass()).error(String.valueOf(e), e);
     }
 }
