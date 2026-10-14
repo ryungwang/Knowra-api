@@ -17,7 +17,11 @@ function Run-Step {
     Write-Host ""
     Write-Host "==> $Name"
     try {
+        # Native commands (gradlew, pnpm, ...) do not throw on failure; check the exit code.
+        # Without this, CI reported success while the backend did not even compile (2026-10-14).
+        $global:LASTEXITCODE = 0
         & $Block
+        if ($LASTEXITCODE -ne 0) { throw "exit code $LASTEXITCODE" }
         Write-Host "PASS: $Name"
     }
     catch {
@@ -73,12 +77,6 @@ try {
         }
         elseif (Test-Path -LiteralPath ".\gradlew") {
             Run-Step "gradle test" { .\gradlew test }
-        }
-        elseif (Test-Path -LiteralPath ".\mvnw.cmd") {
-            Run-Step "maven test" { .\mvnw.cmd test }
-        }
-        elseif (Test-Path -LiteralPath ".\mvnw") {
-            Run-Step "maven test" { .\mvnw test }
         }
     }
 

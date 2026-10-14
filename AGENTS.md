@@ -534,9 +534,9 @@ PL 이 같은 지적을 2회 이상 반복하게 되면 — **prompt 템플릿 �
 
 ### 백엔드
 ```
-□ mvn clean install 성공
-□ ./mvnw test 전체 통과
-□ mvn checkstyle:check 통과
+□ ./gradlew build 성공
+□ ./gradlew test 전체 통과
+□ checkstyle 통과 (도입 시 ./gradlew checkstyleMain)
 □ 테스트 커버리지 70% 이상
 □ 예외처리 누락 없음
 □ 하드코딩 없음
@@ -599,7 +599,7 @@ PL 이 같은 지적을 2회 이상 반복하게 되면 — **prompt 템플릿 �
 
 ### 백엔드
 - Checkstyle — Google Java Style Guide
-- `mvn checkstyle:check` 통과 필수
+- checkstyle 통과 필수 (도입 시 `./gradlew checkstyleMain`)
 
 ### 프론트엔드
 - ESLint — `eslint:recommended` + React 규칙
@@ -767,9 +767,9 @@ project-root/
 - `backend/DECISIONS.md` 또는 `frontend/DECISIONS.md` 업데이트
 
 **검수 기준 — 백엔드**
-- `mvn clean install` 성공
-- `./mvnw test` 전체 통과 + 커버리지 70% 이상
-- `mvn checkstyle:check` 통과
+- `./gradlew build` 성공
+- `./gradlew test` 전체 통과 + 커버리지 70% 이상
+- checkstyle 통과 (도입 시 `./gradlew checkstyleMain`)
 - N+1 쿼리 없음 / 인덱스 누락 없음
 - 민감정보 로그 노출 없음
 - SQL Injection 방지
