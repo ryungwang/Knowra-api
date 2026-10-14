@@ -89,6 +89,11 @@ public class MentionService {
             for (String v : variants(t)) { Long sn = byNick.get(v); if (sn != null) { targets.add(sn); break; } }
         }
         Set<Long> skipSet = new HashSet<>(skip == null ? List.of() : skip);
+        // 「이미 댓글 알림을 받는 사람」을 건너뛰는데, 그 사람이 이 글 알림을 꺼 두었으면 댓글 알림은 안 간다 —
+        // 그러면 멘션까지 둘 다 사라진다. 멘션은 끄기와 상관없이 가야 하므로 그 사람은 건너뛰지 않는다
+        if (!skipSet.isEmpty())
+            skipSet.removeAll(em.createNativeQuery("SELECT user_sn FROM knowra_post.tbl_post_mute WHERE post_sn = ?1")
+                    .setParameter(1, postSn).getResultList().stream().map(x -> ((Number) x).longValue()).toList());
         for (Long t : targets) {
             if (t == senderSn || skipSet.contains(t)) continue;
             boolean canSee = postQuery.base().where(POST.postSn.eq(postSn), PostQuery.alive(), PostQuery.visibleTo(t)).fetchFirst() != null;

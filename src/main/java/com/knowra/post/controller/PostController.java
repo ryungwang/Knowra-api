@@ -25,6 +25,12 @@ public class PostController {
         return postService.setPost(params, me);
     }
 
+    /** 이 글 알림 끄기/켜기 — body: postSn, mute */
+    @PostMapping("/setPostMute")
+    public ResultVO setPostMute(@RequestBody Map<String, Object> params, @CurrentUser Long me) {
+        return postService.setPostMute(params, me);
+    }
+
     /** 수정 기록 — params: postSn */
     @GetMapping("/getPostHistory")
     public ResultVO getPostHistory(@RequestParam Map<String, Object> params, @CurrentUser Long me) {

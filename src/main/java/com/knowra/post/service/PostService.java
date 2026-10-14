@@ -398,6 +398,8 @@ public class PostService {
                 if (com.knowra.safety.service.ReportAutoHide.REVIEW.equals(p.getStat())) resultVO.putResult("underReview", true);
             });
             // 값을 돌려주지 않는 콜백은 줄마다 불리고 커서는 이미 그 줄에 있다 — rs.next() 를 부르면 하나뿐인 줄을 건너뛴다
+            if (me != null) resultVO.putResult("muted", jdbc.queryForObject(
+                    "SELECT COUNT(*) FROM knowra_post.tbl_post_mute WHERE user_sn = ? AND post_sn = ?", Long.class, me, postSn) > 0);
             jdbc.query("SELECT COUNT(*), MAX(edited_at) FROM knowra_post.tbl_post_hist WHERE post_sn = ?", rs -> {
                 if (rs.getLong(1) > 0) { resultVO.putResult("editCount", rs.getLong(1)); resultVO.putResult("editedAt", rs.getTimestamp(2).toLocalDateTime()); }
             }, postSn);
@@ -453,6 +455,28 @@ public class PostService {
             ErrorLog.report(e);
             resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
             resultVO.setResultMessage(ResponseCode.SELECT_ERROR.getMessage());
+        }
+        return resultVO;
+    }
+
+    /** 이 글 알림 끄기/켜기 — params: postSn, mute(true|false) */
+    public ResultVO setPostMute(Map<String, Object> params, Long me) {
+        ResultVO resultVO = new ResultVO();
+        try {
+            long postSn = Long.parseLong(String.valueOf(params.get("postSn")));
+            boolean mute = Boolean.parseBoolean(String.valueOf(params.get("mute")));
+            if (!canReadPost(postSn, me)) throw new IllegalArgumentException("게시글을 찾을 수 없습니다.");
+            if (mute) jdbc.update("INSERT INTO knowra_post.tbl_post_mute (user_sn, post_sn) VALUES (?, ?) ON CONFLICT DO NOTHING", me, postSn);
+            else jdbc.update("DELETE FROM knowra_post.tbl_post_mute WHERE user_sn = ? AND post_sn = ?", me, postSn);
+            resultVO.putResult("muted", mute);
+            resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
+        } catch (IllegalArgumentException e) {
+            resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
+            resultVO.setResultMessage(e.getMessage());
+        } catch (Exception e) {
+            ErrorLog.report(e);
+            resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
+            resultVO.setResultMessage(ResponseCode.SAVE_ERROR.getMessage());
         }
         return resultVO;
     }

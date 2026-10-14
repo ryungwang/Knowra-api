@@ -31,6 +31,8 @@ public class NotificationEventListener {
     @PersistenceContext
     private EntityManager em;
 
+    private static final java.util.Set<String> MUTABLE = java.util.Set.of("COMMENT", "REPLY", "LIKE");
+
     @Async
     @EventListener
     @Transactional
@@ -39,6 +41,10 @@ public class NotificationEventListener {
         if (event.senderSn() != null && event.receiverSn() == event.senderSn()) return;
         // 차단 관계면 양쪽 다 조용히 — 차단한 사람의 반응이 알림으로 새면 차단의 의미가 없다
         if (event.senderSn() != null && safetyService.blockedEitherWay(event.receiverSn(), event.senderSn())) return;
+        // 이 글 알림을 끈 사람 — 댓글·답글·좋아요만 조용히(멘션은 나를 직접 부른 것이라 보낸다)
+        if (MUTABLE.contains(event.notifTyp()) && "POST".equals(event.targetKind()) && event.targetSn() != null
+                && !em.createNativeQuery("SELECT 1 FROM knowra_post.tbl_post_mute WHERE user_sn = ?1 AND post_sn = ?2")
+                      .setParameter(1, event.receiverSn()).setParameter(2, event.targetSn()).setMaxResults(1).getResultList().isEmpty()) return;
 
         // 발신자 닉네임·프로필 조회
         String nickName = null;
