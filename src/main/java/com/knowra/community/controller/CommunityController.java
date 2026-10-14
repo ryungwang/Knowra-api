@@ -18,6 +18,26 @@ public class CommunityController {
 
     private final CommunityService communityService;
     private final CommunityExploreService communityExploreService;
+    private final com.knowra.community.modlog.ModLogService modLogService;
+
+    /** 운영 기록 — 운영진만. cursor: 이보다 오래된 logSn */
+    @GetMapping("/api/community/modLog")
+    public ResultVO modLog(@RequestParam long commSn, @RequestParam(required = false) Long cursor, @CurrentUser Long me) {
+        ResultVO r = new ResultVO();
+        try {
+            if (me == null) throw new IllegalArgumentException("로그인이 필요해요.");
+            modLogService.list(commSn, cursor, me).forEach(r::putResult);
+            r.setResultCode(com.knowra.cmm.model.ResponseCode.SUCCESS.getCode());
+        } catch (IllegalArgumentException e) {
+            r.setResultCode(com.knowra.cmm.model.ResponseCode.SELECT_ERROR.getCode());
+            r.setResultMessage(e.getMessage());
+        } catch (Exception e) {
+            com.knowra.cmm.errlog.ErrorLog.report(e);
+            r.setResultCode(com.knowra.cmm.model.ResponseCode.SELECT_ERROR.getCode());
+            r.setResultMessage(com.knowra.cmm.model.ResponseCode.SELECT_ERROR.getMessage());
+        }
+        return r;
+    }
 
     @GetMapping("/api/community/getCommunityList")
     public ResultVO getCommunityList(Map<String, Object> params, @CurrentUser Long me) {

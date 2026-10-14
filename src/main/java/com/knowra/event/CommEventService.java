@@ -37,6 +37,7 @@ public class CommEventService {
     private final TblCommMbrRepository mbrs;
     private final WikiService wiki;   // 보기 권한(비공개 커뮤니티) 판정을 같이 쓴다
     private final ApplicationEventPublisher publisher;
+    private final com.knowra.community.modlog.ModLogService modLog;
 
     private String activeRole(long commSn, Long me) {
         if (me == null) return null;
@@ -131,6 +132,7 @@ public class CommEventService {
                     .orElseThrow(() -> new IllegalArgumentException("모임을 찾을 수 없어요."));
             if (e.getCreatedBy() != me && !"OWNER".equals(role) && !"ADMIN".equals(role)) throw new IllegalArgumentException("만든 사람이나 운영진만 고칠 수 있어요.");
             if (!e.getStartsAt().equals(starts)) { e.setRemindedDay(false); e.setRemindedHour(false); }   // 시간이 바뀌면 리마인더를 다시
+            if (e.getCreatedBy() != me) modLog.record(commSn, me, com.knowra.community.modlog.ModLogService.EVENT_EDIT, e.getCreatedBy(), null, e.getTitle());
         }
         e.setTitle(title); e.setDescr(descr); e.setStartsAt(starts); e.setEndsAt(ends); e.setPlace(place); e.setOnlineUrl(url); e.setCapacity(cap);
         events.save(e);
@@ -167,6 +169,7 @@ public class CommEventService {
         if (!"CANCELLED".equals(e.getStat())) {
             e.setStat("CANCELLED");
             events.save(e);
+            if (e.getCreatedBy() != me) modLog.record(e.getCommSn(), me, com.knowra.community.modlog.ModLogService.EVENT_CANCEL, e.getCreatedBy(), null, e.getTitle());
             for (TblCommEventRsvp r : rsvps.findAllByEventSnOrderByFrstCrtDtAsc(eventSn)) {
                 publisher.publishEvent(new NotifTriggerEvent(r.getUserSn(), me, "EVENT_CANCEL", e.getCommSn(), "COMM", e.getTitle()));
             }

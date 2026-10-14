@@ -26,6 +26,7 @@ public class WikiService {
     private final CommPageRepository pages;
     private final TblCommRepository comms;
     private final TblCommMbrRepository mbrs;
+    private final com.knowra.community.modlog.ModLogService modLog;
 
     public TblComm requireReadable(long commSn, Long me) {
         TblComm c = comms.findByCommSn(commSn);
@@ -69,6 +70,7 @@ public class WikiService {
         if (next.size() > MAX_RULES) throw new IllegalArgumentException("규칙은 " + MAX_RULES + "개까지예요.");
         rules.deleteAllOf(commSn);
         rules.saveAll(next);
+        modLog.record(commSn, me, com.knowra.community.modlog.ModLogService.RULES, null, null, "규칙 " + next.size() + "개");
         return rules(commSn);
     }
 
@@ -108,13 +110,17 @@ public class WikiService {
         p.setUpdatedBy(me);
         p.setUpdatedAt(LocalDateTime.now());
         pages.save(p);
+        modLog.record(commSn, me, com.knowra.community.modlog.ModLogService.WIKI_SAVE, null, null, t);
         return page(commSn, p.getSlug());
     }
 
     @Transactional
     public void deletePage(long commSn, String slug, long me) {
         requireManager(commSn, me);
-        pages.findByCommSnAndSlug(commSn, slug).ifPresent(pages::delete);
+        pages.findByCommSnAndSlug(commSn, slug).ifPresent(p -> {
+            pages.delete(p);
+            modLog.record(commSn, me, com.knowra.community.modlog.ModLogService.WIKI_DELETE, null, null, p.getTitle());
+        });
     }
 
     /** 주소용 이름 — 한글 제목도 살린다(영문·숫자·한글·하이픈). 비면 page. */

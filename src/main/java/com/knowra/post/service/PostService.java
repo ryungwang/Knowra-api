@@ -93,6 +93,7 @@ public class PostService {
     private final com.knowra.poll.service.PollService pollService;
     private final com.knowra.mention.MentionService mentionService;
     private final com.knowra.badge.BadgeService badgeService;
+    private final com.knowra.community.modlog.ModLogService modLog;
 
     private static final int REDIS_DB  = 15;
     private static final int PAGE_SIZE = 50;
@@ -148,6 +149,9 @@ public class PostService {
                     resultVO.setResultMessage("수정 권한이 없습니다.");
                     return resultVO;
                 }
+                // 운영진이 남의 글을 고쳤으면 운영 기록에 — 고치기 전 제목으로 남긴다
+                if (tblPost.getUserSn() != userSn && tblPost.getCommSn() != null)
+                    modLog.record(tblPost.getCommSn(), userSn, com.knowra.community.modlog.ModLogService.POST_EDIT, tblPost.getUserSn(), tblPost.getPostSn(), tblPost.getPostTtl());
                 // updatable=false 컬럼(creatrSn, frstCrtDt, userSn)은 건드리지 않는다. 소속 커뮤니티도 바꾸지 않는다.
                 tblPost.setPostTtl(params.get("postTtl").toString());
                 tblPost.setPostCntnt(com.knowra.cmm.util.HtmlSanitizer.clean(params.get("postCntnt").toString()));
@@ -730,6 +734,9 @@ public class PostService {
             }
 
             deleteCmtInternal(cmt, userSn);
+            if (cmt.getUserSn() != userSn && post != null && post.getCommSn() != null)
+                modLog.record(post.getCommSn(), userSn, com.knowra.community.modlog.ModLogService.CMT_DELETE, cmt.getUserSn(), post.getPostSn(),
+                        org.jsoup.Jsoup.parse(cmt.getCmtCntnt() == null ? "" : cmt.getCmtCntnt()).text());
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
         } catch (Exception e) {
             ErrorLog.report(e);
@@ -783,6 +790,7 @@ public class PostService {
             if (post == null || !"Y".equals(post.getActvtnYn())) throw new IllegalArgumentException("글을 찾을 수 없어요.");
             if (post.getCommSn() == null) throw new IllegalArgumentException("커뮤니티 글만 고정할 수 있어요.");
             if (!isManagerRole(roleIn(post.getCommSn(), me))) throw new IllegalArgumentException("커뮤니티 운영진만 고정할 수 있어요.");
+            boolean was = post.getPinnedAt() != null;
             if (pin && post.getPinnedAt() == null) {
                 long n = new JPAQueryFactory(em).select(POST.count()).from(POST)
                         .where(POST.commSn.eq(post.getCommSn()), POST.pinnedAt.isNotNull(), POST.actvtnYn.eq("Y")).fetchOne();
@@ -792,6 +800,8 @@ public class PostService {
                 post.setPinnedAt(null);
             }
             tblPostRepository.save(post);
+            if (was != (post.getPinnedAt() != null))
+                modLog.record(post.getCommSn(), me, pin ? com.knowra.community.modlog.ModLogService.POST_PIN : com.knowra.community.modlog.ModLogService.POST_UNPIN, post.getUserSn(), postSn, post.getPostTtl());
             resultVO.putResult("pinned", post.getPinnedAt() != null);
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
         } catch (IllegalArgumentException e) {
@@ -844,6 +854,8 @@ public class PostService {
                 return resultVO;
             }
             deletePostInternal(tblPost, userSn);
+            if (tblPost.getUserSn() != userSn && tblPost.getCommSn() != null)
+                modLog.record(tblPost.getCommSn(), userSn, com.knowra.community.modlog.ModLogService.POST_DELETE, tblPost.getUserSn(), postSn, tblPost.getPostTtl());
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
             resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
         } catch (Exception e) {
