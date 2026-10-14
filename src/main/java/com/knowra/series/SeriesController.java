@@ -22,6 +22,11 @@ public class SeriesController {
         return run(r -> r.putResult("series", series.get(seriesSn, me)));
     }
 
+    @GetMapping("/byUser")
+    public ResultVO byUser(@RequestParam String nickName, @CurrentUser Long me) {
+        return run(r -> r.putResult("list", series.byUser(nickName, me)));
+    }
+
     @PostMapping("/mine")
     public ResultVO mine(@CurrentUser Long me) {
         return run(r -> r.putResult("list", series.mine(me)));

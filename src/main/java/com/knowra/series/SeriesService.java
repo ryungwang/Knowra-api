@@ -75,6 +75,33 @@ public class SeriesService {
         return sn;
     }
 
+    /**
+     * 그 사람의 연재 목록(프로필 「연재」 탭) — 편 수는 보는 사람이 볼 수 있는 글로 센다.
+     * 보이는 편이 없는 연재는 남에게는 빼고(빈 껍데기), 본인에게는 다 보인다.
+     */
+    public List<Map<String, Object>> byUser(String nickName, Long viewer) {
+        Long owner = jdbc.query("SELECT user_sn FROM knowra_user.tbl_user WHERE nick_name = ? AND actvtn_yn = 'Y'", rs -> rs.next() ? rs.getLong(1) : null, nickName);
+        if (owner == null) return List.of();
+        boolean mine = viewer != null && viewer.longValue() == owner;
+        List<Map<String, Object>> out = new java.util.ArrayList<>();
+        for (Map<String, Object> s : jdbc.queryForList("SELECT series_sn AS \"seriesSn\", title, dscrptn AS \"desc\" FROM knowra_post.tbl_series WHERE user_sn = ? ORDER BY series_sn DESC", owner)) {
+            long sn = ((Number) s.get("seriesSn")).longValue();
+            List<Tuple> rows = postQuery.base().where(POST.seriesSn.eq(sn), PostQuery.alive(), PostQuery.visibleTo(viewer))
+                    .orderBy(POST.frstCrtDt.desc()).fetch();
+            // 꾸미기(태그·좋아요…)는 필요 없다 — 제목·시각만. 익명으로 바뀐 커뮤니티의 회차만 뺀다
+            List<TblPost> posts = rows.stream().map(t -> t.get(POST)).toList();
+            java.util.Set<Long> anon = postQuery.anonymousComms(posts.stream().map(TblPost::getCommSn).filter(java.util.Objects::nonNull).toList());
+            List<TblPost> visible = posts.stream().filter(p -> p.getCommSn() == null || !anon.contains(p.getCommSn())).toList();
+            if (visible.isEmpty() && !mine) continue;
+            Map<String, Object> m = new LinkedHashMap<>(s);
+            m.put("count", visible.size());
+            m.put("latestTitle", visible.isEmpty() ? null : visible.get(0).getPostTtl());
+            m.put("latestAt", visible.isEmpty() ? null : visible.get(0).getFrstCrtDt());
+            out.add(m);
+        }
+        return out;
+    }
+
     /** 연재 한 편 — 정보 + 보는 사람이 볼 수 있는 회차(올린 순서) */
     public Map<String, Object> get(long seriesSn, Long viewer) {
         List<Map<String, Object>> rows = jdbc.queryForList("""
