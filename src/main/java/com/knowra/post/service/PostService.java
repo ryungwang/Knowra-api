@@ -200,6 +200,17 @@ public class PostService {
         return resultVO;
     }
 
+    /**
+     * 이 사람이 이 글을 볼 수 있나 — 상세 화면(getPost)과 같은 기준(살아 있음 + 비공개 커뮤니티·차단·숨김).
+     * ⚠️ 글 번호를 받는 모든 창구가 이걸 거쳐야 한다. 예전엔 상세만 막혀 있어 목록·댓글·저장·숨김 창구로
+     * 비공개 커뮤니티 글과 댓글을 로그인 없이도 읽을 수 있었다.
+     */
+    public boolean canSeePost(long postSn, Long me) {
+        return postQuery.base().where(POST.postSn.eq(postSn), PostQuery.alive(), PostQuery.visibleTo(me)).fetchFirst() != null;
+    }
+
+    static final java.util.Set<String> CMT_REACTIONS = java.util.Set.of("LIKE", "LOVE", "HAHA", "WOW", "SAD", "ANGRY");
+
     static final String STAT_SCHEDULED = "SCHEDULED";
     static final int RSRV_MIN_MINUTES = 5, RSRV_MAX_DAYS = 30;
 
@@ -419,7 +430,7 @@ public class PostService {
             Long   cursor  = params.get("cursor")  != null ? Long.parseLong(params.get("cursor").toString()) : null;
             int    page    = params.get("page")    != null ? Integer.parseInt(params.get("page").toString()) : 0;
 
-            BooleanExpression condition = POST.commSn.eq(commSn).and(PostQuery.alive());
+            BooleanExpression condition = POST.commSn.eq(commSn).and(PostQuery.alive()).and(PostQuery.visibleTo(me));
             List<Tuple> tuples;
             if ("POPULAR".equals(listTyp)) {
                 tuples = postQuery.base()
@@ -515,6 +526,11 @@ public class PostService {
             String postLike = params.get("postLike").toString().toUpperCase();
             // 좋아요 하나뿐이다. 화면은 'up' 만 보내지만 API 로 'DOWN' 을 넣으면 옛 비추천 경로가
             // 살아 있어 수가 음수로 내려갔다(저장됨 화면의 -1 이 그 흔적). 여기서 막는다.
+            if (!canSeePost(postSn, userSn)) {
+                resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
+                resultVO.setResultMessage("볼 수 없는 글이에요.");
+                return resultVO;
+            }
             if (!"UP".equals(postLike)) {
                 resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
                 resultVO.setResultMessage("지원하지 않는 반응입니다.");
@@ -587,6 +603,14 @@ public class PostService {
             if (postQuery.base().where(POST.postSn.eq(postSn), PostQuery.alive(), PostQuery.visibleTo(userSn)).fetchFirst() == null) {
                 resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
                 resultVO.setResultMessage("댓글을 달 수 없는 글이에요.");
+                return resultVO;
+            }
+            // 답글의 부모는 같은 글의 살아 있는 댓글이어야 한다 — 예전엔 아무 댓글 번호(비공개 글 것도)나 넣어
+            // 그 댓글 주인에게 「답글」 알림을 보낼 수 있었다
+            if (prntCmtSn != null && tblPostCmtRepository.findById(prntCmtSn)
+                    .filter(c -> c.getPostSn() == postSn && "Y".equals(c.getActvtnYn())).isEmpty()) {
+                resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
+                resultVO.setResultMessage("답글을 달 수 없는 댓글이에요.");
                 return resultVO;
             }
             String cmtText = params.get("cmtCntnt") == null ? "" : params.get("cmtCntnt").toString().trim();
@@ -719,6 +743,13 @@ public class PostService {
             long   userSn    = me;
             long   postCmtSn = Long.parseLong(params.get("postCmtSn").toString());
             String reactTyp  = params.get("reactTyp").toString();
+            TblPostCmt target = tblPostCmtRepository.findById(postCmtSn).orElse(null);
+            if (!CMT_REACTIONS.contains(reactTyp) || target == null || !"Y".equals(target.getActvtnYn())
+                    || !canSeePost(target.getPostSn(), userSn)) {
+                resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
+                resultVO.setResultMessage("반응할 수 없는 댓글이에요.");
+                return resultVO;
+            }
 
             TblPostCmtReact existing = tblPostCmtReactRepository.findByPostCmtSnAndUserSn(postCmtSn, userSn);
             if (existing == null) {
@@ -873,6 +904,11 @@ public class PostService {
             int  size   = params.get("size")   != null ? Integer.parseInt(params.get("size").toString()) : 10;
             Long cursor = params.get("cursor") != null ? Long.parseLong(params.get("cursor").toString()) : null;
 
+            if (!canSeePost(postSn, userSn)) {
+                resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
+                resultVO.setResultMessage("게시글을 찾을 수 없습니다.");
+                return resultVO;
+            }
             JPAQueryFactory q = new JPAQueryFactory(em);
             QTblPostCmt cmt        = QTblPostCmt.tblPostCmt;
             QTblUser    cmtUser    = new QTblUser("cmtUser");
@@ -1027,6 +1063,11 @@ public class PostService {
             if (folderSn != null && saveFolderRepository.findById(folderSn).filter(f -> f.getUserSn() == userSn).isEmpty()) folderSn = null;
 
             TblPostSave existing = tblPostSaveRepository.findByUserSnAndPostSn(userSn, postSn);
+            if (isSave && !canSeePost(postSn, userSn)) {
+                resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
+                resultVO.setResultMessage("볼 수 없는 글이에요.");
+                return resultVO;
+            }
             if (isSave) {
                 if (existing != null) {
                     if (params.containsKey("folderSn")) { existing.setFolderSn(folderSn); tblPostSaveRepository.save(existing); }
@@ -1086,7 +1127,7 @@ public class PostService {
             Map<Long, Tuple> byPostSn = new HashMap<>();
             if (!postSns.isEmpty()) {
                 postQuery.base()
-                        .where(POST.postSn.in(postSns), PostQuery.alive())
+                        .where(POST.postSn.in(postSns), PostQuery.alive(), PostQuery.visibleTo(me))
                         .fetch()
                         .forEach(t -> byPostSn.put(t.get(POST).getPostSn(), t));
             }

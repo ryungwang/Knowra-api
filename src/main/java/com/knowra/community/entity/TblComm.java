@@ -61,6 +61,12 @@ public class TblComm {
   @JoinColumn(name = "BNR_FILE_SN", insertable = false, updatable = false)
   private TblComFile bnrFile;
 
+  /**
+   * ⚠️ 응답에 싣지 않는다. 커뮤니티 정보(getCommunity)가 이 엔티티를 그대로 내보내서, 로그인 없이도
+   * 비공개 커뮤니티의 멤버 명단(사용자 번호·역할·가입 대기·차단 여부·마지막 방문)이 보였다.
+   * 인원수는 memberCnt, 명단은 권한을 보는 getMemberList 로.
+   */
+  @com.fasterxml.jackson.annotation.JsonIgnore
   @OneToMany(fetch = FetchType.LAZY)
   @JoinColumn(name = "COMM_SN", insertable = false, updatable = false)
   private List<TblCommMbr> members;

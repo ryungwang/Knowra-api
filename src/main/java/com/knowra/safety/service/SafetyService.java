@@ -36,6 +36,7 @@ public class SafetyService {
     private final TblPostHideRepository hideRepository;
     private final TblUserRepository userRepository;
     private final TblPostRepository postRepository;
+    private final com.knowra.post.service.PostQuery postQuery;
 
     /** params: targetKind(POST|CMT|USER), targetSn, reason, detail? — 같은 대상은 한 번만. */
     @Transactional
@@ -127,6 +128,12 @@ public class SafetyService {
             long postSn = Long.parseLong(String.valueOf(params.get("postSn")));
             boolean hide = Boolean.parseBoolean(String.valueOf(params.get("hide")));
             Optional<TblPostHide> existing = hideRepository.findByUserSnAndPostSn(me, postSn);
+            // 볼 수 없는 글은 숨길 수도 없다 — 예전엔 아무 번호나 숨긴 뒤 숨김 목록으로 비공개 글 제목을 읽었다
+            if (hide && existing.isEmpty() && !postQuery.accessible(postSn, me)) {
+                resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
+                resultVO.setResultMessage("숨길 수 없는 글이에요.");
+                return resultVO;
+            }
             if (hide && existing.isEmpty()) hideRepository.save(TblPostHide.builder().userSn(me).postSn(postSn).build());
             else if (!hide && existing.isPresent()) hideRepository.delete(existing.get());
             resultVO.putResult("hidden", hide);
@@ -148,7 +155,7 @@ public class SafetyService {
         try {
             List<Map<String, Object>> list = new ArrayList<>();
             for (TblPostHide h : hideRepository.findAllByUserSnOrderByFrstCrtDtDesc(me)) {
-                postRepository.findById(h.getPostSn()).filter(p -> "ACTIVE".equals(p.getStat())).ifPresent(p -> {
+                postRepository.findById(h.getPostSn()).filter(p -> postQuery.accessible(p.getPostSn(), me)).ifPresent(p -> {
                     Map<String, Object> row = new LinkedHashMap<>();
                     row.put("postSn", p.getPostSn()); row.put("title", p.getPostTtl());
                     userRepository.findById(p.getUserSn()).ifPresent(u -> { row.put("nickName", u.getNickName()); row.put("name", u.getName()); });

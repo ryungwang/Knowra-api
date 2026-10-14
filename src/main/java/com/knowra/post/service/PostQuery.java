@@ -72,6 +72,15 @@ public class PostQuery {
                 .and(POST.postSn.notIn(JPAExpressions.select(hide.postSn).from(hide).where(hide.userSn.eq(viewerSn))));
     }
 
+    /**
+     * 살아 있고 그 커뮤니티를 볼 권한이 있는 글인가 — 차단·숨김은 보지 않는다.
+     * 숨김 목록처럼 "내가 숨긴 글"을 다뤄야 하는 자리용(visibleTo 는 숨긴 글을 빼 버린다).
+     */
+    public boolean accessible(long postSn, Long viewerSn) {
+        return base().where(POST.postSn.eq(postSn), alive(),
+                POST.commSn.isNull().or(CommunityQueryHelper.accessCondition(COMM, viewerSn))).fetchFirst() != null;
+    }
+
     public JPAQuery<Tuple> base() {
         return new JPAQueryFactory(em)
                 .select(POST, USER.nickName, USER.name, COMM.commNm, COMM.commDsplNm,
