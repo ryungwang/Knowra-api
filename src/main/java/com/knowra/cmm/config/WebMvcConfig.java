@@ -15,6 +15,7 @@ import java.util.List;
 public class WebMvcConfig implements WebMvcConfigurer {
 
     private final CurrentUserArgumentResolver currentUserArgumentResolver;
+    private final com.knowra.cmm.ratelimit.RateLimitInterceptor rateLimitInterceptor;
 
     @Value("${File.Store.Path}")
     private String uploadPath;
@@ -37,5 +38,11 @@ public class WebMvcConfig implements WebMvcConfigurer {
     @Override
     public void addArgumentResolvers(List<HandlerMethodArgumentResolver> resolvers) {
         resolvers.add(currentUserArgumentResolver);
+    }
+
+    /** 쓰기·발송 창구 도배 제한 — 경로별 한도는 RateLimitInterceptor.RULES. */
+    @Override
+    public void addInterceptors(org.springframework.web.servlet.config.annotation.InterceptorRegistry registry) {
+        registry.addInterceptor(rateLimitInterceptor);
     }
 }
