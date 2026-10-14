@@ -267,8 +267,7 @@ public class AuthService {
             String refreshToken = refreshCookie.read(request);
             if (!StringUtils.hasText(refreshToken)
                     || !jwtProvider.isValid(refreshToken)
-                    || !jwtProvider.isRefreshToken(refreshToken)
-                    || redisApiService.isBlocklisted(REDIS_DB, refreshToken)) {
+                    || !jwtProvider.isRefreshToken(refreshToken)) {   // 이미 쓴 토큰은 아래 재사용 감지로 간다
                 response.addHeader("Set-Cookie", refreshCookie.clear());
                 resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
                 resultVO.setResultMessage("유효하지 않은 토큰입니다.");
@@ -299,6 +298,25 @@ public class AuthService {
                 return resultVO;
             }
 
+            // 이 리프레시 토큰을 "썼다"고 원자적으로 표시한다. 이미 쓰인 토큰이 다시 오면:
+            //  - 15초 안: 여러 탭이 동시에 갱신한 것 — 거절만 한다(브라우저엔 먼저 끝난 쪽의 새 쿠키가 있다).
+            //  - 그 뒤: 누가 옛 토큰을 들고 있다(탈취) — 이 세션을 통째로 끊는다. 예전엔 거절만 해서
+            //    먼저 갱신한 쪽(도둑일 수도)이 계속 살아 있었고, 동시에 두 번 보내면 둘 다 통과해 갈래가 생겼다.
+            String usedKey = "rt:used:" + com.knowra.cmm.errlog.ErrorCollector.sha256Public(refreshToken);
+            if (!redisApiService.setIfAbsent(REDIS_DB, usedKey, String.valueOf(System.currentTimeMillis()), 8 * 24 * 3600)) {
+                Object at = redisApiService.getRedis(REDIS_DB, usedKey);
+                long since = at == null ? Long.MAX_VALUE : System.currentTimeMillis() - Long.parseLong(at.toString());
+                if (since > 15_000) sessionService.revoke(userSn, sid);
+                resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
+                resultVO.setResultMessage(since > 15_000 ? "보안을 위해 이 기기에서 로그아웃했어요. 다시 로그인해 주세요." : "이미 갱신됐어요.");
+                return resultVO;
+            }
+            if (redisApiService.isBlocklisted(REDIS_DB, refreshToken)) {   // 로그아웃으로 폐기된 토큰
+                response.addHeader("Set-Cookie", refreshCookie.clear());
+                resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
+                resultVO.setResultMessage("유효하지 않은 토큰입니다.");
+                return resultVO;
+            }
             revokeIfValid(refreshToken);
             String newAccessToken = jwtProvider.generateAccessToken(userSn, loginId, sid);
             String newRefreshToken = jwtProvider.generateRefreshToken(userSn, loginId, sid);
@@ -325,8 +343,8 @@ public class AuthService {
 
             // 일반 가입은 이메일이나 휴대폰 중 하나는 코드로 확인돼 있어야 한다. 구글 가입은 구글이 확인한다.
             if (!"Y".equals(snsYn)) {
-                boolean emailOk = !email.isEmpty() && verificationService.isVerified(VerificationService.EMAIL, email);
-                boolean phoneOk = !phone.isEmpty() && verificationService.isVerified(VerificationService.PHONE, phone);
+                boolean emailOk = !email.isEmpty() && verificationService.isVerified(VerificationService.EMAIL, email, ComUtil.getStrValue(params.get("emailTicket")));
+                boolean phoneOk = !phone.isEmpty() && verificationService.isVerified(VerificationService.PHONE, phone, ComUtil.getStrValue(params.get("phoneTicket")));
                 // 적은 연락처는 전부 확인된 것이어야 한다 — 하나만 확인하고 다른 칸에 남의 이메일·번호를 적으면
                 // 그 주인이 「이미 가입된」 으로 막히고, 비밀번호 찾기 메일도 엉뚱한 계정 것으로 간다.
                 if ((!emailOk && !phoneOk) || (!email.isEmpty() && !emailOk) || (!phone.isEmpty() && !phoneOk)) {
@@ -345,7 +363,7 @@ public class AuthService {
             String ruleErr = null;
             if (!"Y".equals(snsYn)) {
                 boolean ownEmailId = !email.isEmpty() && loginId.equalsIgnoreCase(email)
-                        && verificationService.isVerified(VerificationService.EMAIL, email);
+                        && verificationService.isVerified(VerificationService.EMAIL, email, ComUtil.getStrValue(params.get("emailTicket")));
                 if (!ownEmailId) ruleErr = com.knowra.user.UserRules.loginIdError(loginId);
                 if (ownEmailId) loginId = email;   // 정규화된(소문자) 주소로
             }
@@ -489,7 +507,9 @@ public class AuthService {
         ResultVO resultVO = new ResultVO();
         String channel = params.getOrDefault("channel", VerificationService.EMAIL);
         String target  = VerificationService.normalize(channel, params.get("target"));
-        if (verificationService.check(channel, target, params.get("code"))) {
+        String ticket = verificationService.check(channel, target, params.get("code"));
+        if (ticket != null) {
+            resultVO.putResult("ticket", ticket);   // 가입·이메일 변경 때 이걸 같이 보낸다(확인한 사람만 쓸 수 있게)
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
         } else {
             resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
@@ -514,7 +534,12 @@ public class AuthService {
             if (user.isPresent() && !"Y".equals(user.get().getSnsYn())) {
                 byte[] buf = new byte[32]; secureRandom.nextBytes(buf);
                 String token = Base64.getUrlEncoder().withoutPadding().encodeToString(buf);
-                redisApiService.setRedis(REDIS_DB, "pwreset:" + token, String.valueOf(user.get().getUserSn()), PW_RESET_TTL);
+                // 사람마다 살아 있는 링크는 하나 — 새로 보내면 예전 링크는 죽는다
+                long sn = user.get().getUserSn();
+                Object prev = redisApiService.getRedis(REDIS_DB, "pwreset:user:" + sn);
+                if (prev != null) redisApiService.delRedis(REDIS_DB, "pwreset:" + prev);
+                redisApiService.setRedis(REDIS_DB, "pwreset:" + token, String.valueOf(sn), PW_RESET_TTL);
+                redisApiService.setRedis(REDIS_DB, "pwreset:user:" + sn, token, PW_RESET_TTL);
                 String link = frontBaseUrl + "/reset-password?token=" + token;
                 mailService.send(email, "[Knowra] 비밀번호 재설정",
                         "아래 링크에서 새 비밀번호를 설정할 수 있습니다. 링크는 30분 동안만 유효합니다.\n\n" + link
@@ -551,6 +576,7 @@ public class AuthService {
             user.setPassword(passwordEncoder.encode(newPw));
             tblUserRepository.save(user);
             redisApiService.delRedis(REDIS_DB, "pwreset:" + token);
+            redisApiService.delRedis(REDIS_DB, "pwreset:user:" + user.getUserSn());
             sessionService.revokeOthers(user.getUserSn(), null);   // 비밀번호를 잊었거나 뺏겼다 — 모든 기기를 끊는다
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
             resultVO.setResultMessage("비밀번호가 바뀌었습니다. 새 비밀번호로 로그인해주세요.");

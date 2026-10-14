@@ -61,27 +61,38 @@ public class VerificationService {
         return code;
     }
 
-    /** 맞으면 확인 표식을 남기고 코드를 지운다. */
-    public boolean check(String channel, String target, String code) {
+    /**
+     * 맞으면 확인 표(ticket)를 만들어 돌려주고 코드를 지운다. 틀리면 null.
+     * ⚠️ 확인은 이 표를 가진 사람에게만 유효하다 — 예전엔 「이 주소는 확인됨」 전역 표시라 30분 동안
+     * 누구나 그 주소로 가입·이메일 변경을 할 수 있었다(피해자가 인증만 하고 가입을 안 마쳤을 때).
+     */
+    public String check(String channel, String target, String code) {
         String base = key(channel, target);
         Object saved = redis.getRedis(REDIS_DB, base);
-        if (saved == null) return false;
+        if (saved == null) return null;
         // 시도 횟수는 먼저 원자적으로 센다(INCR). 예전엔 읽고→비교하고→쓰는 세 단계라, 동시에 수백 번 보내면
         // 전부 tries=0 을 읽어 5회 제한이 거의 걸리지 않았다(6자리 코드를 10분 안에 대입할 수 있었다).
         long tries = redis.incr(REDIS_DB, base + ":tries", CODE_TTL);
-        if (tries > MAX_TRIES) { redis.delRedis(REDIS_DB, base); return false; }
+        if (tries > MAX_TRIES) { redis.delRedis(REDIS_DB, base); return null; }
         if (!java.security.MessageDigest.isEqual(saved.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8),
                 (code == null ? "" : code.trim()).getBytes(java.nio.charset.StandardCharsets.UTF_8))) {
-            return false;
+            return null;
         }
         redis.delRedis(REDIS_DB, base);
         redis.delRedis(REDIS_DB, base + ":tries");
-        redis.setRedis(REDIS_DB, "verif:ok:" + channel + ":" + target, "1", OK_TTL);
-        return true;
+        byte[] b = new byte[24];
+        random.nextBytes(b);
+        String ticket = java.util.HexFormat.of().formatHex(b);
+        redis.setRedis(REDIS_DB, "verif:ok:" + channel + ":" + target, ticket, OK_TTL);
+        return ticket;
     }
 
-    public boolean isVerified(String channel, String target) {
-        return redis.getRedis(REDIS_DB, "verif:ok:" + channel + ":" + target) != null;
+    /** 이 주소가 확인됐고, 확인한 사람이 받은 표와 같은가 */
+    public boolean isVerified(String channel, String target, String ticket) {
+        Object v = redis.getRedis(REDIS_DB, "verif:ok:" + channel + ":" + target);
+        if (v == null || ticket == null || ticket.isBlank()) return false;
+        return java.security.MessageDigest.isEqual(v.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                ticket.trim().getBytes(java.nio.charset.StandardCharsets.UTF_8));
     }
 
     public void consume(String channel, String target) {

@@ -152,6 +152,8 @@ public class ErrorCollector {
 
     private static String cut(String s, int max) { return s == null ? null : s.length() <= max ? s : s.substring(0, max); }
 
+    public static String sha256Public(String s) { return sha256(s); }
+
     static String sha256(String s) {
         try {
             return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(s.getBytes(StandardCharsets.UTF_8)));

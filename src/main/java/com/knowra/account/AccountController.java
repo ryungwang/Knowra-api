@@ -79,9 +79,12 @@ public class AccountController {
         if (u == null) return fail("계정을 찾을 수 없어요.");
         String old = u.getEmail();
         if (email.equalsIgnoreCase(old == null ? "" : old)) return fail("지금 쓰는 이메일과 같아요.");
+        // 비밀번호가 있는 계정이면 확인한다 — 예전엔 소셜 연결(snsYn=Y)이면 비밀번호가 있어도 건너뛰었다
+        boolean hasPassword = u.getPassword() != null && u.getPassword().startsWith("$2");
         boolean sns = "Y".equals(u.getSnsYn());
-        if (!sns && !passwordEncoder.matches(password, u.getPassword())) return fail("비밀번호가 맞지 않아요.");
-        if (!verification.isVerified(VerificationService.EMAIL, email)) return fail("새 이메일 인증을 먼저 마쳐 주세요.");
+        if (hasPassword && !passwordEncoder.matches(password, u.getPassword())) return fail("비밀번호가 맞지 않아요.");
+        if (!verification.isVerified(VerificationService.EMAIL, email, b.get("ticket") == null ? null : String.valueOf(b.get("ticket"))))
+            return fail("새 이메일 인증을 먼저 마쳐 주세요.");
         if (users.findByEmail(email).filter(x -> x.getUserSn() != me).isPresent()
                 || users.findByLoginId(email).filter(x -> x.getUserSn() != me).isPresent()) return fail("이미 다른 계정이 쓰는 이메일이에요.");
 
