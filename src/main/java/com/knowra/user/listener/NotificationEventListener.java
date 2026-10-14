@@ -60,11 +60,17 @@ public class NotificationEventListener {
             }
         }
 
+        // 익명 커뮤니티 글에 대한 알림(좋아요·댓글·답글·멘션·새 글)은 보낸 사람을 숨긴다 — 알림이 익명을 깨면 안 된다
+        boolean anonymous = event.senderSn() != null && "POST".equals(event.targetKind()) && event.targetSn() != null
+                && !em.createQuery("select c.commSn from TblPost p, TblComm c where p.postSn = :sn and c.commSn = p.commSn and c.prvcyStng = 'anonymous'")
+                      .setParameter("sn", event.targetSn()).setMaxResults(1).getResultList().isEmpty();
+        if (anonymous) { nickName = com.knowra.post.service.PostQuery.ANONYMOUS_NAME; pfpUrl = null; }
+
         String message = buildMessage(event.notifTyp(), nickName, event.extra());
 
         TblUserNotif entity = TblUserNotif.builder()
                 .userSn(event.receiverSn())
-                .senderSn(event.senderSn())
+                .senderSn(anonymous ? null : event.senderSn())
                 .notifTyp(event.notifTyp())
                 .message(message)
                 .targetSn(event.targetSn())
@@ -85,7 +91,7 @@ public class NotificationEventListener {
                 java.util.Map<String, Object> payload = new java.util.LinkedHashMap<>();
                 payload.put("title", "knowra");
                 payload.put("body", message);
-                payload.put("url", linkFor(event, nickName));
+                payload.put("url", linkFor(event, anonymous ? null : nickName));
                 payload.put("tag", event.notifTyp() + ":" + event.targetSn());   // 같은 글의 좋아요가 쌓이지 않고 바뀐다
                 webPushService.sendToUser(event.receiverSn(), payload);
             } catch (Exception ignore) { /* 푸시는 덤이다 */ }

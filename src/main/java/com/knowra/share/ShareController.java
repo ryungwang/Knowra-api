@@ -56,6 +56,7 @@ public class ShareController {
         PostDTO p = postQuery.toDto(t);
         String plain = plain(p.getPostCntnt());
         String where = p.getCommDsplNm() != null ? p.getCommDsplNm() : (p.getCommNm() != null ? p.getCommNm() : null);
+        if (postQuery.isAnonymousComm(p.getCommSn())) com.knowra.post.service.PostQuery.anonymize(p);   // 미리보기 카드도 익명
         String desc = (where != null ? where + " · " : "") + (p.getAuthorNm() != null ? p.getAuthorNm() : p.getNickName())
                 + (plain.isEmpty() ? "" : " — " + cut(plain, 120));
         String img = firstImage(p.getPostCntnt(), req);

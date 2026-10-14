@@ -567,6 +567,13 @@ public class CommunityService {
                 resultVO.setResultMessage("멤버만 볼 수 있습니다.");
                 return resultVO;
             }
+            // 익명 커뮤니티의 멤버 명단은 운영진만 — 명단만으로도 "누가 여기서 활동하는지"가 드러난다
+            if ("anonymous".equals(comm.getPrvcyStng()) && !isManager(myRole)) {
+                resultVO.putResult("list", java.util.List.of());
+                resultVO.putResult("hidden", true);
+                resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
+                return resultVO;
+            }
 
             QTblCommMbr m = QTblCommMbr.tblCommMbr;
             com.knowra.user.entity.QTblUser u = com.knowra.user.entity.QTblUser.tblUser;

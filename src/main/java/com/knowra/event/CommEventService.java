@@ -65,8 +65,11 @@ public class CommEventService {
         TblCommEvent e = events.findById(eventSn).orElseThrow(() -> new IllegalArgumentException("모임을 찾을 수 없어요."));
         wiki.requireReadable(e.getCommSn(), me);
         List<TblCommEventRsvp> rs = rsvps.findAllByEventSnOrderByFrstCrtDtAsc(eventSn);
-        Map<String, Object> m = toDto(e, rs, me, activeRole(e.getCommSn(), me));
-        m.put("attendees", attendees(rs));
+        String role = activeRole(e.getCommSn(), me);
+        Map<String, Object> m = toDto(e, rs, me, role);
+        // 익명 커뮤니티 모임은 참석자 얼굴·이름을 운영진에게만 — 수만 보인다
+        boolean hideNames = "anonymous".equals(wiki.requireReadable(e.getCommSn(), me).getPrvcyStng()) && !"OWNER".equals(role) && !"ADMIN".equals(role);
+        m.put("attendees", hideNames ? List.of() : attendees(rs));
         return m;
     }
 

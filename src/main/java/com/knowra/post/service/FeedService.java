@@ -701,7 +701,8 @@ public class FeedService {
     // ─────────────────────────────────────────────────────────────────────
     private List<FeedPost> fetchPostsByUsers(Set<Long> userSns, Long viewerSn) {
         return toFeedPosts(postQuery.base()
-                .where(POST.userSn.in(userSns), PostQuery.alive(), PostQuery.visibleTo(viewerSn))
+                .where(POST.userSn.in(userSns), PostQuery.alive(), PostQuery.visibleTo(viewerSn),
+                        PostQuery.notAnonymous())   // 팔로우한 사람의 익명 글을 「팔로우」 이유로 모으면 누가 썼는지 드러난다
                 .orderBy(POST.frstCrtDt.desc())
                 .fetch());
     }

@@ -35,4 +35,9 @@ public class CmtDTO {
 
     /** 댓글 사진(없으면 null). 지워진 댓글은 사진도 내보내지 않는다. */
     private String imgUrl;
+
+    /** 익명 커뮤니티 댓글 — 작성자 칸은 별칭(글쓴이·익명N)이고 userSn 은 0. 생성자 밖에서 채운다. */
+    private boolean anonymous;
+    /** 내가 쓴 댓글인가 — 익명이면 화면이 닉네임으로 알 수 없어서 서버가 알려 준다 */
+    private boolean mine;
 }

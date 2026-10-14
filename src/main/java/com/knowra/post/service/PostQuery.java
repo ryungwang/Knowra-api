@@ -126,13 +126,47 @@ public class PostQuery {
         Set<Long>               savedSet = viewerSn != null ? mySavedSet(viewerSn, postSns) : Set.of();
         Set<Long>               pollSet  = new HashSet<>();
         pollRepository.findAllByPostSnIn(postSns).forEach(p -> pollSet.add(p.getPostSn()));
+        Set<Long> anonComms = anonymousComms(list.stream().map(PostDTO::getCommSn).filter(java.util.Objects::nonNull).toList());
         for (PostDTO dto : list) {
+            dto.setMine(viewerSn != null && dto.getUserSn() == viewerSn);
+            if (dto.getCommSn() != null && anonComms.contains(dto.getCommSn())) anonymize(dto);
             dto.setHasPoll(pollSet.contains(dto.getPostSn()));
             dto.setTagNms(tagMap.getOrDefault(dto.getPostSn(), List.of()));
             dto.setMyLikeTyp(likeMap.get(dto.getPostSn()));
             dto.setMySaved(savedSet.contains(dto.getPostSn()));
         }
         return list;
+    }
+
+    public static final String ANONYMOUS_NAME = "익명";
+
+    /**
+     * 익명 커뮤니티 글 — 누가 썼는지 알 수 있는 칸을 모두 비운다(번호·닉네임·이름·사진).
+     * 「익명으로 자유롭게」라고 안내하는데 예전엔 작성자가 그대로 보였다. 모든 목록·상세가 이 함수를 지난다.
+     */
+    public static void anonymize(PostDTO dto) {
+        dto.setAnonymous(true);
+        dto.setUserSn(0);
+        dto.setNickName(null);
+        dto.setAuthorNm(ANONYMOUS_NAME);
+        dto.setPfpUrl(null);
+    }
+
+    /** 이 중 익명 커뮤니티인 것 */
+    public Set<Long> anonymousComms(java.util.Collection<Long> commSns) {
+        if (commSns.isEmpty()) return Set.of();
+        return new HashSet<>(new JPAQueryFactory(em).select(COMM.commSn).from(COMM)
+                .where(COMM.commSn.in(commSns), COMM.prvcyStng.eq("anonymous")).fetch());
+    }
+
+    public boolean isAnonymousComm(Long commSn) {
+        return commSn != null && !anonymousComms(List.of(commSn)).isEmpty();
+    }
+
+    /** 익명 커뮤니티 글이 아닌 것(프로필·팔로잉 피드처럼 "누가 썼는지"로 모으는 목록에서 뺄 때) */
+    public static com.querydsl.core.types.dsl.BooleanExpression notAnonymous() {
+        return POST.commSn.isNull().or(POST.commSn.notIn(
+                com.querydsl.jpa.JPAExpressions.select(COMM.commSn).from(COMM).where(COMM.prvcyStng.eq("anonymous"))));
     }
 
     /** postSn → UP/DOWN */

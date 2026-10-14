@@ -489,6 +489,8 @@ public class PostService {
         BooleanExpression condition = POST.userSn.eq(userSn)
                 .and(PostQuery.alive())
                 .and(PostQuery.visibleTo(viewerSn));
+        // 남의 프로필엔 익명 커뮤니티 글을 싣지 않는다 — 실으면 「이 사람이 쓴 익명 글」이 드러난다
+        if (viewerSn == null || viewerSn != userSn) condition = condition.and(PostQuery.notAnonymous());
         if (cursor != null) condition = condition.and(POST.frstCrtDt.lt(cursor));
         List<Tuple> tuples = postQuery.base()
                 .where(condition)
@@ -1024,7 +1026,7 @@ public class PostService {
                         reactionsMap.getOrDefault(sn, new HashMap<>()),
                         myReactMap.get(sn), pfpUrl,
                         deleted ? "DELETED" : "ACTIVE", c.getMdfcnDt(),
-                        deleted ? null : c.getImgUrl());
+                        deleted ? null : c.getImgUrl(), false, userSn != null && c.getUserSn() == userSn);
             };
             Map<Long, CmtDTO> rootMap = new LinkedHashMap<>();
             rootTuples.forEach(t -> rootMap.put(t.get(cmt).getPostCmtSn(), toDto.apply(t)));
@@ -1033,6 +1035,22 @@ public class PostService {
                 if (parent != null) parent.getReplies().add(toDto.apply(t));
             });
             List<CmtDTO> list = new ArrayList<>(rootMap.values());
+
+            // ── 익명 커뮤니티: 글쓴이는 「글쓴이」, 나머지는 이 글에 처음 댓글을 단 순서대로 「익명1·익명2…」.
+            //    같은 사람은 같은 번호라 대화가 이어져 보이고, 누구인지는 알 수 없다(번호·닉네임·사진 비움).
+            TblPost thePost = tblPostRepository.findById(postSn).orElse(null);
+            if (thePost != null && postQuery.isAnonymousComm(thePost.getCommSn())) {
+                List<Long> order = q.select(cmt.userSn).from(cmt).where(cmt.postSn.eq(postSn))
+                        .groupBy(cmt.userSn).orderBy(cmt.postCmtSn.min().asc()).fetch();
+                Map<Long, String> alias = new HashMap<>();
+                int n = 0;
+                for (Long u : order) alias.put(u, u == thePost.getUserSn() ? "글쓴이" : PostQuery.ANONYMOUS_NAME + (++n));
+                java.util.function.Consumer<CmtDTO> anon = d -> {
+                    d.setAuthorNm(alias.getOrDefault(d.getUserSn(), PostQuery.ANONYMOUS_NAME));
+                    d.setAnonymous(true); d.setUserSn(0); d.setNickName(null); d.setPfpUrl(null);
+                };
+                for (CmtDTO d : list) { anon.accept(d); d.getReplies().forEach(anon); }
+            }
 
             // ── 5. nextCursor: 마지막 루트 댓글 SN (size 미달이면 null) ────────
             Long nextCursor = nextCursorOverride != null
