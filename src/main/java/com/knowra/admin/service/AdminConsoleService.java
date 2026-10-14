@@ -59,6 +59,7 @@ public class AdminConsoleService {
             m.put("users",          userRepository.count());
             m.put("usersToday",     userRepository.countByFrstCrtDtAfter(today));
             m.put("usersSuspended", userRepository.countByStatus("S"));
+            m.put("usersDormant",   userRepository.countByStatus("D"));   // 1년 넘게 안 들어와 휴면(DormantService)
             m.put("posts",          postRepository.countByActvtnYn("Y"));
             m.put("postsToday",     postRepository.countByActvtnYnAndFrstCrtDtAfter("Y", today));
             m.put("communities",    commRepository.countByStat("Y"));

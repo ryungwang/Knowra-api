@@ -64,6 +64,7 @@ public class AuthService {
     private final SmsService smsService;
     private final com.knowra.cmm.ratelimit.RateLimiter rateLimiter;
     private final com.knowra.user.suspension.SuspensionService suspensionService;
+    private final com.knowra.user.dormant.DormantService dormantService;
     private final com.knowra.user.twofactor.TwoFactorService twoFactorService;
     private final com.knowra.user.sns.SnsLinkService snsLinks;
 
@@ -157,6 +158,8 @@ public class AuthService {
         h.setUserSn(userSn);
         h.setLgnIp(clientIp);
         tblUserLgnHstryRepository.save(h);
+        // 휴면이었으면 여기서 푼다 — 화면이 「다시 오셨네요」를 띄울 수 있게 알린다
+        if (dormantService.wake(userSn)) resultVO.putResult("reactivated", true);
         resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
     }
 

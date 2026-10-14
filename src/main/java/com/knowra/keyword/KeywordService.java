@@ -50,6 +50,7 @@ public class KeywordService {
         List<Map<String, Object>> hits = jdbc.queryForList("""
                 SELECT w.user_sn, MIN(w.keyword) AS keyword FROM knowra_user.tbl_keyword_watch w
                 WHERE w.user_sn <> ? AND position(lower(w.keyword) IN lower(?)) > 0
+                  AND EXISTS (SELECT 1 FROM knowra_user.tbl_user u WHERE u.user_sn = w.user_sn AND u.status = 'Y' AND u.actvtn_yn = 'Y')
                   AND NOT EXISTS (SELECT 1 FROM knowra_community.tbl_comm_mbr m
                                   WHERE m.comm_sn = ? AND m.user_sn = w.user_sn AND m.stat = 'ACTIVE' AND m.notif_yn = 'Y')
                 GROUP BY w.user_sn LIMIT ?""", post.getUserSn(), text, post.getCommSn(), MAX_TARGETS);
