@@ -65,6 +65,7 @@ public class RateLimitInterceptor implements HandlerInterceptor {
             Map.entry("/api/auth/password/reset",     new Rule("pw-reset", 10, 600)),
             Map.entry("/api/account/changeEmail",     new Rule("chg-email", 10, 600)), // 비밀번호 대입 창구
             Map.entry("/api/account/sessions/revoke", new Rule("sess", 30, 600)),
+            Map.entry("/api/account/sns/link",        new Rule("sns-link", 20, 600)),   // 매번 제공자에게 바깥 요청이 나간다
             Map.entry("/api/account/export",          new Rule("export", 5, 3600)),   // 내 글·댓글·DM 을 통째로 읽는다
             Map.entry("/api/user/setUserInfo",        new Rule("profile", 20, 600)),
             Map.entry("/api/user/changePassword",     new Rule("chg-pw", 10, 600)),

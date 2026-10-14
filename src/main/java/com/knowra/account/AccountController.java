@@ -82,6 +82,39 @@ public class AccountController {
         return r;
     }
 
+    private final com.knowra.user.sns.SnsLinkService snsLinks;
+    private final com.knowra.user.sns.SnsAuthService snsAuth;
+
+    // ── 소셜 계정 연결 ── 연결은 제공자 인증을 다녀온 값(code·accessToken·idToken)으로만 — 폼 값을 믿지 않는다
+    @PostMapping("/sns")
+    public ResultVO snsList(@CurrentUser Long me) {
+        ResultVO r = new ResultVO();
+        r.putResult("linked", snsLinks.list(me));
+        r.putResult("hasPassword", users.findById(me).map(u -> u.getPassword() != null && u.getPassword().startsWith("$2")).orElse(false));
+        r.setResultCode(ResponseCode.SUCCESS.getCode());
+        return r;
+    }
+
+    /** body: provider + 제공자별 자격(GOOGLE accessToken / KAKAO·NAVER code,state / APPLE idToken) */
+    @PostMapping("/sns/link")
+    public ResultVO snsLink(@RequestBody Map<String, String> b, @CurrentUser Long me) {
+        return attempt(() -> {
+            String provider = b.getOrDefault("provider", "").toUpperCase();
+            snsLinks.link(me, snsAuth.fetchIdentity(provider, b));
+            return Map.of("linked", snsLinks.list(me));
+        });
+    }
+
+    /** body: provider */
+    @PostMapping("/sns/unlink")
+    public ResultVO snsUnlink(@RequestBody Map<String, String> b, @CurrentUser Long me) {
+        return attempt(() -> {
+            boolean hasPw = users.findById(me).map(u -> u.getPassword() != null && u.getPassword().startsWith("$2")).orElse(false);
+            snsLinks.unlink(me, String.valueOf(b.get("provider")).toUpperCase(), hasPw);
+            return Map.of("linked", snsLinks.list(me));
+        });
+    }
+
     /** 내 데이터 내려받기 — JSON 파일 한 개. 비싼 조회라 횟수 제한(RateLimitInterceptor) */
     @PostMapping("/export")
     public org.springframework.http.ResponseEntity<byte[]> export(@CurrentUser Long me) throws Exception {

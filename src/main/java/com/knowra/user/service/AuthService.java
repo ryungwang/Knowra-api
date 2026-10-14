@@ -65,6 +65,7 @@ public class AuthService {
     private final com.knowra.cmm.ratelimit.RateLimiter rateLimiter;
     private final com.knowra.user.suspension.SuspensionService suspensionService;
     private final com.knowra.user.twofactor.TwoFactorService twoFactorService;
+    private final com.knowra.user.sns.SnsLinkService snsLinks;
 
     /*
      * 로그인 실패 제한(15분 창). 세 겹인 이유:
@@ -200,7 +201,9 @@ public class AuthService {
             String provider = StringUtils.hasText(params.get("provider")) ? params.get("provider").toUpperCase() : SnsAuthService.GOOGLE;
             SnsIdentity id = snsAuthService.fetchIdentity(provider, params);
 
-            Optional<TblUser> tblUser = tblUserRepository.findBySnsNameAndSnsId(id.provider(), id.id());
+            // 연결 표(V33)가 단일 진실 — 한 계정에 여러 소셜이 붙는다
+            Long linked = snsLinks.findUser(id.provider(), id.id());
+            Optional<TblUser> tblUser = linked == null ? Optional.empty() : tblUserRepository.findById(linked);
             // 이메일로 찾는 건 "예전 구글 가입(제공자 ID 없이 loginId=이메일)"을 잇는 용도뿐이다. ⚠️ 좁게 건다:
             // 제공자가 확인한 이메일 + 그 계정이 소셜 계정 + 아직 제공자가 안 묶임 + 구글. 예전엔 아무 계정이나
             // loginId 가 같으면 들어가서, 남이 이메일 아이디를 먼저 만들어 두거나(비밀번호 계정) 확인 안 된
@@ -230,7 +233,9 @@ public class AuthService {
                     return resultVO;
                 }
                 // 이메일로만 찾은 예전 계정은 제공자 ID 를 이번에 묶어 둔다 — 다음부터 ①로 바로 찾는다.
-                if (!StringUtils.hasText(u.getSnsId())) { u.setSnsYn("Y"); u.setSnsName(id.provider()); u.setSnsId(id.id()); tblUserRepository.save(u); }
+                // 이메일로만 찾은 예전 계정은 이번에 연결해 둔다 — 다음부터 연결 표로 바로 찾는다.
+                // (예전엔 tbl_user.SNS_ID 에 썼는데 updatable=false 라 조용히 저장되지 않았다)
+                if (linked == null) snsLinks.link(u.getUserSn(), id);
                 // 소셜 로그인도 2단계를 탄다 — 소셜 계정을 뺏기면 그대로 들어오면 안 된다
                 if (twoFactorService.isEnabled(u.getUserSn())) return twoFactorRequired(resultVO, u.getUserSn());
                 finishLogin(u.getUserSn(), u.getLoginId(), clientIp, httpResponse, resultVO);
@@ -427,15 +432,17 @@ public class AuthService {
             tblUser.setBio(ComUtil.getStrValue(params.get("bio")));
             tblUser.setInterest(ComUtil.getStrValue(params.get("interest")));
 
+            SnsIdentity joinedSns = null;   // 저장 뒤 연결 표에 넣는다
             if(snsYn.equals("Y")){
                 // 신원은 폼이 아니라 티켓(서버가 제공자에게 확인한 것)에서 — 폼 값을 믿으면 남의 이메일로 계정을 만들 수 있다.
                 SnsIdentity id = snsAuthService.consumeTicket(ComUtil.getStrValue(params.get("snsTicket")));
+                joinedSns = id;
                 if (id == null) {
                     resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
                     resultVO.setResultMessage("소셜 인증이 만료됐어요. 처음부터 다시 시도해 주세요.");
                     return resultVO;
                 }
-                if (tblUserRepository.findBySnsNameAndSnsId(id.provider(), id.id()).isPresent()) {
+                if (snsLinks.findUser(id.provider(), id.id()) != null) {
                     resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
                     resultVO.setResultMessage("이미 가입된 소셜 계정이에요. 로그인해 주세요.");
                     return resultVO;
@@ -457,6 +464,7 @@ public class AuthService {
                 tblUser.setPassword("SNS 연동");
             }
             tblUserRepository.save(tblUser);
+            if (joinedSns != null) snsLinks.link(tblUser.getUserSn(), joinedSns);
 
             UserService.profileImageSave(profileImage, tblUser, fileUtil, tblComFileRepository, tblUserRepository);
 

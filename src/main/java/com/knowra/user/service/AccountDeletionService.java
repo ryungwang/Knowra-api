@@ -36,6 +36,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class AccountDeletionService {
 
+    private final com.knowra.user.sns.SnsLinkService snsLinks;
     private final TblUserRepository userRepository;
     private final PostService postService;
     private final SessionService sessionService;
@@ -112,7 +113,8 @@ public class AccountDeletionService {
         u.setPhone(null);
         u.setBio(null);
         u.setInterest(null);
-        u.setSnsId(null);
+        u.setSnsId(null);   // ⚠️ updatable=false 라 저장되지 않는다 — 실제로 푸는 건 아래 연결 표 삭제
+        snsLinks.deleteAll(me);   // 같은 소셜 계정으로 다시 가입할 수 있게
         u.setSnsName(null);
         u.setActvtnYn("N");
         userRepository.save(u);
