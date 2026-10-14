@@ -71,11 +71,20 @@ public class AuthService {
     private String frontBaseUrl;
 
     public ResultVO login(Map<String, String> params, String clientIp, HttpServletResponse response) {
+        return login(params, clientIp, response, false);
+    }
+
+    /**
+     * ⚠️ {@code skipPassword} 는 서버 안에서만 정한다 — 소셜 가입 직후처럼 신원이 이미 다른 경로
+     * (제공자 티켓)로 확인된 경우뿐이다. 예전엔 요청 본문의 {@code snsYn=Y} 로 비밀번호 검사를
+     * 건너뛰어, 아무 loginId 에 snsYn 만 붙이면 그 계정으로 로그인됐다.
+     */
+    private ResultVO login(Map<String, String> params, String clientIp, HttpServletResponse response, boolean skipPassword) {
         ResultVO resultVO = new ResultVO();
         try {
             String loginId = params.get("loginId");
 
-            if(!"Y".equals(params.get("snsYn"))){ // snsYn 이 안 오면 일반 로그인 — 예전엔 NPE 로 "조회 오류"가 났다
+            if (!skipPassword) {
                 authenticationManager.authenticate(
                         new UsernamePasswordAuthenticationToken(loginId, params.get("password"))
                 );
@@ -352,7 +361,8 @@ public class AuthService {
             if (!email.isEmpty()) verificationService.consume(VerificationService.EMAIL, email);
             if (!phone.isEmpty()) verificationService.consume(VerificationService.PHONE, phone);
 
-            resultVO = login(Map.of("loginId", loginId, "password", rawPassword, "snsYn", snsYn), clientIp, response);
+            // 소셜 가입은 위에서 티켓으로 신원을 확인했으니 비밀번호 없이 들여보낸다
+            resultVO = login(Map.of("loginId", loginId, "password", rawPassword), clientIp, response, "Y".equals(snsYn));
         } catch (Exception e) {
             e.printStackTrace();
             resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
