@@ -1,5 +1,6 @@
 package com.knowra.post.service;
 
+import com.knowra.cmm.errlog.ErrorLog;
 import com.knowra.cmm.jwt.JwtProvider;
 import com.knowra.cmm.model.ResponseCode;
 import com.knowra.cmm.model.ResultVO;
@@ -209,7 +210,7 @@ public class FeedService {
             resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
 
         } catch (Exception e) {
-            e.printStackTrace();
+            ErrorLog.report(e);
             resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
             resultVO.setResultMessage(ResponseCode.SELECT_ERROR.getMessage());
         }

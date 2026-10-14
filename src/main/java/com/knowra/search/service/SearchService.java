@@ -1,5 +1,6 @@
 package com.knowra.search.service;
 
+import com.knowra.cmm.errlog.ErrorLog;
 import com.knowra.cmm.model.ResponseCode;
 import com.knowra.cmm.model.ResultVO;
 import com.knowra.common.entity.QTblComFile;
@@ -88,7 +89,7 @@ public class SearchService {
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
             resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
         } catch (Exception e) {
-            e.printStackTrace();
+            ErrorLog.report(e);
             resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
             resultVO.setResultMessage(ResponseCode.SELECT_ERROR.getMessage());
         }
@@ -121,7 +122,7 @@ public class SearchService {
             resultVO.putResult("posts", posts);
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
         } catch (Exception e) {
-            e.printStackTrace();
+            ErrorLog.report(e);
             resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
             resultVO.setResultMessage(ResponseCode.SELECT_ERROR.getMessage());
         }

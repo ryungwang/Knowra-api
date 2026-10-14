@@ -1,5 +1,6 @@
 package com.knowra.user.service;
 
+import com.knowra.cmm.errlog.ErrorLog;
 import com.knowra.cmm.jwt.JwtProvider;
 import com.knowra.common.CommunityQueryHelper;
 import com.knowra.cmm.model.ResponseCode;
@@ -129,7 +130,7 @@ public class UserService {
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
             resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
         }catch (Exception e) {
-            e.printStackTrace();
+            ErrorLog.report(e);
             resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
             resultVO.setResultMessage(ResponseCode.SELECT_ERROR.getMessage());
         }
@@ -171,7 +172,7 @@ public class UserService {
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
             resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
         }catch (Exception e) {
-            e.printStackTrace();
+            ErrorLog.report(e);
             resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
             resultVO.setResultMessage(ResponseCode.SELECT_ERROR.getMessage());
         }
@@ -205,7 +206,7 @@ public class UserService {
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
             resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
         }catch (Exception e) {
-            e.printStackTrace();
+            ErrorLog.report(e);
             resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
             resultVO.setResultMessage(ResponseCode.SELECT_ERROR.getMessage());
         }
@@ -257,7 +258,7 @@ public class UserService {
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
             resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
         } catch (Exception e) {
-            e.printStackTrace();
+            ErrorLog.report(e);
             resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
             resultVO.setResultMessage(ResponseCode.SELECT_ERROR.getMessage());
         }
@@ -302,7 +303,7 @@ public class UserService {
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
             resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
         } catch (Exception e) {
-            e.printStackTrace();
+            ErrorLog.report(e);
             resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
             resultVO.setResultMessage(ResponseCode.SELECT_ERROR.getMessage());
         }
@@ -346,7 +347,7 @@ public class UserService {
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
             resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
         } catch (Exception e) {
-            e.printStackTrace();
+            ErrorLog.report(e);
             resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
             resultVO.setResultMessage(ResponseCode.SELECT_ERROR.getMessage());
         }
@@ -399,7 +400,7 @@ public class UserService {
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
             resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
         } catch (Exception e) {
-            e.printStackTrace();
+            ErrorLog.report(e);
             resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
             resultVO.setResultMessage(ResponseCode.SAVE_ERROR.getMessage());
         }
@@ -450,7 +451,7 @@ public class UserService {
             resultVO.setResultCode(ResponseCode.CHANGE_PW_SUCCESS.getCode());
             resultVO.setResultMessage(ResponseCode.CHANGE_PW_SUCCESS.getMessage());
         }catch (Exception e) {
-            e.printStackTrace();
+            ErrorLog.report(e);
             resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
             resultVO.setResultMessage(ResponseCode.SAVE_ERROR.getMessage());
         }
@@ -479,7 +480,7 @@ public class UserService {
             resultVO.setResultCode(ResponseCode.CHANGE_PW_SUCCESS.getCode());
             resultVO.setResultMessage(ResponseCode.CHANGE_PW_SUCCESS.getMessage());
         }catch (Exception e) {
-            e.printStackTrace();
+            ErrorLog.report(e);
             resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
             resultVO.setResultMessage(ResponseCode.SAVE_ERROR.getMessage());
         }
@@ -514,7 +515,7 @@ public class UserService {
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
             resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
         }catch (Exception e) {
-            e.printStackTrace();
+            ErrorLog.report(e);
             resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
             resultVO.setResultMessage(ResponseCode.SELECT_ERROR.getMessage());
         }
@@ -538,7 +539,7 @@ public class UserService {
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
             resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
         }catch (Exception e) {
-            e.printStackTrace();
+            ErrorLog.report(e);
             resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
             resultVO.setResultMessage(ResponseCode.SELECT_ERROR.getMessage());
         }

@@ -1,5 +1,6 @@
 package com.knowra.community.service;
 
+import com.knowra.cmm.errlog.ErrorLog;
 import com.knowra.cmm.jwt.JwtProvider;
 import com.knowra.cmm.model.PaginationInfo;
 import com.knowra.cmm.model.ResponseCode;
@@ -121,7 +122,7 @@ public class CommunityService {
             resultVO.setResultCode(ResponseCode.COMMUNITY_CREATE_SUCCESS.getCode());
             resultVO.setResultMessage(ResponseCode.COMMUNITY_CREATE_SUCCESS.getMessage());
         } catch (Exception e) {
-            e.printStackTrace();
+            ErrorLog.report(e);
             resultVO.setResultCode(ResponseCode.COMMUNITY_CREATE_ERROR.getCode());
             resultVO.setResultMessage(ResponseCode.COMMUNITY_CREATE_ERROR.getMessage());
         }
@@ -191,7 +192,7 @@ public class CommunityService {
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
             resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
         } catch (Exception e) {
-            e.printStackTrace();
+            ErrorLog.report(e);
             resultVO.setResultCode(ResponseCode.COMMUNITY_SELECT_ERROR.getCode());
             resultVO.setResultMessage(ResponseCode.COMMUNITY_SELECT_ERROR.getMessage());
         }
@@ -251,7 +252,7 @@ public class CommunityService {
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
             resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
         } catch (Exception e) {
-            e.printStackTrace();
+            ErrorLog.report(e);
             resultVO.setResultCode(ResponseCode.COMMUNITY_SELECT_ERROR.getCode());
             resultVO.setResultMessage(ResponseCode.COMMUNITY_SELECT_ERROR.getMessage());
         }
@@ -359,7 +360,7 @@ public class CommunityService {
             resultVO.setResultCode(ResponseCode.COMMUNITY_MEMBER_ERROR.getCode());
             resultVO.setResultMessage(e.getMessage());
         } catch (Exception e) {
-            e.printStackTrace();
+            ErrorLog.report(e);
             resultVO.setResultCode(ResponseCode.COMMUNITY_MEMBER_ERROR.getCode());
             resultVO.setResultMessage(ResponseCode.COMMUNITY_MEMBER_ERROR.getMessage());
         }
@@ -390,7 +391,7 @@ public class CommunityService {
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
             resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
         } catch (Exception e) {
-            e.printStackTrace();
+            ErrorLog.report(e);
             resultVO.setResultCode(ResponseCode.COMMUNITY_MEMBER_ERROR.getCode());
             resultVO.setResultMessage(ResponseCode.COMMUNITY_MEMBER_ERROR.getMessage());
         }
@@ -504,7 +505,7 @@ public class CommunityService {
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
             resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
         } catch (Exception e) {
-            e.printStackTrace();
+            ErrorLog.report(e);
             resultVO.setResultCode(ResponseCode.COMMUNITY_SELECT_ERROR.getCode());
             resultVO.setResultMessage(ResponseCode.COMMUNITY_SELECT_ERROR.getMessage());
         }
@@ -579,7 +580,7 @@ public class CommunityService {
             resultVO.putResult("myRole", myRole);
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
         } catch (Exception e) {
-            e.printStackTrace();
+            ErrorLog.report(e);
             resultVO.setResultCode(ResponseCode.COMMUNITY_SELECT_ERROR.getCode());
             resultVO.setResultMessage(ResponseCode.COMMUNITY_SELECT_ERROR.getMessage());
         }
@@ -633,7 +634,7 @@ public class CommunityService {
             resultVO.setResultCode(ResponseCode.COMMUNITY_MEMBER_ERROR.getCode());
             resultVO.setResultMessage(e.getMessage());
         } catch (Exception e) {
-            e.printStackTrace();
+            ErrorLog.report(e);
             resultVO.setResultCode(ResponseCode.COMMUNITY_MEMBER_ERROR.getCode());
             resultVO.setResultMessage(ResponseCode.COMMUNITY_MEMBER_ERROR.getMessage());
         }
@@ -664,7 +665,7 @@ public class CommunityService {
             resultVO.setResultCode(ResponseCode.COMMUNITY_MEMBER_ERROR.getCode());
             resultVO.setResultMessage(e.getMessage());
         } catch (Exception e) {
-            e.printStackTrace();
+            ErrorLog.report(e);
             resultVO.setResultCode(ResponseCode.COMMUNITY_MEMBER_ERROR.getCode());
             resultVO.setResultMessage(ResponseCode.COMMUNITY_MEMBER_ERROR.getMessage());
         }
@@ -713,7 +714,7 @@ public class CommunityService {
             resultVO.setResultCode(ResponseCode.COMMUNITY_UPDATE_ERROR.getCode());
             resultVO.setResultMessage(e.getMessage());
         } catch (Exception e) {
-            e.printStackTrace();
+            ErrorLog.report(e);
             resultVO.setResultCode(ResponseCode.COMMUNITY_UPDATE_ERROR.getCode());
             resultVO.setResultMessage(ResponseCode.COMMUNITY_UPDATE_ERROR.getMessage());
         }

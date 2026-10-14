@@ -1,5 +1,6 @@
 package com.knowra.chat.service;
 
+import com.knowra.cmm.errlog.ErrorLog;
 import com.knowra.chat.entity.TblChatMsg;
 import com.knowra.chat.entity.TblChatRoom;
 import com.knowra.chat.entity.TblChatRoomMbr;
@@ -132,7 +133,7 @@ public class ChatService {
             resultVO.putResult("unreadTotal", unreadTotal);
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
         } catch (Exception e) {
-            e.printStackTrace();
+            ErrorLog.report(e);
             resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
             resultVO.setResultMessage(ResponseCode.SELECT_ERROR.getMessage());
         }
@@ -174,7 +175,7 @@ public class ChatService {
             resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
             resultVO.setResultMessage(e.getMessage());
         } catch (Exception e) {
-            e.printStackTrace();
+            ErrorLog.report(e);
             resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
             resultVO.setResultMessage(ResponseCode.SELECT_ERROR.getMessage());
         }
@@ -206,7 +207,7 @@ public class ChatService {
             resultVO.putResult("nextCursor", more && !rows.isEmpty() ? rows.get(0).getMsgSn() : null);
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
         } catch (Exception e) {
-            e.printStackTrace();
+            ErrorLog.report(e);
             resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
             resultVO.setResultMessage(ResponseCode.SELECT_ERROR.getMessage());
         }
@@ -254,7 +255,7 @@ public class ChatService {
             resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
             resultVO.setResultMessage(e.getMessage());
         } catch (Exception e) {
-            e.printStackTrace();
+            ErrorLog.report(e);
             resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
             resultVO.setResultMessage(ResponseCode.SAVE_ERROR.getMessage());
         }
@@ -276,7 +277,7 @@ public class ChatService {
             }
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
         } catch (Exception e) {
-            e.printStackTrace();
+            ErrorLog.report(e);
             resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
             resultVO.setResultMessage(ResponseCode.SAVE_ERROR.getMessage());
         }

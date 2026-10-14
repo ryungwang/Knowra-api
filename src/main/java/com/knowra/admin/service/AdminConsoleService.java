@@ -1,5 +1,6 @@
 package com.knowra.admin.service;
 
+import com.knowra.cmm.errlog.ErrorLog;
 import com.knowra.cmm.model.ResponseCode;
 import com.knowra.cmm.model.ResultVO;
 import com.knowra.community.repository.TblCommRepository;
@@ -45,6 +46,7 @@ public class AdminConsoleService {
     private final TblCommRepository commRepository;
     private final PostService postService;
     private final org.springframework.context.ApplicationEventPublisher publisher;
+    private final org.springframework.jdbc.core.JdbcTemplate jdbc;
 
     public ResultVO getStats() {
         ResultVO resultVO = new ResultVO();
@@ -58,10 +60,11 @@ public class AdminConsoleService {
             m.put("postsToday",     postRepository.countByActvtnYnAndFrstCrtDtAfter("Y", today));
             m.put("communities",    commRepository.countByStat("Y"));
             m.put("reportsOpen",    reportRepository.countByStat("OPEN"));
+            m.put("errorsOpen",     jdbc.queryForObject("SELECT COUNT(*) FROM knowra_com.tbl_err_log WHERE RESOLVED = FALSE", Integer.class));
             resultVO.putResult("stats", m);
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
         } catch (Exception e) {
-            e.printStackTrace();
+            ErrorLog.report(e);
             resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
             resultVO.setResultMessage(ResponseCode.SELECT_ERROR.getMessage());
         }
@@ -84,7 +87,7 @@ public class AdminConsoleService {
             resultVO.putResult("total", p.getTotalElements());
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
         } catch (Exception e) {
-            e.printStackTrace();
+            ErrorLog.report(e);
             resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
             resultVO.setResultMessage(ResponseCode.SELECT_ERROR.getMessage());
         }
@@ -160,7 +163,7 @@ public class AdminConsoleService {
             resultVO.setResultCode(ResponseCode.UPDATE_ERROR.getCode());
             resultVO.setResultMessage(e.getMessage());
         } catch (Exception e) {
-            e.printStackTrace();
+            ErrorLog.report(e);
             resultVO.setResultCode(ResponseCode.UPDATE_ERROR.getCode());
             resultVO.setResultMessage(ResponseCode.UPDATE_ERROR.getMessage());
         }
@@ -177,7 +180,7 @@ public class AdminConsoleService {
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
             if (!done) resultVO.setResultMessage("이미 삭제된 글이에요.");
         } catch (Exception e) {
-            e.printStackTrace();
+            ErrorLog.report(e);
             resultVO.setResultCode(ResponseCode.DELETE_ERROR.getCode());
             resultVO.setResultMessage(ResponseCode.DELETE_ERROR.getMessage());
         }
@@ -194,7 +197,7 @@ public class AdminConsoleService {
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
             if (!done) resultVO.setResultMessage("이미 삭제된 댓글이에요.");
         } catch (Exception e) {
-            e.printStackTrace();
+            ErrorLog.report(e);
             resultVO.setResultCode(ResponseCode.DELETE_ERROR.getCode());
             resultVO.setResultMessage(ResponseCode.DELETE_ERROR.getMessage());
         }
@@ -220,7 +223,7 @@ public class AdminConsoleService {
             resultVO.putResult("total", p.getTotalElements());
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
         } catch (Exception e) {
-            e.printStackTrace();
+            ErrorLog.report(e);
             resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
             resultVO.setResultMessage(ResponseCode.SELECT_ERROR.getMessage());
         }
@@ -246,7 +249,7 @@ public class AdminConsoleService {
             resultVO.setResultCode(ResponseCode.UPDATE_ERROR.getCode());
             resultVO.setResultMessage(e.getMessage());
         } catch (Exception e) {
-            e.printStackTrace();
+            ErrorLog.report(e);
             resultVO.setResultCode(ResponseCode.UPDATE_ERROR.getCode());
             resultVO.setResultMessage(ResponseCode.UPDATE_ERROR.getMessage());
         }

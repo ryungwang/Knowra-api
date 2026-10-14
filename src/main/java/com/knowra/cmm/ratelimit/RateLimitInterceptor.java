@@ -50,7 +50,9 @@ public class RateLimitInterceptor implements HandlerInterceptor {
             // 메일·문자가 나가는 창구 — IP 기준
             Map.entry("/api/auth/verify/send",        new Rule("verify", 10, 3600)),
             Map.entry("/api/auth/password/forgot",    new Rule("forgot", 5, 600)),
-            Map.entry("/api/auth/join",               new Rule("join", 10, 3600))
+            Map.entry("/api/auth/join",               new Rule("join", 10, 3600)),
+            // 화면 오류 접수 — 오류 루프 한 번에 DB 가 차지 않게
+            Map.entry("/api/err/report",              new Rule("err", 20, 60))
     );
 
     private final RateLimiter limiter;

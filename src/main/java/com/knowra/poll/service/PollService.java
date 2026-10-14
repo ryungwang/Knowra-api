@@ -1,5 +1,6 @@
 package com.knowra.poll.service;
 
+import com.knowra.cmm.errlog.ErrorLog;
 import com.knowra.cmm.model.ResponseCode;
 import com.knowra.cmm.model.ResultVO;
 import com.knowra.poll.entity.TblPoll;
@@ -143,7 +144,7 @@ public class PollService {
             r.setResultCode(ResponseCode.SAVE_ERROR.getCode());
             r.setResultMessage(e.getMessage());
         } catch (Exception e) {
-            e.printStackTrace();
+            ErrorLog.report(e);
             r.setResultCode(ResponseCode.SAVE_ERROR.getCode());
             r.setResultMessage(ResponseCode.SAVE_ERROR.getMessage());
         }

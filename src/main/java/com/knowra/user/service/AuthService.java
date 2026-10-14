@@ -1,5 +1,6 @@
 package com.knowra.user.service;
 
+import com.knowra.cmm.errlog.ErrorLog;
 import com.knowra.cmm.jwt.JwtAuthenticationFilter;
 import com.knowra.cmm.jwt.JwtProvider;
 import com.knowra.cmm.security.RefreshCookie;
@@ -145,7 +146,7 @@ public class AuthService {
             resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
             resultVO.setResultMessage("이용이 정지된 계정입니다. 문의해 주세요.");
         } catch (Exception e) {
-            e.printStackTrace();
+            ErrorLog.report(e);
             resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
             resultVO.setResultMessage(ResponseCode.SELECT_ERROR.getMessage());
         }
@@ -200,7 +201,7 @@ public class AuthService {
             resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
             resultVO.setResultMessage(e.getMessage());
         } catch (Exception e) {
-            e.printStackTrace();
+            ErrorLog.report(e);
             resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
             resultVO.setResultMessage(ResponseCode.SELECT_ERROR.getMessage());
         }
@@ -394,7 +395,7 @@ public class AuthService {
             // 소셜 가입은 위에서 티켓으로 신원을 확인했으니 비밀번호 없이 들여보낸다
             resultVO = login(Map.of("loginId", loginId, "password", rawPassword), clientIp, response, "Y".equals(snsYn));
         } catch (Exception e) {
-            e.printStackTrace();
+            ErrorLog.report(e);
             resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
             resultVO.setResultMessage(ResponseCode.SELECT_ERROR.getMessage());
         }
@@ -444,7 +445,7 @@ public class AuthService {
             resultVO.putResult("expiresIn", 600);
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
         } catch (Exception e) {
-            e.printStackTrace();
+            ErrorLog.report(e);
             resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
             resultVO.setResultMessage("인증 코드를 보내지 못했습니다. 잠시 후 다시 시도해주세요.");
         }
@@ -490,7 +491,7 @@ public class AuthService {
             }
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
         } catch (Exception e) {
-            e.printStackTrace();
+            ErrorLog.report(e);
             resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
             resultVO.setResultMessage("메일을 보내지 못했습니다. 잠시 후 다시 시도해주세요.");
         }
@@ -521,7 +522,7 @@ public class AuthService {
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
             resultVO.setResultMessage("비밀번호가 바뀌었습니다. 새 비밀번호로 로그인해주세요.");
         } catch (Exception e) {
-            e.printStackTrace();
+            ErrorLog.report(e);
             resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
             resultVO.setResultMessage(ResponseCode.SAVE_ERROR.getMessage());
         }
