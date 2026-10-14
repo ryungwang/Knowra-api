@@ -67,7 +67,7 @@ public class AccountDeletionService {
                 WHERE o.user_sn = ? AND o.role = 'OWNER' AND o.stat = 'ACTIVE' AND c.stat = 'Y'""", me, me);
         for (Map<String, Object> c : owned) {
             if (((Number) c.get("others")).longValue() > 0)
-                return fail(r, "「" + c.get("name") + "」의 주인이에요. 커뮤니티 관리에서 다른 운영진에게 주인을 넘긴 뒤 탈퇴해 주세요.");
+                return fail(r, "「" + c.get("name") + "」의 주인이에요. 커뮤니티 멤버 목록에서 다른 멤버에게 주인을 넘긴 뒤 탈퇴해 주세요.");
         }
 
         // 1) 글·댓글 — 기존 삭제 경로로

@@ -63,7 +63,7 @@ public enum ResponseCode {
 	COMMUNITY_ALREADY_JOINED(500, "이미 가입된 커뮤니티입니다."),
 	COMMUNITY_BANNED_USER(500, "추방된 커뮤니티에는 재가입할 수 없습니다."),
 	COMMUNITY_NOT_MEMBER(500, "가입된 커뮤니티가 아닙니다."),
-	COMMUNITY_OWNER_CANNOT_LEAVE(500, "OWNER는 탈퇴할 수 없습니다. 권한을 위임하거나 커뮤니티를 삭제하세요."),
+	COMMUNITY_OWNER_CANNOT_LEAVE(500, "주인은 바로 나갈 수 없어요. 멤버 목록에서 다른 멤버에게 주인을 넘긴 뒤 나가 주세요."),
 	COMMUNITY_MEMBER_ERROR(500, "가입/탈퇴 처리 중 오류가 발생했습니다."),
 
 	/** 커뮤니티 멤버 관리 */

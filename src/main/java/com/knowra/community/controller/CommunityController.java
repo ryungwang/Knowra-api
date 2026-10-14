@@ -60,6 +60,12 @@ public class CommunityController {
         return communityService.setMemberRole(params, me);
     }
 
+    /** 주인 넘기기. params: commSn, userSn, confirm(커뮤니티 이름) */
+    @PostMapping("/api/community/transferOwner")
+    public ResultVO transferOwner(@RequestBody Map<String, Object> params, @CurrentUser Long me) {
+        return communityService.transferOwner(params, me);
+    }
+
     /** 커뮤니티 정보 수정(멀티파트). */
     @PostMapping("/api/community/updateCommunity")
     public ResultVO updateCommunity(MultipartHttpServletRequest request, @CurrentUser Long me) {

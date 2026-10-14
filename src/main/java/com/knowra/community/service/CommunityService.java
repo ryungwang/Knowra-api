@@ -627,8 +627,8 @@ public class CommunityService {
             if (!isManager(myRole)) throw new IllegalArgumentException("운영진만 할 수 있습니다.");
             TblCommMbr mb = tblCommMbrRepository.findByCommSnAndUserSn(commSn, target)
                     .orElseThrow(() -> new IllegalArgumentException("멤버가 아닙니다."));
-            if ("OWNER".equals(mb.getRole())) throw new IllegalArgumentException("만든 사람은 내보낼 수 없습니다.");
-            if ("ADMIN".equals(mb.getRole()) && !"OWNER".equals(myRole)) throw new IllegalArgumentException("운영진은 만든 사람만 바꿀 수 있습니다.");
+            if ("OWNER".equals(mb.getRole())) throw new IllegalArgumentException("주인은 내보낼 수 없습니다.");
+            if ("ADMIN".equals(mb.getRole()) && !"OWNER".equals(myRole)) throw new IllegalArgumentException("운영진은 주인만 바꿀 수 있습니다.");
 
             // 승인(ACTIVE)은 가입 신청 중(PENDING)이거나 차단 해제(BANNED)일 때만 — 스스로 나간 사람(WITHDRAWN)·거절된 사람을
             // 운영진이 동의 없이 다시 끌어넣을 수 있었다(알림까지 켜진 채로).
@@ -676,16 +676,57 @@ public class CommunityService {
             long target = Long.parseLong(params.get("userSn").toString());
             String role = params.get("role").toString();
             if (!"ADMIN".equals(role) && !"MEMBER".equals(role)) throw new IllegalArgumentException("지원하지 않는 역할입니다.");
-            if (!"OWNER".equals(roleOf(commSn, me))) throw new IllegalArgumentException("만든 사람만 운영진을 정할 수 있습니다.");
+            if (!"OWNER".equals(roleOf(commSn, me))) throw new IllegalArgumentException("주인만 운영진을 정할 수 있습니다.");
             TblCommMbr mb = tblCommMbrRepository.findByCommSnAndUserSn(commSn, target)
                     .filter(x -> "ACTIVE".equals(x.getStat()))
                     .orElseThrow(() -> new IllegalArgumentException("활성 멤버가 아닙니다."));
-            if ("OWNER".equals(mb.getRole())) throw new IllegalArgumentException("만든 사람의 역할은 바꿀 수 없습니다.");
+            if ("OWNER".equals(mb.getRole())) throw new IllegalArgumentException("주인의 역할은 바꿀 수 없습니다. 주인 넘기기를 써 주세요.");
             mb.setRole(role); mb.setMdfrSn(me);
             tblCommMbrRepository.save(mb);
             TblComm comm = tblCommRepository.findByCommSn(commSn);
             eventPublisher.publishEvent(new com.knowra.cmm.event.NotifTriggerEvent(target, me, "ADMIN".equals(role) ? "COMM_ADMIN" : "COMM_ADMIN_OFF", commSn, "COMM", comm.getCommDsplNm()));
             resultVO.putResult("role", role);
+            resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
+        } catch (IllegalArgumentException e) {
+            resultVO.setResultCode(ResponseCode.COMMUNITY_MEMBER_ERROR.getCode());
+            resultVO.setResultMessage(e.getMessage());
+        } catch (Exception e) {
+            ErrorLog.report(e);
+            resultVO.setResultCode(ResponseCode.COMMUNITY_MEMBER_ERROR.getCode());
+            resultVO.setResultMessage(ResponseCode.COMMUNITY_MEMBER_ERROR.getMessage());
+        }
+        return resultVO;
+    }
+
+    /**
+     * 주인 넘기기. params: commSn, userSn(받을 사람), confirm(커뮤니티 이름 — 실수 방지).
+     * 받을 사람은 활성 멤버면 누구나. 넘긴 사람은 운영진으로 남는다 — 그 뒤에 나가거나 탈퇴할 수 있다.
+     * 주인은 커뮤니티당 하나여야 한다 — 두 번 눌러 동시에 들어와도 한쪽만 통과하게 커뮤니티 줄을 잠근다.
+     */
+    @Transactional
+    public ResultVO transferOwner(Map<String, Object> params, Long me) {
+        ResultVO resultVO = new ResultVO();
+        try {
+            long commSn = Long.parseLong(params.get("commSn").toString());
+            long target = Long.parseLong(params.get("userSn").toString());
+            if (target == me) throw new IllegalArgumentException("이미 주인이에요.");
+            TblComm comm = em.find(TblComm.class, commSn, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
+            if (comm == null || !"Y".equals(comm.getStat())) throw new IllegalArgumentException("없는 커뮤니티예요.");
+            String name = StringUtils.hasText(comm.getCommDsplNm()) ? comm.getCommDsplNm() : comm.getCommNm();
+            if (!name.equals(String.valueOf(params.get("confirm")).trim())) throw new IllegalArgumentException("확인을 위해 커뮤니티 이름을 정확히 입력해 주세요.");
+
+            TblCommMbr mine = tblCommMbrRepository.findByCommSnAndUserSn(commSn, me)
+                    .filter(x -> "ACTIVE".equals(x.getStat()) && "OWNER".equals(x.getRole()))
+                    .orElseThrow(() -> new IllegalArgumentException("주인만 넘길 수 있어요."));
+            TblCommMbr next = tblCommMbrRepository.findByCommSnAndUserSn(commSn, target)
+                    .filter(x -> "ACTIVE".equals(x.getStat()))
+                    .orElseThrow(() -> new IllegalArgumentException("이 커뮤니티의 멤버에게만 넘길 수 있어요."));
+
+            mine.setRole("ADMIN"); mine.setMdfrSn(me);
+            next.setRole("OWNER"); next.setMdfrSn(me);
+            tblCommMbrRepository.saveAll(List.of(mine, next));
+            eventPublisher.publishEvent(new com.knowra.cmm.event.NotifTriggerEvent(target, me, "COMM_OWNER", commSn, "COMM", name));
+            resultVO.putResult("myRole", "ADMIN");
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
         } catch (IllegalArgumentException e) {
             resultVO.setResultCode(ResponseCode.COMMUNITY_MEMBER_ERROR.getCode());

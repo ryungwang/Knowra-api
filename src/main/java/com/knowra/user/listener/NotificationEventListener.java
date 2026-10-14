@@ -143,6 +143,7 @@ public class NotificationEventListener {
             case "COMM_REMOVED"   -> place + "에서 내보내졌습니다.";
             case "COMM_ADMIN"     -> place + "의 운영진이 됐습니다.";
             case "COMM_ADMIN_OFF" -> place + "의 운영진에서 해제됐습니다.";
+            case "COMM_OWNER"     -> sender + "이 " + place + "의 주인 자리를 넘겼습니다.";
             default            -> "새 알림이 있습니다. (" + notifTyp + ")";
         };
         // MESSAGE 컬럼은 255자다 — 커뮤니티 이름이 길어도 넘치지 않게 자른다.
