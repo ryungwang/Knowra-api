@@ -907,6 +907,43 @@ public class PostService {
     public static final int MAX_PINNED = 3;
 
     /** 커뮤니티 상단 고정/해제 — 그 커뮤니티 운영진(OWNER/ADMIN)만. params: postSn, pin */
+    /**
+     * 댓글 고정·풀기 — 글쓴이나 그 커뮤니티 운영진. 글마다 하나, 루트 댓글만. params: postSn, postCmtSn(null 이면 풀기)
+     * 다른 댓글을 고정하면 앞의 것은 저절로 풀린다. 남의 댓글을 고정하면 그 사람에게 알린다.
+     */
+    public ResultVO setCmtPin(Map<String, Object> params, Long me) {
+        ResultVO resultVO = new ResultVO();
+        try {
+            long postSn = Long.parseLong(String.valueOf(params.get("postSn")));
+            Object raw = params.get("postCmtSn");
+            Long cmtSn = raw == null || String.valueOf(raw).isBlank() || "null".equals(String.valueOf(raw)) ? null : Long.parseLong(String.valueOf(raw));
+            TblPost post = tblPostRepository.findByPostSn(postSn);
+            if (post == null || !"Y".equals(post.getActvtnYn()) || !"ACTIVE".equals(post.getStat())) throw new IllegalArgumentException("글을 찾을 수 없어요.");
+            boolean allowed = post.getUserSn() == me || (post.getCommSn() != null && isManagerRole(roleIn(post.getCommSn(), me)));
+            if (!allowed) throw new IllegalArgumentException("글쓴이나 운영진만 고정할 수 있어요.");
+            if (cmtSn != null) {
+                TblPostCmt c = tblPostCmtRepository.findById(cmtSn).orElseThrow(() -> new IllegalArgumentException("댓글을 찾을 수 없어요."));
+                if (c.getPostSn() != postSn || c.getPrntCmtSn() != null) throw new IllegalArgumentException("이 글의 댓글만, 답글이 아닌 댓글만 고정할 수 있어요.");
+                if (!"ACTIVE".equals(c.getStat()) || !"Y".equals(c.getActvtnYn())) throw new IllegalArgumentException("지워졌거나 가려진 댓글은 고정할 수 없어요.");
+                int n = jdbc.update("UPDATE knowra_post.tbl_post SET pinned_cmt_sn = ? WHERE post_sn = ? AND pinned_cmt_sn IS DISTINCT FROM ?", cmtSn, postSn, cmtSn);
+                if (n > 0 && c.getUserSn() != me)
+                    eventPublisher.publishEvent(new com.knowra.cmm.event.NotifTriggerEvent(c.getUserSn(), me, "CMT_PINNED", postSn, "POST", post.getPostTtl()));
+            } else {
+                jdbc.update("UPDATE knowra_post.tbl_post SET pinned_cmt_sn = NULL WHERE post_sn = ?", postSn);
+            }
+            resultVO.putResult("pinnedCmtSn", cmtSn);
+            resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
+        } catch (IllegalArgumentException e) {
+            resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
+            resultVO.setResultMessage(e.getMessage());
+        } catch (Exception e) {
+            ErrorLog.report(e);
+            resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
+            resultVO.setResultMessage(ResponseCode.SAVE_ERROR.getMessage());
+        }
+        return resultVO;
+    }
+
     public ResultVO setPostPin(Map<String, Object> params, Long me) {
         ResultVO resultVO = new ResultVO();
         try {
@@ -1002,6 +1039,8 @@ public class PostService {
 
     /** 댓글 삭제 본문. 답글이 살아 있으면 자리는 남긴다(stat=DELETED, actvtnYn 유지). */
     private void deleteCmtInternal(TblPostCmt cmt, long by) {
+        // 고정해 둔 댓글이 지워지면 고정도 푼다 — 빈 자리가 맨 위에 남지 않게
+        jdbc.update("UPDATE knowra_post.tbl_post SET pinned_cmt_sn = NULL WHERE post_sn = ? AND pinned_cmt_sn = ?", cmt.getPostSn(), cmt.getPostCmtSn());
         QTblPostCmt c = QTblPostCmt.tblPostCmt;
         long liveReplies = new JPAQueryFactory(em).select(c.count()).from(c)
                 .where(c.prntCmtSn.eq(cmt.getPostCmtSn()).and(c.stat.eq("ACTIVE")).and(c.actvtnYn.eq("Y")))
@@ -1077,6 +1116,10 @@ public class PostService {
             // 커서 대신 오프셋을 쓴다. 한 글의 루트 댓글은 많아야 수백이라 점수는 메모리에서 매긴다.
             String sort = params.get("sort") == null ? "old" : params.get("sort").toString();
             Long nextCursorOverride = null;
+            // 고정 댓글 — 첫 쪽 맨 위에 한 번만 두고, 정렬·페이지에서는 뺀다(두 번 나오지 않게)
+            Long pinnedSn = jdbc.query("SELECT pinned_cmt_sn FROM knowra_post.tbl_post WHERE post_sn = ?", rs -> rs.next() ? (Long) rs.getObject(1, Long.class) : null, postSn);
+            BooleanExpression pinnedCondition = pinnedSn == null ? null : rootCondition.and(cmt.postCmtSn.eq(pinnedSn));
+            if (pinnedSn != null) rootCondition = rootCondition.and(cmt.postCmtSn.ne(pinnedSn));
             List<Tuple> rootTuples;
             com.querydsl.core.types.Expression<?>[] cols = { cmt, cmtUser.nickName, cmtUser.name,
                     cmtPfpFile.atchFilePathNm, cmtPfpFile.strgFileNm, cmtPfpFile.atchFileExtnNm, cmtPfpFile.fileKey };
@@ -1110,6 +1153,14 @@ public class PostService {
                         .orderBy(desc ? cmt.postCmtSn.desc() : cmt.postCmtSn.asc())
                         .limit(size)
                         .fetch();
+            }
+
+            int normalCount = rootTuples.size();
+            Long lastNormalSn = rootTuples.isEmpty() ? null : rootTuples.get(rootTuples.size() - 1).get(cmt).getPostCmtSn();
+            if (pinnedCondition != null && cursor == null) {
+                Tuple pin = q.select(cols).from(cmt).join(cmtUser).on(cmt.userSn.eq(cmtUser.userSn)).leftJoin(cmtUser.pfp, cmtPfpFile)
+                        .where(pinnedCondition).fetchFirst();
+                if (pin != null) { List<Tuple> withPin = new ArrayList<>(); withPin.add(pin); withPin.addAll(rootTuples); rootTuples = withPin; }
             }
 
             if (rootTuples.isEmpty()) {
@@ -1167,7 +1218,7 @@ public class PostService {
                         reactionsMap.getOrDefault(sn, new HashMap<>()),
                         myReactMap.get(sn), pfpUrl,
                         review ? "REVIEW" : "ACTIVE".equals(c.getStat()) ? "ACTIVE" : "DELETED", c.getMdfcnDt(),
-                        hideBody ? null : c.getImgUrl(), false, mine, false);
+                        hideBody ? null : c.getImgUrl(), false, mine, false, false);
             };
             Map<Long, CmtDTO> rootMap = new LinkedHashMap<>();
             rootTuples.forEach(t -> rootMap.put(t.get(cmt).getPostCmtSn(), toDto.apply(t)));
@@ -1176,6 +1227,7 @@ public class PostService {
                 if (parent != null) parent.getReplies().add(toDto.apply(t));
             });
             List<CmtDTO> list = new ArrayList<>(rootMap.values());
+            if (pinnedSn != null) list.forEach(d -> { if (d.getCmtSn() == pinnedSn) d.setPinned(true); });
 
             // ── 익명 커뮤니티: 글쓴이는 「글쓴이」, 나머지는 이 글에 처음 댓글을 단 순서대로 「익명1·익명2…」.
             //    같은 사람은 같은 번호라 대화가 이어져 보이고, 누구인지는 알 수 없다(번호·닉네임·사진 비움).
@@ -1205,7 +1257,7 @@ public class PostService {
             // ── 5. nextCursor: 마지막 루트 댓글 SN (size 미달이면 null) ────────
             Long nextCursor = nextCursorOverride != null
                     ? (nextCursorOverride < 0 ? null : nextCursorOverride)
-                    : (list.size() == size ? rootSns.get(rootSns.size() - 1) : null);
+                    : (normalCount == size ? lastNormalSn : null);   // 고정 댓글은 세지 않는다(첫 쪽이 size+1 개라 다음 쪽이 끊겼다)
             resultVO.putResult("list", list);
             resultVO.putResult("nextCursor", nextCursor);
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());

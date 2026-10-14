@@ -116,6 +116,12 @@ public class PostController {
         return postService.getPostSaveList(params, me);
     }
 
+    /** 댓글 고정·풀기 — body: postSn, postCmtSn(없으면 풀기) */
+    @PostMapping("/setCmtPin")
+    public ResultVO setCmtPin(@RequestBody Map<String, Object> params, @CurrentUser Long me) {
+        return postService.setCmtPin(params, me);
+    }
+
     @PostMapping("/getRecentViewList")
     public ResultVO getRecentViewList(@CurrentUser Long me) {
         return postService.getRecentViewList(me);

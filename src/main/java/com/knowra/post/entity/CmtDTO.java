@@ -42,4 +42,6 @@ public class CmtDTO {
     private boolean mine;
     /** 내가 숨긴 사람의 댓글 — 화면이 접어 둔다(차단과 달리 내용은 온다) */
     private boolean muted;
+    /** 맨 위에 고정된 댓글(글쓴이·운영진이 고른 것) */
+    private boolean pinned;
 }

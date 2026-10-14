@@ -114,7 +114,7 @@ public class NotificationEventListener {
         if (st == null) return !"LIKE".equals(typ);
         String yn = switch (typ) {
             case "LIKE" -> st.getLikeNtfctnYn();
-            case "COMMENT", "REPLY", "MENTION" -> st.getCmtNtfctnYn();
+            case "COMMENT", "REPLY", "MENTION", "CMT_PINNED" -> st.getCmtNtfctnYn();
             case "SERIES_NEW", "KEYWORD" -> st.getSysNtfctnYn();
             case "FOLLOW" -> st.getFlwrNtfctnYn();
             default -> st.getSysNtfctnYn();   // 모임(EVENT_*)도 커뮤니티 소식 쪽
@@ -158,6 +158,7 @@ public class NotificationEventListener {
             case "COMM_OWNER"     -> sender + "이 " + place + "의 주인 자리를 넘겼습니다.";
             case "KEYWORD"        -> { String[] x = nz(extra).split("\\|", 2); yield "관심 키워드 「" + x[0] + "」 새 글: " + (x.length > 1 ? x[1] : ""); }
             case "SERIES_NEW"     -> { String[] x = nz(extra).split("\\|", 2); yield "구독 중인 연재 「" + x[0] + "」 새 편: " + (x.length > 1 ? x[1] : ""); }
+            case "CMT_PINNED"     -> sender + "이 「" + nz(extra) + "」에서 회원님의 댓글을 맨 위에 고정했어요.";
             case "HOLD_NEW"       -> place + "에 검토할 새 멤버 글이 있어요.";
             case "HOLD_APPROVED"  -> { String[] x = nz(extra).split("\\|", 2); yield x[0] + " 운영진이 확인해 글이 올라갔어요: " + (x.length > 1 ? x[1] : ""); }
             case "HOLD_REJECTED"  -> { String[] x = nz(extra).split("\\|", 2); yield x[0] + " 운영진이 확인한 뒤 글을 올리지 않았어요: " + (x.length > 1 ? x[1] : ""); }
