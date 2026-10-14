@@ -94,6 +94,7 @@ public class PostService {
     private final com.knowra.mention.MentionService mentionService;
     private final com.knowra.badge.BadgeService badgeService;
     private final com.knowra.community.modlog.ModLogService modLog;
+    private final org.springframework.jdbc.core.JdbcTemplate jdbc;
 
     private static final int REDIS_DB  = 15;
     private static final int PAGE_SIZE = 50;
@@ -153,8 +154,14 @@ public class PostService {
                 if (tblPost.getUserSn() != userSn && tblPost.getCommSn() != null)
                     modLog.record(tblPost.getCommSn(), userSn, com.knowra.community.modlog.ModLogService.POST_EDIT, tblPost.getUserSn(), tblPost.getPostSn(), tblPost.getPostTtl());
                 // updatable=false 컬럼(creatrSn, frstCrtDt, userSn)은 건드리지 않는다. 소속 커뮤니티도 바꾸지 않는다.
-                tblPost.setPostTtl(params.get("postTtl").toString());
-                tblPost.setPostCntnt(com.knowra.cmm.util.HtmlSanitizer.clean(params.get("postCntnt").toString()));
+                String newTtl = params.get("postTtl").toString();
+                String newCntnt = com.knowra.cmm.util.HtmlSanitizer.clean(params.get("postCntnt").toString());
+                // 제목·본문이 실제로 바뀌면 고치기 전 판을 남긴다 — 「수정됨」과 이전 내용 보기의 근거
+                if (!newTtl.equals(tblPost.getPostTtl()) || !newCntnt.equals(tblPost.getPostCntnt()))
+                    jdbc.update("INSERT INTO knowra_post.tbl_post_hist (post_sn, post_ttl, post_cntnt, edited_by) VALUES (?, ?, ?, ?)",
+                            tblPost.getPostSn(), tblPost.getPostTtl(), tblPost.getPostCntnt() == null ? "" : tblPost.getPostCntnt(), userSn);
+                tblPost.setPostTtl(newTtl);
+                tblPost.setPostCntnt(newCntnt);
                 tblPost.setPostTyp(resolvePostTyp(params, tblPost.getCommSn(), userSn, tblPost.getPostTyp()));
                 tblPost.setMdfrSn(userSn);
                 if (STAT_SCHEDULED.equals(tblPost.getStat())) resultVO.putResult("rsrvAt", tblPost.getRsrvAt());   // 수정해도 예약은 그대로
@@ -390,6 +397,10 @@ public class PostService {
                 if (STAT_SCHEDULED.equals(p.getStat())) resultVO.putResult("rsrvAt", p.getRsrvAt());
                 if (com.knowra.safety.service.ReportAutoHide.REVIEW.equals(p.getStat())) resultVO.putResult("underReview", true);
             });
+            // 값을 돌려주지 않는 콜백은 줄마다 불리고 커서는 이미 그 줄에 있다 — rs.next() 를 부르면 하나뿐인 줄을 건너뛴다
+            jdbc.query("SELECT COUNT(*), MAX(edited_at) FROM knowra_post.tbl_post_hist WHERE post_sn = ?", rs -> {
+                if (rs.getLong(1) > 0) { resultVO.putResult("editCount", rs.getLong(1)); resultVO.putResult("editedAt", rs.getTimestamp(2).toLocalDateTime()); }
+            }, postSn);
             resultVO.putResult("myLikeTyp", dto.getMyLikeTyp());
             resultVO.putResult("poll", pollService.view(postSn, dto.getUserSn(), me));
             if (dto.getCommSn() != null) {
@@ -399,6 +410,45 @@ public class PostService {
             }
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
             resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
+        } catch (Exception e) {
+            ErrorLog.report(e);
+            resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
+            resultVO.setResultMessage(ResponseCode.SELECT_ERROR.getMessage());
+        }
+        return resultVO;
+    }
+
+    /**
+     * 글 수정 기록 — 글을 볼 수 있는 사람이면 누구나(글 자체가 공개된 내용이다). 최신 판이 먼저.
+     * 고친 사람은 「작성자」 또는 운영진 이름 — 익명 커뮤니티는 「운영진」으로만(이름이 익명을 깬다).
+     */
+    public ResultVO getPostHistory(Map<String, Object> params, Long me) {
+        ResultVO resultVO = new ResultVO();
+        try {
+            long postSn = Long.parseLong(String.valueOf(params.get("postSn")));
+            if (!canReadPost(postSn, me)) throw new IllegalArgumentException("게시글을 찾을 수 없습니다.");
+            TblPost post = tblPostRepository.findByPostSn(postSn);
+            boolean anonymous = post.getCommSn() != null && postQuery.isAnonymousComm(post.getCommSn());
+            List<Map<String, Object>> list = new ArrayList<>();
+            for (Map<String, Object> r : jdbc.queryForList("""
+                    SELECT h.hist_sn, h.post_ttl, h.post_cntnt, h.edited_by, h.edited_at, u.nick_name, u.name
+                    FROM knowra_post.tbl_post_hist h LEFT JOIN knowra_user.tbl_user u ON u.user_sn = h.edited_by
+                    WHERE h.post_sn = ? ORDER BY h.hist_sn DESC LIMIT 50""", postSn)) {
+                Map<String, Object> m = new LinkedHashMap<>();
+                long editor = ((Number) r.get("edited_by")).longValue();
+                m.put("histSn", r.get("hist_sn"));
+                m.put("title", r.get("post_ttl"));
+                m.put("content", r.get("post_cntnt"));   // 저장 전에 HtmlSanitizer 를 거친 본문 그대로
+                m.put("editedAt", r.get("edited_at"));
+                m.put("editor", editor == post.getUserSn() ? "작성자"
+                        : anonymous ? "운영진" : (r.get("name") != null && !String.valueOf(r.get("name")).isBlank() ? r.get("name") : r.get("nick_name")) + " (운영진)");
+                list.add(m);
+            }
+            resultVO.putResult("list", list);
+            resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
+        } catch (IllegalArgumentException e) {
+            resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
+            resultVO.setResultMessage(e.getMessage());
         } catch (Exception e) {
             ErrorLog.report(e);
             resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());

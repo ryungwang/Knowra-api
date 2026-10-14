@@ -25,6 +25,12 @@ public class PostController {
         return postService.setPost(params, me);
     }
 
+    /** 수정 기록 — params: postSn */
+    @GetMapping("/getPostHistory")
+    public ResultVO getPostHistory(@RequestParam Map<String, Object> params, @CurrentUser Long me) {
+        return postService.getPostHistory(params, me);
+    }
+
     @GetMapping("/getPost")
     public ResultVO getPost(@ModelAttribute TblPost tblPost, @CurrentUser Long me) {
         return postService.getPost(tblPost, me);
