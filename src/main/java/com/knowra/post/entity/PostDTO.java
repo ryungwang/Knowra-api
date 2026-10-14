@@ -48,6 +48,8 @@ public class PostDTO {
     private Long flairSn;            // 말머리 — decorate 가 채운다
     private String flairName;
     private String flairColor;
+    private Long seriesSn;           // 연재 — decorate 가 채운다(익명 글은 비운다)
+    private String seriesTitle;
     /** 익명 커뮤니티 글 — 작성자 칸은 비우고 「익명」. 신고 처리 등 관리자 화면만 실제 작성자를 본다. */
     private boolean anonymous;
     /** 내가 쓴 글인가 — 익명 글은 화면이 닉네임으로 알 수 없어서 서버가 알려 준다 */

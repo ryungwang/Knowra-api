@@ -38,10 +38,12 @@ public class DataExportService {
                 FROM knowra_user.tbl_user_stng WHERE user_sn = ?""", me)));
 
         out.put("posts", jdbc.queryForList("""
-                SELECT p.post_sn AS "postSn", c.comm_dspl_nm AS community, p.post_ttl AS title, p.post_cntnt AS "contentHtml",
+                SELECT p.post_sn AS "postSn", c.comm_dspl_nm AS community, p.series_sn AS "seriesSn", p.post_ttl AS title, p.post_cntnt AS "contentHtml",
                        p.stat AS status, p.like_cnt AS likes, p.cmt_cnt AS comments, p.view_cnt AS views, p.frst_crt_dt AS "createdAt", p.mdfcn_dt AS "updatedAt"
                 FROM knowra_post.tbl_post p LEFT JOIN knowra_community.tbl_comm c ON c.comm_sn = p.comm_sn
                 WHERE p.user_sn = ? AND p.actvtn_yn = 'Y' ORDER BY p.post_sn""", me));
+        out.put("series", jdbc.queryForList(
+                "SELECT series_sn AS \"seriesSn\", title, dscrptn AS description, created_at AS \"createdAt\" FROM knowra_post.tbl_series WHERE user_sn = ? ORDER BY series_sn", me));
         out.put("comments", jdbc.queryForList("""
                 SELECT c.post_cmt_sn AS "commentSn", c.post_sn AS "postSn", p.post_ttl AS "postTitle", c.cmt_cntnt AS content,
                        c.img_url AS image, c.frst_crt_dt AS "createdAt"

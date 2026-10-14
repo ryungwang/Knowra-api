@@ -97,6 +97,7 @@ public class PostService {
     private final org.springframework.jdbc.core.JdbcTemplate jdbc;
     private final com.knowra.keyword.KeywordService keywordService;
     private final com.knowra.community.flair.FlairService flairService;
+    private final com.knowra.series.SeriesService seriesService;
 
     private static final int REDIS_DB  = 15;
     private static final int PAGE_SIZE = 50;
@@ -165,6 +166,9 @@ public class PostService {
                 tblPost.setPostTtl(newTtl);
                 tblPost.setPostCntnt(newCntnt);
                 if (params.containsKey("flairSn")) tblPost.setFlairSn(flairService.validFor(params.get("flairSn"), tblPost.getCommSn()));
+                // 연재는 글쓴이만 바꾼다 — 운영진이 남의 글을 고칠 때 연재가 빠지지 않게
+                if (params.containsKey("seriesSn") && tblPost.getUserSn() == userSn)
+                    tblPost.setSeriesSn(seriesService.validFor(params.get("seriesSn"), userSn, tblPost.getCommSn()));
                 tblPost.setPostTyp(resolvePostTyp(params, tblPost.getCommSn(), userSn, tblPost.getPostTyp()));
                 tblPost.setMdfrSn(userSn);
                 if (STAT_SCHEDULED.equals(tblPost.getStat())) resultVO.putResult("rsrvAt", tblPost.getRsrvAt());   // 수정해도 예약은 그대로
@@ -186,6 +190,7 @@ public class PostService {
                 tblPost.setLikeCnt(0); tblPost.setViewCnt(0); tblPost.setCmtCnt(0);
                 tblPost.setActvtnYn("Y"); tblPost.setPinnedAt(null);
                 tblPost.setFlairSn(flairService.validFor(params.get("flairSn"), tblPost.getCommSn()));   // 남의 커뮤니티 말머리는 못 단다
+                tblPost.setSeriesSn(seriesService.validFor(params.get("seriesSn"), userSn, tblPost.getCommSn()));
                 tblPost.setStat("ACTIVE"); tblPost.setRsrvAt(null);
                 tblPost.setFrstCrtDt(java.time.LocalDateTime.now());
                 java.time.LocalDateTime rsrvAt = parseReservation(params.get("rsrvAt"));

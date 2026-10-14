@@ -45,6 +45,10 @@ public class TblPost extends BasePostEntity {
     @Column(name = "FLAIR_SN")
     private Long flairSn;
 
+    /** 연재(V39) — 글쓴이가 묶은 연재. 없으면 NULL */
+    @Column(name = "SERIES_SN")
+    private Long seriesSn;
+
     @Column(name = "COMM_SN")
     @Comment("커뮤니티 SN (tbl_comm 논리 참조) — NULL 이면 전체 공개 글")
     private Long commSn;

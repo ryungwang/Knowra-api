@@ -144,7 +144,16 @@ public class PostQuery {
             Object[] r = (Object[]) row;
             flairs.put(((Number) r[0]).longValue(), r);
         }
+        // 연재 — 제목만. 몇 번째인지는 상세에서 연재를 따로 읽어 센다(보는 사람마다 보이는 회차가 다르다)
+        Map<Long, Object[]> series = new java.util.HashMap<>();
+        for (Object row : em.createNativeQuery("SELECT p.post_sn, s.series_sn, s.title FROM knowra_post.tbl_post p JOIN knowra_post.tbl_series s ON s.series_sn = p.series_sn WHERE p.post_sn IN (?1)")
+                .setParameter(1, postSns).getResultList()) {
+            Object[] r = (Object[]) row;
+            series.put(((Number) r[0]).longValue(), r);
+        }
         for (PostDTO dto : list) {
+            Object[] sr = series.get(dto.getPostSn());
+            if (sr != null) { dto.setSeriesSn(((Number) sr[1]).longValue()); dto.setSeriesTitle((String) sr[2]); }
             dto.setMine(viewerSn != null && dto.getUserSn() == viewerSn);
             if (dto.getCommSn() != null && anonComms.contains(dto.getCommSn())) anonymize(dto);
             dto.setHasPoll(pollSet.contains(dto.getPostSn()));
@@ -165,6 +174,8 @@ public class PostQuery {
      */
     public static void anonymize(PostDTO dto) {
         dto.setAnonymous(true);
+        dto.setSeriesSn(null);   // 연재는 같은 사람의 글 묶음이라 작성자를 드러낸다
+        dto.setSeriesTitle(null);
         dto.setUserSn(0);
         dto.setNickName(null);
         dto.setAuthorNm(ANONYMOUS_NAME);
