@@ -213,6 +213,14 @@ public class PostService {
         return postQuery.base().where(POST.postSn.eq(postSn), PostQuery.alive(), PostQuery.visibleTo(me)).fetchFirst() != null;
     }
 
+    /** 읽기 전용 경로(댓글 목록) — 신고가 몰려 가려진 자기 글은 쓴 사람이 계속 본다. 반응·댓글 쓰기는 canSeePost 로 막는다 */
+    private boolean canReadPost(long postSn, Long me) {
+        if (canSeePost(postSn, me)) return true;
+        return me != null && tblPostRepository.findById(postSn)
+                .filter(p -> p.getUserSn() == me && "Y".equals(p.getActvtnYn()) && com.knowra.safety.service.ReportAutoHide.REVIEW.equals(p.getStat()))
+                .isPresent();
+    }
+
     static final java.util.Set<String> CMT_REACTIONS = java.util.Set.of("LIKE", "LOVE", "HAHA", "WOW", "SAD", "ANGRY");
 
     static final String STAT_SCHEDULED = "SCHEDULED";
@@ -365,8 +373,9 @@ public class PostService {
         try {
             long postSn = tblPost.getPostSn();
             // 예약 글은 쓴 사람에게만 보인다(올라가기 전 확인·수정·취소용)
+            // 신고가 몰려 가려진 글(REVIEW)도 쓴 사람은 연다 — 왜 안 보이는지 알아야 한다
             com.querydsl.core.types.dsl.BooleanExpression aliveOrMine = me == null ? PostQuery.alive()
-                    : PostQuery.alive().or(POST.stat.eq(STAT_SCHEDULED).and(POST.actvtnYn.eq("Y")).and(POST.userSn.eq(me)));
+                    : PostQuery.alive().or(POST.stat.in(STAT_SCHEDULED, com.knowra.safety.service.ReportAutoHide.REVIEW).and(POST.actvtnYn.eq("Y")).and(POST.userSn.eq(me)));
             Tuple t = postQuery.base()
                     .where(POST.postSn.eq(postSn), aliveOrMine, PostQuery.visibleTo(me))
                     .fetchOne();
@@ -377,8 +386,10 @@ public class PostService {
             }
             PostDTO dto = postQuery.decorate(List.of(t), me).get(0);
             resultVO.putResult("post", dto);
-            tblPostRepository.findById(postSn).filter(p -> STAT_SCHEDULED.equals(p.getStat()))
-                    .ifPresent(p -> resultVO.putResult("rsrvAt", p.getRsrvAt()));
+            tblPostRepository.findById(postSn).ifPresent(p -> {
+                if (STAT_SCHEDULED.equals(p.getStat())) resultVO.putResult("rsrvAt", p.getRsrvAt());
+                if (com.knowra.safety.service.ReportAutoHide.REVIEW.equals(p.getStat())) resultVO.putResult("underReview", true);
+            });
             resultVO.putResult("myLikeTyp", dto.getMyLikeTyp());
             resultVO.putResult("poll", pollService.view(postSn, dto.getUserSn(), me));
             if (dto.getCommSn() != null) {
@@ -923,7 +934,7 @@ public class PostService {
             int  size   = params.get("size")   != null ? Integer.parseInt(params.get("size").toString()) : 10;
             Long cursor = params.get("cursor") != null ? Long.parseLong(params.get("cursor").toString()) : null;
 
-            if (!canSeePost(postSn, userSn)) {
+            if (!canReadPost(postSn, userSn)) {
                 resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
                 resultVO.setResultMessage("게시글을 찾을 수 없습니다.");
                 return resultVO;
@@ -1030,15 +1041,18 @@ public class PostService {
                 long       sn     = c.getPostCmtSn();
                 String     pathNm = t.get(cmtPfpFile.atchFilePathNm);
                 String     pfpUrl = com.knowra.cmm.storage.StorageUrls.of(pathNm, t.get(cmtPfpFile.strgFileNm), t.get(cmtPfpFile.atchFileExtnNm), t.get(cmtPfpFile.fileKey));
-                boolean deleted = !"ACTIVE".equals(c.getStat());
+                boolean mine = userSn != null && c.getUserSn() == userSn;
+                boolean review = com.knowra.safety.service.ReportAutoHide.REVIEW.equals(c.getStat());
+                // 지워진 댓글, 신고가 몰려 가려진 댓글(쓴 사람 말고)은 본문을 내보내지 않는다
+                boolean hideBody = review ? !mine : !"ACTIVE".equals(c.getStat());
                 return new CmtDTO(
                         sn, c.getUserSn(), t.get(cmtUser.nickName), t.get(cmtUser.name),
-                        deleted ? "" : c.getCmtCntnt(),   // 지워진 댓글의 본문은 내보내지 않는다
+                        hideBody ? "" : c.getCmtCntnt(),
                         c.getLikeCnt(), c.getFrstCrtDt(), new ArrayList<>(),
                         reactionsMap.getOrDefault(sn, new HashMap<>()),
                         myReactMap.get(sn), pfpUrl,
-                        deleted ? "DELETED" : "ACTIVE", c.getMdfcnDt(),
-                        deleted ? null : c.getImgUrl(), false, userSn != null && c.getUserSn() == userSn);
+                        review ? "REVIEW" : "ACTIVE".equals(c.getStat()) ? "ACTIVE" : "DELETED", c.getMdfcnDt(),
+                        hideBody ? null : c.getImgUrl(), false, mine);
             };
             Map<Long, CmtDTO> rootMap = new LinkedHashMap<>();
             rootTuples.forEach(t -> rootMap.put(t.get(cmt).getPostCmtSn(), toDto.apply(t)));

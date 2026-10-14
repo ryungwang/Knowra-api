@@ -26,6 +26,7 @@ public class CommunityReportService {
 
     private final JdbcTemplate jdbc;
     private final ModLogService modLog;
+    private final com.knowra.safety.service.ReportAutoHide autoHide;
 
     public long openCount(long commSn) {
         Long n = jdbc.queryForObject("SELECT COUNT(DISTINCT (target_kind, target_sn)) FROM knowra_user.tbl_report WHERE comm_sn = ? AND comm_stat = 'OPEN'", Long.class, commSn);
@@ -57,15 +58,16 @@ public class CommunityReportService {
             m.put("stat", g.get("comm_stat")); m.put("handledAt", g.get("handled_at"));
             Map<String, Object> t = "POST".equals(kind)
                     ? first(jdbc.queryForList("""
-                        SELECT p.post_sn AS "postSn", p.post_ttl AS title, p.post_cntnt AS body, p.actvtn_yn = 'Y' AND p.stat = 'ACTIVE' AS alive,
+                        SELECT p.post_sn AS "postSn", p.post_ttl AS title, p.post_cntnt AS body, p.actvtn_yn = 'Y' AND p.stat IN ('ACTIVE','REVIEW') AS alive, p.stat = 'REVIEW' AS review,
                                u.user_sn AS "userSn", u.nick_name AS "nickName", u.name AS name
                         FROM knowra_post.tbl_post p JOIN knowra_user.tbl_user u ON u.user_sn = p.user_sn WHERE p.post_sn = ?""", sn))
                     : first(jdbc.queryForList("""
-                        SELECT c.post_sn AS "postSn", c.post_cmt_sn AS "postCmtSn", c.cmt_cntnt AS body, c.actvtn_yn = 'Y' AND c.stat = 'ACTIVE' AS alive,
+                        SELECT c.post_sn AS "postSn", c.post_cmt_sn AS "postCmtSn", c.cmt_cntnt AS body, c.actvtn_yn = 'Y' AND c.stat IN ('ACTIVE','REVIEW') AS alive, c.stat = 'REVIEW' AS review,
                                u.user_sn AS "userSn", u.nick_name AS "nickName", u.name AS name
                         FROM knowra_post.tbl_post_cmt c JOIN knowra_user.tbl_user u ON u.user_sn = c.user_sn WHERE c.post_cmt_sn = ?""", sn));
             if (t == null) { m.put("gone", true); out.add(m); continue; }
             m.put("gone", !Boolean.TRUE.equals(t.get("alive")));
+            m.put("autoHidden", Boolean.TRUE.equals(t.get("review")));
             m.put("postSn", t.get("postSn"));
             if (t.get("postCmtSn") != null) m.put("postCmtSn", t.get("postCmtSn"));
             if (t.get("title") != null) m.put("title", t.get("title"));
@@ -95,6 +97,8 @@ public class CommunityReportService {
                 UPDATE knowra_user.tbl_report SET comm_stat = ?, comm_handled_by = ?, comm_handled_at = ?
                 WHERE comm_sn = ? AND target_kind = ? AND target_sn = ? AND comm_stat = 'OPEN'""",
                 stat, me, LocalDateTime.now(), commSn, kind, targetSn);
+        // 문제없음이면 신고 누적으로 가려 둔 것을 되돌린다(운영진은 이 커뮤니티 글을 원래 고치고 지울 수 있다)
+        if ("DISMISS".equals(action)) autoHide.restore(kind, targetSn);
         if (n > 0) {
             Long postSn = "POST".equals(kind) ? Long.valueOf(targetSn)
                     : jdbc.query("SELECT post_sn FROM knowra_post.tbl_post_cmt WHERE post_cmt_sn = ?", rs -> rs.next() ? rs.getLong(1) : null, targetSn);

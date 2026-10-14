@@ -48,6 +48,7 @@ public class AdminConsoleService {
     private final org.springframework.context.ApplicationEventPublisher publisher;
     private final org.springframework.jdbc.core.JdbcTemplate jdbc;
     private final com.knowra.session.SessionService sessionService;
+    private final com.knowra.safety.service.ReportAutoHide autoHide;
 
     public ResultVO getStats() {
         ResultVO resultVO = new ResultVO();
@@ -113,6 +114,7 @@ public class AdminConsoleService {
                 TblPost p = postRepository.findByPostSn(r.getTargetSn());
                 if (p != null) {
                     gone = !"Y".equals(p.getActvtnYn());
+                    t.put("autoHidden", "REVIEW".equals(p.getStat()));
                     t.put("postSn", p.getPostSn()); t.put("title", p.getPostTtl());
                     t.put("preview", snippet(p.getPostCntnt()));
                     userRepository.findById(p.getUserSn()).ifPresent(u -> t.put("author", userBrief(u)));
@@ -121,7 +123,8 @@ public class AdminConsoleService {
             case "CMT" -> {
                 TblPostCmt c = cmtRepository.findById(r.getTargetSn()).orElse(null);
                 if (c != null) {
-                    gone = !"ACTIVE".equals(c.getStat());
+                    gone = !"ACTIVE".equals(c.getStat()) && !"REVIEW".equals(c.getStat());
+                    t.put("autoHidden", "REVIEW".equals(c.getStat()));
                     t.put("postCmtSn", c.getPostCmtSn()); t.put("postSn", c.getPostSn());
                     t.put("preview", snippet(c.getCmtCntnt()));
                     userRepository.findById(c.getUserSn()).ifPresent(u -> t.put("author", userBrief(u)));
@@ -183,6 +186,8 @@ public class AdminConsoleService {
             String stat = switch (action) { case "RESOLVE" -> "RESOLVED"; case "DISMISS" -> "DISMISSED"; case "REOPEN" -> "OPEN"; default -> throw new IllegalArgumentException("알 수 없는 처리입니다."); };
             r.setStat(stat); r.setHandledBy("OPEN".equals(stat) ? null : admin); r.setHandledAt("OPEN".equals(stat) ? null : LocalDateTime.now());
             reportRepository.save(r);
+            // 기각이면 신고 누적으로 가려 둔 것을 되돌린다 — 몰려와서 신고로 남의 글을 가리는 걸 여기서 푼다
+            if ("DISMISSED".equals(stat)) autoHide.restore(r.getTargetKind(), r.getTargetSn());
             resultVO.putResult("report", toRow(r));
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
         } catch (IllegalArgumentException e) {

@@ -38,6 +38,7 @@ public class SafetyService {
     private final TblPostRepository postRepository;
     private final com.knowra.post.service.PostQuery postQuery;
     private final org.springframework.jdbc.core.JdbcTemplate jdbc;
+    private final ReportAutoHide autoHide;
 
     /** params: targetKind(POST|CMT|USER|MSG), targetSn, reason, detail? — 같은 대상은 한 번만. */
     @Transactional
@@ -74,6 +75,7 @@ public class SafetyService {
             };
             reportRepository.save(TblReport.builder().reporterSn(me).targetKind(kind).targetSn(target).reason(reason).detail(detail)
                     .commSn(commSn).commStat(commSn == null ? null : "OPEN").build());
+            autoHide.afterReport(kind, target);
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
             resultVO.setResultMessage("신고가 접수됐어요. 확인 후 조치할게요.");
         } catch (IllegalArgumentException e) {
