@@ -95,6 +95,7 @@ public class PostService {
     private final com.knowra.badge.BadgeService badgeService;
     private final com.knowra.community.modlog.ModLogService modLog;
     private final org.springframework.jdbc.core.JdbcTemplate jdbc;
+    private final com.knowra.community.flair.FlairService flairService;
 
     private static final int REDIS_DB  = 15;
     private static final int PAGE_SIZE = 50;
@@ -162,6 +163,7 @@ public class PostService {
                             tblPost.getPostSn(), tblPost.getPostTtl(), tblPost.getPostCntnt() == null ? "" : tblPost.getPostCntnt(), userSn);
                 tblPost.setPostTtl(newTtl);
                 tblPost.setPostCntnt(newCntnt);
+                if (params.containsKey("flairSn")) tblPost.setFlairSn(flairService.validFor(params.get("flairSn"), tblPost.getCommSn()));
                 tblPost.setPostTyp(resolvePostTyp(params, tblPost.getCommSn(), userSn, tblPost.getPostTyp()));
                 tblPost.setMdfrSn(userSn);
                 if (STAT_SCHEDULED.equals(tblPost.getStat())) resultVO.putResult("rsrvAt", tblPost.getRsrvAt());   // 수정해도 예약은 그대로
@@ -182,6 +184,7 @@ public class PostService {
                 // 실어 보내면 그대로 저장돼 인기 피드를 조작할 수 있었다(좋아요 9999 로 재현). 고정은 setPostPin 으로만.
                 tblPost.setLikeCnt(0); tblPost.setViewCnt(0); tblPost.setCmtCnt(0);
                 tblPost.setActvtnYn("Y"); tblPost.setPinnedAt(null);
+                tblPost.setFlairSn(flairService.validFor(params.get("flairSn"), tblPost.getCommSn()));   // 남의 커뮤니티 말머리는 못 단다
                 tblPost.setStat("ACTIVE"); tblPost.setRsrvAt(null);
                 tblPost.setFrstCrtDt(java.time.LocalDateTime.now());
                 java.time.LocalDateTime rsrvAt = parseReservation(params.get("rsrvAt"));
@@ -520,6 +523,9 @@ public class PostService {
             int    page    = params.get("page")    != null ? Integer.parseInt(params.get("page").toString()) : 0;
 
             BooleanExpression condition = POST.commSn.eq(commSn).and(PostQuery.alive()).and(PostQuery.visibleTo(me));
+            // 말머리로 걸러 보기 — 고정·공지도 같이 거른다
+            if (params.get("flairSn") != null && !String.valueOf(params.get("flairSn")).isBlank())
+                condition = condition.and(POST.flairSn.eq(Long.parseLong(String.valueOf(params.get("flairSn")))));
             List<Tuple> tuples;
             if ("POPULAR".equals(listTyp)) {
                 tuples = postQuery.base()

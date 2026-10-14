@@ -43,6 +43,35 @@ public class CommunityController {
 
     private final com.knowra.community.report.CommunityReportService reportService;
 
+    private final com.knowra.community.flair.FlairService flairService;
+
+    /** 말머리 목록 — 누구나 */
+    @GetMapping("/api/community/flairs")
+    public ResultVO flairs(@RequestParam long commSn) {
+        ResultVO r = new ResultVO();
+        r.putResult("list", flairService.list(commSn));
+        r.setResultCode(com.knowra.cmm.model.ResponseCode.SUCCESS.getCode());
+        return r;
+    }
+
+    /** 말머리 통째로 바꾸기 — body: commSn, items[{flairSn?, name, color}] */
+    @PostMapping("/api/community/flairs/save")
+    public ResultVO saveFlairs(@RequestBody Map<String, Object> b, @CurrentUser Long me) {
+        ResultVO r = new ResultVO();
+        try {
+            r.putResult("list", flairService.save(Long.parseLong(String.valueOf(b.get("commSn"))), (java.util.List<?>) b.get("items"), me));
+            r.setResultCode(com.knowra.cmm.model.ResponseCode.SUCCESS.getCode());
+        } catch (IllegalArgumentException e) {
+            r.setResultCode(com.knowra.cmm.model.ResponseCode.UPDATE_ERROR.getCode());
+            r.setResultMessage(e.getMessage());
+        } catch (Exception e) {
+            com.knowra.cmm.errlog.ErrorLog.report(e);
+            r.setResultCode(com.knowra.cmm.model.ResponseCode.UPDATE_ERROR.getCode());
+            r.setResultMessage(com.knowra.cmm.model.ResponseCode.UPDATE_ERROR.getMessage());
+        }
+        return r;
+    }
+
     /** 운영진 신고함 — stat: OPEN | DONE */
     @GetMapping("/api/community/reports")
     public ResultVO reports(@RequestParam long commSn, @RequestParam(defaultValue = "OPEN") String stat, @CurrentUser Long me) {

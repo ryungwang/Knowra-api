@@ -41,6 +41,10 @@ public class TblPost extends BasePostEntity {
      * 커뮤니티 글의 노출 범위(비공개 커뮤니티)는 조회 쪽에서
      * {@code CommunityQueryHelper.accessCondition} 으로 거른다.
      */
+    /** 말머리(V31) — 그 커뮤니티 운영진이 정한 분류. 없으면 NULL */
+    @Column(name = "FLAIR_SN")
+    private Long flairSn;
+
     @Column(name = "COMM_SN")
     @Comment("커뮤니티 SN (tbl_comm 논리 참조) — NULL 이면 전체 공개 글")
     private Long commSn;

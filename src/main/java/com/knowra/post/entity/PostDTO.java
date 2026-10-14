@@ -45,6 +45,9 @@ public class PostDTO {
     private boolean mySaved;
     private boolean hasPoll;         // 피드 카드의 「투표」 표시
     private boolean pinned;          // 커뮤니티 상단 고정
+    private Long flairSn;            // 말머리 — decorate 가 채운다
+    private String flairName;
+    private String flairColor;
     /** 익명 커뮤니티 글 — 작성자 칸은 비우고 「익명」. 신고 처리 등 관리자 화면만 실제 작성자를 본다. */
     private boolean anonymous;
     /** 내가 쓴 글인가 — 익명 글은 화면이 닉네임으로 알 수 없어서 서버가 알려 준다 */

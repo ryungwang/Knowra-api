@@ -127,10 +127,19 @@ public class PostQuery {
         Set<Long>               pollSet  = new HashSet<>();
         pollRepository.findAllByPostSnIn(postSns).forEach(p -> pollSet.add(p.getPostSn()));
         Set<Long> anonComms = anonymousComms(list.stream().map(PostDTO::getCommSn).filter(java.util.Objects::nonNull).toList());
+        // 말머리 — 글마다 하나, 한 번에 읽는다
+        Map<Long, Object[]> flairs = new java.util.HashMap<>();
+        for (Object row : em.createNativeQuery("SELECT p.post_sn, f.flair_sn, f.name, f.color FROM knowra_post.tbl_post p JOIN knowra_community.tbl_comm_flair f ON f.flair_sn = p.flair_sn WHERE p.post_sn IN (?1)")
+                .setParameter(1, postSns).getResultList()) {
+            Object[] r = (Object[]) row;
+            flairs.put(((Number) r[0]).longValue(), r);
+        }
         for (PostDTO dto : list) {
             dto.setMine(viewerSn != null && dto.getUserSn() == viewerSn);
             if (dto.getCommSn() != null && anonComms.contains(dto.getCommSn())) anonymize(dto);
             dto.setHasPoll(pollSet.contains(dto.getPostSn()));
+            Object[] f = flairs.get(dto.getPostSn());
+            if (f != null) { dto.setFlairSn(((Number) f[1]).longValue()); dto.setFlairName((String) f[2]); dto.setFlairColor((String) f[3]); }
             dto.setTagNms(tagMap.getOrDefault(dto.getPostSn(), List.of()));
             dto.setMyLikeTyp(likeMap.get(dto.getPostSn()));
             dto.setMySaved(savedSet.contains(dto.getPostSn()));
