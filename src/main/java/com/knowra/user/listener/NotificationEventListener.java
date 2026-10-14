@@ -158,6 +158,9 @@ public class NotificationEventListener {
             case "COMM_OWNER"     -> sender + "이 " + place + "의 주인 자리를 넘겼습니다.";
             case "KEYWORD"        -> { String[] x = nz(extra).split("\\|", 2); yield "관심 키워드 「" + x[0] + "」 새 글: " + (x.length > 1 ? x[1] : ""); }
             case "SERIES_NEW"     -> { String[] x = nz(extra).split("\\|", 2); yield "구독 중인 연재 「" + x[0] + "」 새 편: " + (x.length > 1 ? x[1] : ""); }
+            case "HOLD_NEW"       -> place + "에 검토할 새 멤버 글이 있어요.";
+            case "HOLD_APPROVED"  -> { String[] x = nz(extra).split("\\|", 2); yield x[0] + " 운영진이 확인해 글이 올라갔어요: " + (x.length > 1 ? x[1] : ""); }
+            case "HOLD_REJECTED"  -> { String[] x = nz(extra).split("\\|", 2); yield x[0] + " 운영진이 확인한 뒤 글을 올리지 않았어요: " + (x.length > 1 ? x[1] : ""); }
             case "NEW_LOGIN"      -> "새 기기에서 로그인했어요: " + nz(extra) + ". 본인이 아니면 비밀번호를 바꾸고 그 기기를 로그아웃하세요.";
             case "REPORT_HIDDEN"  -> "신고가 여러 건 들어와 회원님의 " + nz(extra) + subjectJosa(nz(extra)) + " 검토 중이에요. 문제가 없으면 다시 보여요.";
             default            -> "새 알림이 있습니다. (" + notifTyp + ")";

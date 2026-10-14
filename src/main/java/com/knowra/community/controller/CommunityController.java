@@ -74,6 +74,42 @@ public class CommunityController {
 
     private final com.knowra.community.joinq.JoinQuestionService joinQuestions;
 
+    private final com.knowra.community.hold.HoldService holdService;
+    private final com.knowra.post.service.PostService postService;
+
+    /** 새 멤버 글 검토 — 검토할 글 목록(운영진). body: commSn */
+    @PostMapping("/api/community/hold/list")
+    public ResultVO holdList(@RequestBody Map<String, Object> b, @CurrentUser Long me) {
+        return holdRun(r -> r.putResult("list", holdService.list(Long.parseLong(String.valueOf(b.get("commSn"))), me)));
+    }
+
+    /** 승인·거절. body: postSn, approve(true|false) */
+    @PostMapping("/api/community/hold/decide")
+    public ResultVO holdDecide(@RequestBody Map<String, Object> b, @CurrentUser Long me) {
+        return holdRun(r -> {
+            Long released = holdService.decide(Long.parseLong(String.valueOf(b.get("postSn"))), me, Boolean.parseBoolean(String.valueOf(b.get("approve"))));
+            if (released != null) postService.releaseHeld(released);
+        });
+    }
+
+    /** 검토 기간(날수, 0=끔). body: commSn, days */
+    @PostMapping("/api/community/hold/days")
+    public ResultVO holdDays(@RequestBody Map<String, Object> b, @CurrentUser Long me) {
+        return holdRun(r -> holdService.setDays(Long.parseLong(String.valueOf(b.get("commSn"))), me, Integer.parseInt(String.valueOf(b.get("days")))));
+    }
+
+    private static ResultVO holdRun(java.util.function.Consumer<ResultVO> body) {
+        ResultVO r = new ResultVO();
+        try {
+            body.accept(r);
+            r.setResultCode(com.knowra.cmm.model.ResponseCode.SUCCESS.getCode());
+        } catch (IllegalArgumentException e) {
+            r.setResultCode(com.knowra.cmm.model.ResponseCode.UPDATE_ERROR.getCode());
+            r.setResultMessage(e.getMessage());
+        }
+        return r;
+    }
+
     /** 가입 질문 — 누구나(신청하기 전에 읽는다) */
     @GetMapping("/api/community/joinQuestions")
     public ResultVO joinQuestions(@RequestParam long commSn) {

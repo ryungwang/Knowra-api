@@ -98,6 +98,7 @@ public class PostService {
     private final com.knowra.keyword.KeywordService keywordService;
     private final com.knowra.community.flair.FlairService flairService;
     private final com.knowra.series.SeriesService seriesService;
+    private final com.knowra.community.hold.HoldService holdService;
 
     private static final int REDIS_DB  = 15;
     private static final int PAGE_SIZE = 50;
@@ -195,9 +196,13 @@ public class PostService {
                 tblPost.setFrstCrtDt(java.time.LocalDateTime.now());
                 java.time.LocalDateTime rsrvAt = parseReservation(params.get("rsrvAt"));
                 if (rsrvAt != null) { tblPost.setStat(STAT_SCHEDULED); tblPost.setRsrvAt(rsrvAt); }
+                // 새 멤버 글 검토 — 잡아 두면 피드·알림·뱃지는 승인 때 낸다(releaseHeld). 예약 글은 올라갈 때 다시 본다
+                boolean hold = rsrvAt == null && holdService.needsHold(tblPost.getCommSn(), userSn);
+                if (hold) tblPost.setStat(com.knowra.community.hold.HoldService.HELD);
                 tblPostRepository.save(tblPost);
                 if (poll != null) pollService.create(tblPost.getPostSn(), poll);
-                if (rsrvAt == null) publishEffects(tblPost, userSn);   // 예약 글은 올라갈 때 낸다
+                if (hold) { resultVO.putResult("held", true); holdService.notifyManagers(tblPost.getCommSn(), tblPost.getPostSn(), userSn); }
+                else if (rsrvAt == null) publishEffects(tblPost, userSn);   // 예약 글은 올라갈 때 낸다
                 else resultVO.putResult("rsrvAt", rsrvAt);
             }
 
@@ -232,9 +237,14 @@ public class PostService {
     /** 읽기 전용 경로(댓글 목록) — 신고가 몰려 가려진 자기 글은 쓴 사람이 계속 본다. 반응·댓글 쓰기는 canSeePost 로 막는다 */
     private boolean canReadPost(long postSn, Long me) {
         if (canSeePost(postSn, me)) return true;
-        return me != null && tblPostRepository.findById(postSn)
-                .filter(p -> p.getUserSn() == me && "Y".equals(p.getActvtnYn()) && com.knowra.safety.service.ReportAutoHide.REVIEW.equals(p.getStat()))
-                .isPresent();
+        if (me == null) return false;
+        TblPost p = tblPostRepository.findById(postSn).orElse(null);
+        if (p == null || !"Y".equals(p.getActvtnYn())) return false;
+        boolean held = com.knowra.community.hold.HoldService.HELD.equals(p.getStat());
+        if (p.getUserSn() == me && (held || com.knowra.safety.service.ReportAutoHide.REVIEW.equals(p.getStat()))) return true;
+        // 검토 중인 새 멤버 글은 그 커뮤니티 운영진도 연다(올릴지 정해야 한다)
+        if (held && p.getCommSn() != null) { String role = roleIn(p.getCommSn(), me); return "OWNER".equals(role) || "ADMIN".equals(role); }
+        return false;
     }
 
     static final java.util.Set<String> CMT_REACTIONS = java.util.Set.of("LIKE", "LOVE", "HAHA", "WOW", "SAD", "ANGRY");
@@ -280,16 +290,27 @@ public class PostService {
      */
     public boolean publishScheduled(long postSn) {
         java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        // 예약한 사이에 검토 대상이 됐을 수 있다(예약 뒤 커뮤니티가 검토를 켬) — 올라갈 때 다시 본다
+        TblPost before = tblPostRepository.findById(postSn).orElse(null);
+        boolean hold = before != null && holdService.needsHold(before.getCommSn(), before.getUserSn());
         long n = new JPAQueryFactory(em).update(POST)
-                .set(POST.stat, "ACTIVE").set(POST.frstCrtDt, now)
+                .set(POST.stat, hold ? com.knowra.community.hold.HoldService.HELD : "ACTIVE").set(POST.frstCrtDt, now)
                 .where(POST.postSn.eq(postSn), POST.stat.eq(STAT_SCHEDULED))
                 .execute();
         if (n == 0) return false;
         em.flush();
         em.clear();
         TblPost post = tblPostRepository.findById(postSn).orElseThrow();
-        publishEffects(post, post.getUserSn());
+        if (hold) holdService.notifyManagers(post.getCommSn(), postSn, post.getUserSn());
+        else publishEffects(post, post.getUserSn());
         return true;
+    }
+
+    /** 검토해 둔 글이 승인됐다(HoldService.decide 가 ACTIVE 로 바꾼 뒤) — 올라간 글이 할 일(피드·알림·뱃지) */
+    public void releaseHeld(long postSn) {
+        em.clear();
+        TblPost post = tblPostRepository.findById(postSn).orElseThrow();
+        if ("ACTIVE".equals(post.getStat())) publishEffects(post, post.getUserSn());
     }
 
     /** 예약 글 관리 — 쓴 사람만. params: postSn, action(PUBLISH=지금 올리기 | RESCHEDULE), rsrvAt(RESCHEDULE 때) */
@@ -392,8 +413,13 @@ public class PostService {
             long postSn = tblPost.getPostSn();
             // 예약 글은 쓴 사람에게만 보인다(올라가기 전 확인·수정·취소용)
             // 신고가 몰려 가려진 글(REVIEW)도 쓴 사람은 연다 — 왜 안 보이는지 알아야 한다
+            // 새 멤버 글 검토(HELD)는 쓴 사람과 그 커뮤니티 운영진이 연다
             com.querydsl.core.types.dsl.BooleanExpression aliveOrMine = me == null ? PostQuery.alive()
-                    : PostQuery.alive().or(POST.stat.in(STAT_SCHEDULED, com.knowra.safety.service.ReportAutoHide.REVIEW).and(POST.actvtnYn.eq("Y")).and(POST.userSn.eq(me)));
+                    : PostQuery.alive().or(POST.stat.in(STAT_SCHEDULED, com.knowra.safety.service.ReportAutoHide.REVIEW, com.knowra.community.hold.HoldService.HELD).and(POST.actvtnYn.eq("Y")).and(POST.userSn.eq(me)))
+                      .or(POST.stat.eq(com.knowra.community.hold.HoldService.HELD).and(POST.actvtnYn.eq("Y")).and(POST.commSn.in(
+                              com.querydsl.jpa.JPAExpressions.select(com.knowra.community.entity.QTblCommMbr.tblCommMbr.commSn).from(com.knowra.community.entity.QTblCommMbr.tblCommMbr)
+                                      .where(com.knowra.community.entity.QTblCommMbr.tblCommMbr.userSn.eq(me), com.knowra.community.entity.QTblCommMbr.tblCommMbr.stat.eq("ACTIVE"),
+                                             com.knowra.community.entity.QTblCommMbr.tblCommMbr.role.in("OWNER", "ADMIN")))));
             Tuple t = postQuery.base()
                     .where(POST.postSn.eq(postSn), aliveOrMine, PostQuery.visibleTo(me))
                     .fetchOne();
@@ -407,6 +433,7 @@ public class PostService {
             tblPostRepository.findById(postSn).ifPresent(p -> {
                 if (STAT_SCHEDULED.equals(p.getStat())) resultVO.putResult("rsrvAt", p.getRsrvAt());
                 if (com.knowra.safety.service.ReportAutoHide.REVIEW.equals(p.getStat())) resultVO.putResult("underReview", true);
+                if (com.knowra.community.hold.HoldService.HELD.equals(p.getStat())) resultVO.putResult("held", true);
             });
             // 값을 돌려주지 않는 콜백은 줄마다 불리고 커서는 이미 그 줄에 있다 — rs.next() 를 부르면 하나뿐인 줄을 건너뛴다
             if (me != null) resultVO.putResult("muted", jdbc.queryForObject(

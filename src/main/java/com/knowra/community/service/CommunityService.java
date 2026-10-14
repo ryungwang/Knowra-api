@@ -55,6 +55,7 @@ public class CommunityService {
     private final com.knowra.community.modlog.ModLogService modLog;
     private final com.knowra.community.report.CommunityReportService communityReports;
     private final com.knowra.community.joinq.JoinQuestionService joinQuestions;
+    private final com.knowra.community.hold.HoldService holdService;
 
     @PersistenceContext
     private EntityManager em;
@@ -197,6 +198,8 @@ public class CommunityService {
                 long pending = tblComm.getMembers().stream().filter(x -> "PENDING".equals(x.getStat()) && "Y".equals(x.getActvtnYn())).count();
                 resultVO.putResult("pendingCnt", pending);
                 resultVO.putResult("reportCnt", communityReports.openCount(tblComm.getCommSn()));
+                resultVO.putResult("heldCnt", holdService.count(tblComm.getCommSn()));
+                resultVO.putResult("holdDays", holdService.days(tblComm.getCommSn()));
             }
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
             resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
@@ -369,6 +372,7 @@ public class CommunityService {
                 }
                 if ("PENDING".equals(memberStatus)) joinQuestions.store(tblComm.getCommSn(), userSn, answers);
                 if ("ACTIVE".equals(memberStatus)) {
+                    holdService.markJoined(tblComm.getCommSn(), userSn);   // 새 멤버 글 검토는 이때부터 센다
                     tblComm.setMemberCnt(tblComm.getMemberCnt() + 1);
                     tblCommRepository.save(tblComm);
                     actionLogService.log(userSn, TblUserActionLog.TARGET_COMM, tblComm.getCommSn(), TblUserActionLog.ACTION_JOIN);
@@ -662,6 +666,7 @@ public class CommunityService {
                 tblCommRepository.save(comm);
             }
             if (nowActive && !wasActive) {
+                holdService.markJoined(commSn, target);
                 actionLogService.log(target, TblUserActionLog.TARGET_COMM, commSn, TblUserActionLog.ACTION_JOIN);
                 interestScoreService.update(target, TblUserActionLog.TARGET_COMM, commSn, 8);
             }
