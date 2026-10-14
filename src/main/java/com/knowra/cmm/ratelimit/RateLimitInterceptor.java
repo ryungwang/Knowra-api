@@ -37,6 +37,8 @@ public class RateLimitInterceptor implements HandlerInterceptor {
             Map.entry("/api/chat/openDm",             new Rule("dm", 20, 600)),
             Map.entry("/api/community/setCommunity",  new Rule("comm", 5, 3600)),
             Map.entry("/api/community/event/save",    new Rule("event", 10, 600)),
+            Map.entry("/api/community/invite/create", new Rule("invite", 20, 3600)),
+            Map.entry("/api/community/invite/accept", new Rule("invite-use", 30, 3600)),
             Map.entry("/api/community/wiki/page/save", new Rule("wiki", 30, 600)),
             Map.entry("/api/common/uploadImage",      new Rule("upload", 30, 600)),
             // 상대에게 알림이 가는 반응 — 눌렀다 뗐다로 알림 폭탄을 만들 수 있다

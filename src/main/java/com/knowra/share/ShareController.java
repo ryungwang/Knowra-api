@@ -41,6 +41,8 @@ public class ShareController {
 
     private final PostQuery postQuery;
     private final TblCommRepository commRepository;
+    private final org.springframework.jdbc.core.JdbcTemplate jdbc;
+    private final com.knowra.user.repository.TblUserRepository userRepository;
 
     @Value("${knowra.front.base-url:http://localhost:5111}")
     private String frontBase;
@@ -72,6 +74,25 @@ public class ShareController {
         String img = c.getLogoFile() == null ? null
                 : api(req) + c.getLogoFile().getAtchFilePathNm() + "/" + c.getLogoFile().getStrgFileNm() + "." + c.getLogoFile().getAtchFileExtnNm();
         return page(target, name, desc, img, "website", req);
+    }
+
+    /** 초대 링크 — 「○○에 초대받았어요」 카드. 만료·취소된 링크도 일단 받는 화면으로 보낸다(거기서 이유를 알려 준다). */
+    @GetMapping("/s/i/{code}")
+    public ResponseEntity<String> invite(@PathVariable String code, HttpServletRequest req) {
+        if (!code.matches("[A-Za-z0-9]{6,16}")) return page(front(), "knowra", "없는 초대 링크예요.", null, "website", req);
+        String target = front() + "/invite/" + code;
+        java.util.List<java.util.Map<String, Object>> rows = jdbc.queryForList(
+                "SELECT COMM_SN, CREATED_BY FROM knowra_community.tbl_comm_invite WHERE INVITE_CODE = ?", code);
+        TblComm c = rows.isEmpty() ? null : commRepository.findByCommSn(((Number) rows.get(0).get("comm_sn")).longValue());
+        if (c == null || !"Y".equals(c.getStat())) return page(target, "knowra 초대", "커뮤니티 초대 링크예요.", null, "website", req);
+        String name = c.getCommDsplNm() != null ? c.getCommDsplNm() : c.getCommNm();
+        String inviter = userRepository.findById(((Number) rows.get(0).get("created_by")).longValue())
+                .map(u -> u.getNickName()).orElse(null);
+        String desc = (inviter != null ? inviter + "님이 초대했어요" : "knowra 커뮤니티 초대")
+                + ("private".equals(c.getPrvcyStng()) ? " · 비공개 커뮤니티" : " · 멤버 " + c.getMemberCnt() + "명");
+        String img = c.getLogoFile() == null ? null
+                : api(req) + c.getLogoFile().getAtchFilePathNm() + "/" + c.getLogoFile().getStrgFileNm() + "." + c.getLogoFile().getAtchFileExtnNm();
+        return page(target, name + "에 초대받았어요", desc, img, "website", req);
     }
 
     /* ───────── HTML ───────── */

@@ -100,7 +100,8 @@ public class SecurityConfig {
                                 "/api/community/getCommunity", "/api/community/getCommunityList",
                                 "/api/community/explore", "/api/community/explore/filter",
                                 "/api/community/wiki/overview", "/api/community/wiki/page",
-                                "/api/community/event/list", "/api/community/event/detail").permitAll()
+                                "/api/community/event/list", "/api/community/event/detail",
+                                "/api/community/invite/*").permitAll()   // 초대 받는 화면은 로그인 전에도 보인다
 
                         // 비로그인 열람 — 공개 프로필
                         .requestMatchers(HttpMethod.POST,

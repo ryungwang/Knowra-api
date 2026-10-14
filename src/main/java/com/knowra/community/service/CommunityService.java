@@ -261,6 +261,15 @@ public class CommunityService {
     }
 
     public ResultVO setMember(Map<String, Object> params, Long me) {
+        return setMember(params, me, false);
+    }
+
+    /**
+     * {@code viaInvite}: 운영진이 만든 초대 링크로 들어온 경우(InviteService 만 true 로 부른다).
+     * 승인제여도 바로 ACTIVE 이고, 이미 가입 신청(PENDING) 중이면 그걸 승인으로 올린다.
+     * 규칙 동의와 차단(BANNED)은 초대로도 건너뛰지 않는다.
+     */
+    public ResultVO setMember(Map<String, Object> params, Long me, boolean viaInvite) {
         ResultVO resultVO = new ResultVO();
 
         try {
@@ -303,7 +312,8 @@ public class CommunityService {
                 } else {
                     memberStatus = "PENDING";
                 }
-                String joinTyp = "ACTIVE".equals(memberStatus) ? "AUTO" : "APPLY";
+                if (viaInvite) memberStatus = "ACTIVE";
+                String joinTyp = viaInvite ? "INVITE" : "ACTIVE".equals(memberStatus) ? "AUTO" : "APPLY";
                 // 규칙이 있으면 동의해야 참여(가입 신청)할 수 있다 — 동의한 시각을 멤버 줄에 남긴다
                 boolean needAgree = wikiService.hasRules(tblComm.getCommSn());
                 if (needAgree && !Boolean.parseBoolean(String.valueOf(params.get("agreeRules")))) {
@@ -313,7 +323,7 @@ public class CommunityService {
 
                 if (existing.isPresent()) {
                     String currentStat = existing.get().getStat();
-                    if ("ACTIVE".equals(currentStat) || "PENDING".equals(currentStat)) {
+                    if ("ACTIVE".equals(currentStat) || ("PENDING".equals(currentStat) && !viaInvite)) {
                         throw new RuntimeException(ResponseCode.COMMUNITY_ALREADY_JOINED.getMessage());
                     }
                     if ("BANNED".equals(currentStat)) {
