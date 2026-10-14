@@ -81,7 +81,7 @@ public class AccountDeletionService {
         jdbc.update("UPDATE knowra_post.tbl_post p SET like_cnt = GREATEST(0, p.like_cnt - 1) FROM knowra_post.tbl_post_like l WHERE l.post_sn = p.post_sn AND l.user_sn = ?", me);
         jdbc.update("DELETE FROM knowra_post.tbl_post_like WHERE user_sn = ?", me);
         for (String t : List.of("knowra_post.tbl_post_cmt_react", "knowra_community.tbl_comm_event_rsvp", "knowra_post.tbl_post_save",
-                "knowra_post.tbl_post_save_folder", "knowra_post.tbl_post_hide", "knowra_post.tbl_post_mute", "knowra_user.tbl_keyword_watch", "knowra_post.tbl_post_draft", "knowra_post.tbl_series", "knowra_user.tbl_known_device", "knowra_post.tbl_series_sub", "knowra_user.tbl_push_sub",
+                "knowra_post.tbl_post_save_folder", "knowra_post.tbl_post_hide", "knowra_post.tbl_post_mute", "knowra_user.tbl_keyword_watch", "knowra_post.tbl_post_draft", "knowra_post.tbl_series", "knowra_user.tbl_known_device", "knowra_post.tbl_series_sub", "knowra_community.tbl_comm_join_ans", "knowra_user.tbl_push_sub",
                 "knowra_user.tbl_user_notif", "knowra_user.tbl_user_interest_score", "knowra_user.tbl_user_tag",
                 "knowra_user.tbl_user_badge", "knowra_user.tbl_user_action_log", "knowra_user.tbl_user_lgn_hstry"))
             jdbc.update("DELETE FROM " + t + " WHERE user_sn = ?", me);

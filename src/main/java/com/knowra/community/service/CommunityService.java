@@ -54,6 +54,7 @@ public class CommunityService {
     private final ApplicationEventPublisher eventPublisher;
     private final com.knowra.community.modlog.ModLogService modLog;
     private final com.knowra.community.report.CommunityReportService communityReports;
+    private final com.knowra.community.joinq.JoinQuestionService joinQuestions;
 
     @PersistenceContext
     private EntityManager em;
@@ -315,6 +316,7 @@ public class CommunityService {
                 tblComm.setMemberCnt(Math.max(0, tblComm.getMemberCnt() - 1));
                 tblCommRepository.save(tblComm);
                 interestScoreService.update(userSn, TblUserActionLog.TARGET_COMM, tblComm.getCommSn(), -8);
+                joinQuestions.clear(tblComm.getCommSn(), userSn);   // 신청을 거둔 경우 — 답도 거둔다
                 memberStatus = "WITHDRAWN";
             } else {
                 String privacy = tblComm.getPrvcyStng();
@@ -331,6 +333,8 @@ public class CommunityService {
                     throw new RuntimeException("커뮤니티 규칙에 동의해야 참여할 수 있어요.");
                 }
                 java.time.LocalDateTime agreedAt = needAgree ? java.time.LocalDateTime.now() : null;
+                // 승인 신청이면 가입 질문에 답이 다 있어야 한다(초대·자동 가입은 묻지 않는다)
+                List<String> answers = "PENDING".equals(memberStatus) ? joinQuestions.validate(tblComm.getCommSn(), params.get("answers")) : List.of();
 
                 if (existing.isPresent()) {
                     String currentStat = existing.get().getStat();
@@ -363,6 +367,7 @@ public class CommunityService {
                             .build();
                     tblCommMbrRepository.save(tblCommMbr);
                 }
+                if ("PENDING".equals(memberStatus)) joinQuestions.store(tblComm.getCommSn(), userSn, answers);
                 if ("ACTIVE".equals(memberStatus)) {
                     tblComm.setMemberCnt(tblComm.getMemberCnt() + 1);
                     tblCommRepository.save(tblComm);
@@ -591,6 +596,7 @@ public class CommunityService {
                     .orderBy(m.role.asc(), m.frstCrtDt.asc())
                     .fetch();
             List<Map<String, Object>> list = new java.util.ArrayList<>();
+            Map<Long, List<Map<String, Object>>> answers = "PENDING".equals(stat) ? joinQuestions.answersFor(commSn) : Map.of();
             for (com.querydsl.core.Tuple t : rows) {
                 TblCommMbr mb = t.get(m);
                 String path = t.get(pfp.atchFilePathNm);
@@ -602,6 +608,7 @@ public class CommunityService {
                 row.put("role",     mb.getRole());
                 row.put("stat",     mb.getStat());
                 row.put("joinedAt", mb.getFrstCrtDt());
+                if (answers.containsKey(mb.getUserSn())) row.put("answers", answers.get(mb.getUserSn()));
                 list.add(row);
             }
             resultVO.putResult("list", list);
@@ -649,6 +656,7 @@ public class CommunityService {
             if (nowActive && !wasActive) { mb.setJoinTyp("APPROVE"); mb.setNotifYn("Y"); }
             if (!nowActive) mb.setRole("MEMBER");
             tblCommMbrRepository.save(mb);
+            if ("PENDING".equals(prevStat)) joinQuestions.clear(commSn, target);   // 결정이 났다 — 답은 더 쓸 데가 없다
             if (wasActive != nowActive) {
                 comm.setMemberCnt(Math.max(0, comm.getMemberCnt() + (nowActive ? 1 : -1)));
                 tblCommRepository.save(comm);

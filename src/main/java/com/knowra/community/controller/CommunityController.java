@@ -72,6 +72,31 @@ public class CommunityController {
         return r;
     }
 
+    private final com.knowra.community.joinq.JoinQuestionService joinQuestions;
+
+    /** 가입 질문 — 누구나(신청하기 전에 읽는다) */
+    @GetMapping("/api/community/joinQuestions")
+    public ResultVO joinQuestions(@RequestParam long commSn) {
+        ResultVO r = new ResultVO();
+        r.putResult("list", joinQuestions.list(commSn));
+        r.setResultCode(com.knowra.cmm.model.ResponseCode.SUCCESS.getCode());
+        return r;
+    }
+
+    /** 가입 질문 통째로 바꾸기(운영진) — body: commSn, questions[최대 3] */
+    @PostMapping("/api/community/joinQuestions/save")
+    public ResultVO saveJoinQuestions(@RequestBody Map<String, Object> b, @CurrentUser Long me) {
+        ResultVO r = new ResultVO();
+        try {
+            r.putResult("list", joinQuestions.save(Long.parseLong(String.valueOf(b.get("commSn"))), me, (java.util.List<?>) b.get("questions")));
+            r.setResultCode(com.knowra.cmm.model.ResponseCode.SUCCESS.getCode());
+        } catch (IllegalArgumentException e) {
+            r.setResultCode(com.knowra.cmm.model.ResponseCode.UPDATE_ERROR.getCode());
+            r.setResultMessage(e.getMessage());
+        }
+        return r;
+    }
+
     /** 운영진 신고함 — stat: OPEN | DONE */
     @GetMapping("/api/community/reports")
     public ResultVO reports(@RequestParam long commSn, @RequestParam(defaultValue = "OPEN") String stat, @CurrentUser Long me) {
