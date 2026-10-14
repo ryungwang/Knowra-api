@@ -31,7 +31,17 @@ public class WebMvcConfig implements WebMvcConfigurer {
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         String location = new java.io.File(uploadPath).getAbsoluteFile().toURI().toString();
         if (!location.endsWith("/")) location += "/";
-        registry.addResourceHandler("/upload/**").addResourceLocations(location);
+        // 예전 업로드(새 파일은 StorageService). ⚠️ 이미지 확장자만 내보낸다 — 확장자 허용 목록이 생기기 전에
+        // 올라간 html·svg 가 남아 있으면 이 API 출처에서 문서로 열려 리프레시 쿠키로 토큰을 얻을 수 있었다.
+        registry.addResourceHandler("/upload/**").addResourceLocations(location)
+                .resourceChain(true)
+                .addResolver(new org.springframework.web.servlet.resource.PathResourceResolver() {
+                    @Override
+                    protected org.springframework.core.io.Resource getResource(String resourcePath, org.springframework.core.io.Resource dir) throws java.io.IOException {
+                        if (!resourcePath.toLowerCase(java.util.Locale.ROOT).matches(".*\\.(png|jpe?g|gif|webp)$")) return null;
+                        return super.getResource(resourcePath, dir);
+                    }
+                });
     }
 
     /** {@code @CurrentUser Long me} 를 컨트롤러에서 쓸 수 있게 한다. */

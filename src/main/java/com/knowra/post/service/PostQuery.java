@@ -84,7 +84,7 @@ public class PostQuery {
     public JPAQuery<Tuple> base() {
         return new JPAQueryFactory(em)
                 .select(POST, USER.nickName, USER.name, COMM.commNm, COMM.commDsplNm,
-                        PFP.atchFilePathNm, PFP.strgFileNm, PFP.atchFileExtnNm)
+                        PFP.atchFilePathNm, PFP.strgFileNm, PFP.atchFileExtnNm, PFP.fileKey)
                 .from(POST)
                 .join(USER).on(POST.userSn.eq(USER.userSn))
                 .leftJoin(USER.pfp, PFP)
@@ -108,9 +108,7 @@ public class PostQuery {
 
     public static String pfpUrl(Tuple t) {
         String pathNm = t.get(PFP.atchFilePathNm);
-        return pathNm != null
-                ? pathNm + "/" + t.get(PFP.strgFileNm) + "." + t.get(PFP.atchFileExtnNm)
-                : null;
+        return com.knowra.cmm.storage.StorageUrls.of(pathNm, t.get(PFP.strgFileNm), t.get(PFP.atchFileExtnNm), t.get(PFP.fileKey));
     }
 
     /** 조회 행들 → DTO 목록 + 태그·내 좋아요·내 저장(배치 3회). 순서는 입력 그대로. */

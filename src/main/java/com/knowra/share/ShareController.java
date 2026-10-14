@@ -72,7 +72,7 @@ public class ShareController {
         String desc = "private".equals(c.getPrvcyStng()) ? "비공개 커뮤니티예요. 가입하면 볼 수 있어요."
                 : (c.getCommDesc() == null || c.getCommDesc().isBlank() ? "knowra 커뮤니티 · 멤버 " + c.getMemberCnt() + "명" : cut(plain(c.getCommDesc()), 140));
         String img = c.getLogoFile() == null ? null
-                : api(req) + c.getLogoFile().getAtchFilePathNm() + "/" + c.getLogoFile().getStrgFileNm() + "." + c.getLogoFile().getAtchFileExtnNm();
+                : absolute(c.getLogoFile().getUrl(), req);
         return page(target, name, desc, img, "website", req);
     }
 
@@ -91,7 +91,7 @@ public class ShareController {
         String desc = (inviter != null ? inviter + "님이 초대했어요" : "knowra 커뮤니티 초대")
                 + ("private".equals(c.getPrvcyStng()) ? " · 비공개 커뮤니티" : " · 멤버 " + c.getMemberCnt() + "명");
         String img = c.getLogoFile() == null ? null
-                : api(req) + c.getLogoFile().getAtchFilePathNm() + "/" + c.getLogoFile().getStrgFileNm() + "." + c.getLogoFile().getAtchFileExtnNm();
+                : absolute(c.getLogoFile().getUrl(), req);
         return page(target, name + "에 초대받았어요", desc, img, "website", req);
     }
 
@@ -123,6 +123,12 @@ public class ShareController {
                 .contentType(new MediaType("text", "html", java.nio.charset.StandardCharsets.UTF_8))
                 .cacheControl(CacheControl.maxAge(Duration.ofMinutes(10)).cachePublic())
                 .body(html);
+    }
+
+    /** 저장소 URL(운영은 S3 절대 주소)은 그대로, 예전 /upload 상대 경로는 API 주소를 붙인다 — 봇은 상대 경로를 못 따라간다 */
+    private static String absolute(String url, HttpServletRequest req) {
+        if (url == null) return null;
+        return url.startsWith("http://") || url.startsWith("https://") ? url : api(req) + url;
     }
 
     private String front() { return frontBase.replaceAll("/+$", ""); }

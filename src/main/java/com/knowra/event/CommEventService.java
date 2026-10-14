@@ -75,13 +75,13 @@ public class CommEventService {
         QTblUser u = QTblUser.tblUser;
         QTblComFile pfp = new QTblComFile("pfp");
         Map<Long, Map<String, Object>> byUser = new HashMap<>();
-        new JPAQueryFactory(em).select(u.userSn, u.nickName, u.name, pfp.atchFilePathNm, pfp.strgFileNm, pfp.atchFileExtnNm)
+        new JPAQueryFactory(em).select(u.userSn, u.nickName, u.name, pfp.atchFilePathNm, pfp.strgFileNm, pfp.atchFileExtnNm, pfp.fileKey)
                 .from(u).leftJoin(u.pfp, pfp).where(u.userSn.in(rs.stream().map(TblCommEventRsvp::getUserSn).toList())).fetch()
                 .forEach(t -> {
                     Map<String, Object> x = new LinkedHashMap<>();
                     x.put("nickName", t.get(u.nickName)); x.put("name", t.get(u.name));
                     String path = t.get(pfp.atchFilePathNm);
-                    x.put("pfpUrl", path == null ? null : path + "/" + t.get(pfp.strgFileNm) + "." + t.get(pfp.atchFileExtnNm));
+                    x.put("pfpUrl", com.knowra.cmm.storage.StorageUrls.of(path, t.get(pfp.strgFileNm), t.get(pfp.atchFileExtnNm), t.get(pfp.fileKey)));
                     byUser.put(t.get(u.userSn), x);
                 });
         return rs.stream().map(r -> byUser.get(r.getUserSn())).filter(Objects::nonNull).toList();

@@ -94,22 +94,14 @@ public class CommunityService {
             String psnTblSn = "community_" + tblComm.getCommSn();
 
             if (request.getFile("logoImage") != null) {
-                TblComFile logoFile = fileUtil.devFileInf(
-                        request.getFile("logoImage"),
-                        "/communities/" + tblComm.getCommSn() + "/logo",
-                        psnTblSn
-                );
+                TblComFile logoFile = fileUtil.storeImage(request.getFile("logoImage"), userSn, FileUtil.CAT_COMMUNITY_LOGO, psnTblSn);
                 logoFile.setCreatrSn(userSn);
                 TblComFile savedLogo = tblComFileRepository.save(logoFile);
                 tblComm.setLogoFileSn(savedLogo.getAtchFileSn());
             }
 
             if (request.getFile("bannerImage") != null) {
-                TblComFile bannerFile = fileUtil.devFileInf(
-                        request.getFile("bannerImage"),
-                        "/communities/" + tblComm.getCommSn() + "/banner",
-                        psnTblSn
-                );
+                TblComFile bannerFile = fileUtil.storeImage(request.getFile("bannerImage"), userSn, FileUtil.CAT_COMMUNITY_BANNER, psnTblSn);
                 bannerFile.setCreatrSn(userSn);
                 TblComFile savedBanner = tblComFileRepository.save(bannerFile);
                 tblComm.setBnrFileSn(savedBanner.getAtchFileSn());
@@ -580,7 +572,7 @@ public class CommunityService {
             com.knowra.user.entity.QTblUser u = com.knowra.user.entity.QTblUser.tblUser;
             QTblComFile pfp = new QTblComFile("pfp");
             List<com.querydsl.core.Tuple> rows = new JPAQueryFactory(em)
-                    .select(m, u.nickName, u.name, pfp.atchFilePathNm, pfp.strgFileNm, pfp.atchFileExtnNm)
+                    .select(m, u.nickName, u.name, pfp.atchFilePathNm, pfp.strgFileNm, pfp.atchFileExtnNm, pfp.fileKey)
                     .from(m).join(u).on(m.userSn.eq(u.userSn)).leftJoin(u.pfp, pfp)
                     .where(m.commSn.eq(commSn).and(m.stat.eq(stat)).and(m.actvtnYn.eq("Y")))
                     .orderBy(m.role.asc(), m.frstCrtDt.asc())
@@ -593,7 +585,7 @@ public class CommunityService {
                 row.put("userSn",   mb.getUserSn());
                 row.put("nickName", t.get(u.nickName));
                 row.put("name",     t.get(u.name));
-                row.put("pfpUrl",   path != null ? path + "/" + t.get(pfp.strgFileNm) + "." + t.get(pfp.atchFileExtnNm) : null);
+                row.put("pfpUrl",   com.knowra.cmm.storage.StorageUrls.of(path, t.get(pfp.strgFileNm), t.get(pfp.atchFileExtnNm), t.get(pfp.fileKey)));
                 row.put("role",     mb.getRole());
                 row.put("stat",     mb.getStat());
                 row.put("joinedAt", mb.getFrstCrtDt());
@@ -724,14 +716,14 @@ public class CommunityService {
 
             String psnTblSn = "community_" + commSn;
             if (request.getFile("logoImage") != null) {
-                TblComFile f = fileUtil.devFileInf(request.getFile("logoImage"), "/communities/" + commSn + "/logo", psnTblSn);
+                TblComFile f = fileUtil.storeImage(request.getFile("logoImage"), me, FileUtil.CAT_COMMUNITY_LOGO, psnTblSn);
                 f.setCreatrSn(me);
                 comm.setLogoFileSn(tblComFileRepository.save(f).getAtchFileSn());
             } else if ("true".equals(request.getParameter("removeLogo"))) {
                 comm.setLogoFileSn(null);
             }
             if (request.getFile("bannerImage") != null) {
-                TblComFile f = fileUtil.devFileInf(request.getFile("bannerImage"), "/communities/" + commSn + "/banner", psnTblSn);
+                TblComFile f = fileUtil.storeImage(request.getFile("bannerImage"), me, FileUtil.CAT_COMMUNITY_BANNER, psnTblSn);
                 f.setCreatrSn(me);
                 comm.setBnrFileSn(tblComFileRepository.save(f).getAtchFileSn());
             } else if ("true".equals(request.getParameter("removeBanner"))) {

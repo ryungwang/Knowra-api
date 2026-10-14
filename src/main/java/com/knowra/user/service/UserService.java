@@ -125,6 +125,8 @@ public class UserService {
                 profile.put("loginId", tblUser.getLoginId());
                 profile.put("snsYn", tblUser.getSnsYn());
                 profile.put("snsName", tblUser.getSnsName());
+                // 비밀번호가 있는 계정인가(소셜로만 가입하면 없다) — 탈퇴·이메일 변경 화면이 확인 방식을 고른다
+                profile.put("hasPassword", tblUser.getPassword() != null && tblUser.getPassword().startsWith("$2"));
             }
             resultVO.putResult("userProfile", profile);
             resultVO.putResult("userSetting", tblUserStngRepository.findByUserSn(userSn));
@@ -231,11 +233,7 @@ public class UserService {
 
     static void profileImageSave(MultipartFile profileImage, TblUser tblUser, FileUtil fileUtil, TblComFileRepository tblComFileRepository, TblUserRepository tblUserRepository) throws IOException {
         if (profileImage != null) {
-            TblComFile proFile = fileUtil.devFileInf(
-                    profileImage,
-                    "/user/" + tblUser.getUserSn() + "/profile",
-                    "user_" + tblUser.getUserSn()
-            );
+            TblComFile proFile = fileUtil.storeImage(profileImage, tblUser.getUserSn(), FileUtil.CAT_PROFILE, "user_" + tblUser.getUserSn());
             proFile.setCreatrSn(tblUser.getUserSn());
             TblComFile pfp = tblComFileRepository.save(proFile);
 
@@ -293,7 +291,7 @@ public class UserService {
             QTblComFile  pfpFile   = new QTblComFile("pfpFile");
 
             List<com.querydsl.core.Tuple> tuples = new JPAQueryFactory(em)
-                    .select(qFollower.userSn, qFollower.nickName, qFollower.name, pfpFile.atchFilePathNm, pfpFile.strgFileNm, pfpFile.atchFileExtnNm)
+                    .select(qFollower.userSn, qFollower.nickName, qFollower.name, pfpFile.atchFilePathNm, pfpFile.strgFileNm, pfpFile.atchFileExtnNm, pfpFile.fileKey)
                     .from(qFlwr)
                     .join(qFollower).on(qFlwr.flwrUserSn.eq(qFollower.userSn))
                     .leftJoin(qFollower.pfp, pfpFile)
@@ -311,7 +309,7 @@ public class UserService {
                 map.put("name",        t.get(qFollower.name));
                 map.put("isFollowing", myFollowings.contains(t.get(qFollower.userSn)));
                 String pathNm = t.get(pfpFile.atchFilePathNm);
-                map.put("pfpUrl", pathNm != null ? pathNm + "/" + t.get(pfpFile.strgFileNm) + "." + t.get(pfpFile.atchFileExtnNm) : null);
+                map.put("pfpUrl", com.knowra.cmm.storage.StorageUrls.of(pathNm, t.get(pfpFile.strgFileNm), t.get(pfpFile.atchFileExtnNm), t.get(pfpFile.fileKey)));
                 return map;
             }).toList();
 
@@ -338,7 +336,7 @@ public class UserService {
             QTblComFile  pfpFile   = new QTblComFile("pfpFile");
 
             List<com.querydsl.core.Tuple> tuples = new JPAQueryFactory(em)
-                    .select(qFollowee.userSn, qFollowee.nickName, qFollowee.name, pfpFile.atchFilePathNm, pfpFile.strgFileNm, pfpFile.atchFileExtnNm)
+                    .select(qFollowee.userSn, qFollowee.nickName, qFollowee.name, pfpFile.atchFilePathNm, pfpFile.strgFileNm, pfpFile.atchFileExtnNm, pfpFile.fileKey)
                     .from(qFlwr)
                     .join(qFollowee).on(qFlwr.flwngUserSn.eq(qFollowee.userSn))
                     .leftJoin(qFollowee.pfp, pfpFile)
@@ -355,7 +353,7 @@ public class UserService {
                 map.put("name",        t.get(qFollowee.name));
                 map.put("isFollowing", myFollowings.contains(t.get(qFollowee.userSn)));
                 String pathNm = t.get(pfpFile.atchFilePathNm);
-                map.put("pfpUrl", pathNm != null ? pathNm + "/" + t.get(pfpFile.strgFileNm) + "." + t.get(pfpFile.atchFileExtnNm) : null);
+                map.put("pfpUrl", com.knowra.cmm.storage.StorageUrls.of(pathNm, t.get(pfpFile.strgFileNm), t.get(pfpFile.atchFileExtnNm), t.get(pfpFile.fileKey)));
                 return map;
             }).toList();
 
@@ -485,36 +483,6 @@ public class UserService {
             // 비밀번호를 바꾸는 이유의 대부분은 "누가 들어온 것 같아서"다 — 지금 기기만 남기고 다른 세션을 끊는다.
             // 예전엔 끊지 않아서, 훔친 리프레시 쿠키가 비밀번호를 바꾼 뒤에도 계속 살았다.
             sessionService.revokeOthers(me, currentSid());
-
-            resultVO.setResultCode(ResponseCode.CHANGE_PW_SUCCESS.getCode());
-            resultVO.setResultMessage(ResponseCode.CHANGE_PW_SUCCESS.getMessage());
-        }catch (Exception e) {
-            ErrorLog.report(e);
-            resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
-            resultVO.setResultMessage(ResponseCode.SAVE_ERROR.getMessage());
-        }
-
-        return resultVO;
-    }
-
-    public ResultVO deleteAccount(Map<String, Object> params, Long me) {
-        ResultVO resultVO = new ResultVO();
-
-        try {
-            long userSn = me;
-            TblUser tblUser = tblUserRepository.findById(userSn).orElseThrow();
-
-            String password = params.get("password").toString();
-
-            PasswordEncoder encoder = new BCryptPasswordEncoder();
-            if(!encoder.matches(password, tblUser.getPassword())){
-                resultVO.setResultCode(ResponseCode.CURRENT_PW_NOT_EQ.getCode());
-                resultVO.setResultMessage(ResponseCode.CURRENT_PW_NOT_EQ.getMessage());
-                return resultVO;
-            }
-            tblUser.setActvtnYn("N");
-            tblUserRepository.save(tblUser);
-            sessionService.revokeOthers(me, null);   // 탈퇴하면 모든 기기에서 끊는다 — 예전엔 리프레시로 계속 살아 있었다
 
             resultVO.setResultCode(ResponseCode.CHANGE_PW_SUCCESS.getCode());
             resultVO.setResultMessage(ResponseCode.CHANGE_PW_SUCCESS.getMessage());

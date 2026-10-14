@@ -250,7 +250,7 @@ public class SearchService {
         QTblComFile qPfp  = new QTblComFile("pfpFile");
         List<Tuple> rows = new JPAQueryFactory(em)
                 .select(qUser.userSn, qUser.nickName, qUser.name, qUser.bio,
-                        qPfp.atchFilePathNm, qPfp.strgFileNm, qPfp.atchFileExtnNm)
+                        qPfp.atchFilePathNm, qPfp.strgFileNm, qPfp.atchFileExtnNm, qPfp.fileKey)
                 .from(qUser)
                 .leftJoin(qUser.pfp, qPfp)
                 .where(qUser.actvtnYn.eq("Y"), qUser.status.eq("Y"), notBlocked(qUser, me), allTokens(tokens, t ->
@@ -268,7 +268,7 @@ public class SearchService {
             m.put("name",     t.get(qUser.name));
             m.put("bio",      t.get(qUser.bio));
             String pathNm = t.get(qPfp.atchFilePathNm);
-            m.put("pfpUrl", pathNm != null ? pathNm + "/" + t.get(qPfp.strgFileNm) + "." + t.get(qPfp.atchFileExtnNm) : null);
+            m.put("pfpUrl", com.knowra.cmm.storage.StorageUrls.of(pathNm, t.get(qPfp.strgFileNm), t.get(qPfp.atchFileExtnNm), t.get(qPfp.fileKey)));
             list.add(m);
         }
         return list;

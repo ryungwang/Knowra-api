@@ -31,7 +31,7 @@ public class CommonController {
     }
 
     @PostMapping("/uploadImage")
-    public ResultVO uploadImage(@RequestParam(required = false) MultipartFile image) {
-        return commonService.uploadImage(image);
+    public ResultVO uploadImage(@RequestParam(required = false) MultipartFile image, @com.knowra.cmm.security.CurrentUser Long me) {
+        return commonService.uploadImage(image, me);
     }
 }

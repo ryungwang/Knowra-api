@@ -48,7 +48,7 @@ public class NotificationEventListener {
             QTblComFile pfpFile = new QTblComFile("pfpFile");
             Tuple t = new JPAQueryFactory(em)
                     .select(qUser.nickName,
-                            pfpFile.atchFilePathNm, pfpFile.strgFileNm, pfpFile.atchFileExtnNm)
+                            pfpFile.atchFilePathNm, pfpFile.strgFileNm, pfpFile.atchFileExtnNm, pfpFile.fileKey)
                     .from(qUser)
                     .leftJoin(qUser.pfp, pfpFile)
                     .where(qUser.userSn.eq(event.senderSn()))
@@ -56,9 +56,7 @@ public class NotificationEventListener {
             if (t != null) {
                 nickName      = t.get(qUser.nickName);
                 String pathNm = t.get(pfpFile.atchFilePathNm);
-                pfpUrl        = pathNm != null
-                        ? pathNm + "/" + t.get(pfpFile.strgFileNm) + "." + t.get(pfpFile.atchFileExtnNm)
-                        : null;
+                pfpUrl        = com.knowra.cmm.storage.StorageUrls.of(pathNm, t.get(pfpFile.strgFileNm), t.get(pfpFile.atchFileExtnNm), t.get(pfpFile.fileKey));
             }
         }
 

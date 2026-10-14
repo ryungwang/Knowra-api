@@ -19,9 +19,28 @@
         <java.version>21</java.version>
         <querydsl.version>5.0.0</querydsl.version>
         <jjwt.version>0.12.6</jjwt.version>
+        <!-- synub 생태계와 같은 버전(전역 규칙: AWS SDK 는 BOM 으로 관리, 레퍼런스 synub-office) -->
+        <awssdk.version>2.28.29</awssdk.version>
     </properties>
 
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>software.amazon.awssdk</groupId>
+                <artifactId>bom</artifactId>
+                <version>${awssdk.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
     <dependencies>
+        <!-- 파일 저장(prod) — S3. 로컬·개발은 디스크(StorageService 프로필 분기) -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>s3</artifactId>
+        </dependency>
         <!-- HTML 정리(XSS) — 글 본문·위키는 HTML 이라 허용 목록 밖은 저장 전에 걷어낸다 -->
         <dependency>
             <groupId>org.jsoup</groupId>

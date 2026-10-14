@@ -109,7 +109,7 @@ public class SecurityConfig {
                                 "/api/user/getUserFollowerList", "/api/user/getUserFollowingList").permitAll()
 
                         // 정적·기타
-                        .requestMatchers(HttpMethod.GET, "/api/common/getCategoryList", "/upload/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/common/getCategoryList", "/upload/**", "/api/files/**").permitAll()   // /api/files = 로컬·dev 저장소(공개 파일만)
                         .requestMatchers("/ws/**").permitAll()
 
                         // 관리자 — 역할까지 본다(토큰 role 클레임 → ROLE_ADMIN)

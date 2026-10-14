@@ -105,7 +105,7 @@ public class MentionService {
         QTblComFile pfp = new QTblComFile("pfpFile");
         QTblUserBlock b = QTblUserBlock.tblUserBlock;
         List<Tuple> rows = new JPAQueryFactory(em)
-                .select(u.userSn, u.nickName, u.name, pfp.atchFilePathNm, pfp.strgFileNm, pfp.atchFileExtnNm)
+                .select(u.userSn, u.nickName, u.name, pfp.atchFilePathNm, pfp.strgFileNm, pfp.atchFileExtnNm, pfp.fileKey)
                 .from(u).leftJoin(u.pfp, pfp)
                 .where(u.actvtnYn.eq("Y"), u.status.eq("Y"), u.userSn.ne(me),
                         u.nickName.startsWithIgnoreCase(s).or(u.name.startsWithIgnoreCase(s)).or(u.nickName.containsIgnoreCase(s)),
@@ -119,7 +119,7 @@ public class MentionService {
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("nickName", t.get(u.nickName)); m.put("name", t.get(u.name));
             String path = t.get(pfp.atchFilePathNm);
-            m.put("pfpUrl", path == null ? null : path + "/" + t.get(pfp.strgFileNm) + "." + t.get(pfp.atchFileExtnNm));
+            m.put("pfpUrl", com.knowra.cmm.storage.StorageUrls.of(path, t.get(pfp.strgFileNm), t.get(pfp.atchFileExtnNm), t.get(pfp.fileKey)));
             list.add(m);
         }
         // 앞부분이 맞는 사람이 위로

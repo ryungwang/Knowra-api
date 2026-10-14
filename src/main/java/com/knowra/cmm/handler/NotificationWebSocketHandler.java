@@ -242,16 +242,14 @@ public class NotificationWebSocketHandler extends TextWebSocketHandler {
         Map<Long, String[]> result = new HashMap<>();
         new JPAQueryFactory(em)
                 .select(qUser.userSn, qUser.nickName,
-                        pfpFile.atchFilePathNm, pfpFile.strgFileNm, pfpFile.atchFileExtnNm)
+                        pfpFile.atchFilePathNm, pfpFile.strgFileNm, pfpFile.atchFileExtnNm, pfpFile.fileKey)
                 .from(qUser)
                 .leftJoin(qUser.pfp, pfpFile)
                 .where(qUser.userSn.in(senderSns))
                 .fetch()
                 .forEach(t -> {
                     String pathNm = t.get(pfpFile.atchFilePathNm);
-                    String pfpUrl = pathNm != null
-                            ? pathNm + "/" + t.get(pfpFile.strgFileNm) + "." + t.get(pfpFile.atchFileExtnNm)
-                            : null;
+                    String pfpUrl = com.knowra.cmm.storage.StorageUrls.of(pathNm, t.get(pfpFile.strgFileNm), t.get(pfpFile.atchFileExtnNm), t.get(pfpFile.fileKey));
                     result.put(t.get(qUser.userSn), new String[]{t.get(qUser.nickName), pfpUrl});
                 });
         return result;

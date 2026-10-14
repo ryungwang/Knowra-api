@@ -5,6 +5,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication
+@org.springframework.boot.context.properties.ConfigurationPropertiesScan
 @EnableScheduling
 public class KnowraApiApplication {
 

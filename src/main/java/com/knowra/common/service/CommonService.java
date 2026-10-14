@@ -265,7 +265,7 @@ public class CommonService {
         ResultVO resultVO = new ResultVO();
 
         try {
-            boolean isDelete = fileUtil.deleteFile(new String[]{tblComFile.getStrgFileNm() + "." + tblComFile.getAtchFileExtnNm()}, tblComFile.getAtchFilePathNm());
+            boolean isDelete = fileUtil.deleteStored(tblComFile);
             if(isDelete){
                 tblComFileRepository.delete(tblComFile);
             }else{
@@ -279,27 +279,6 @@ public class CommonService {
             resultVO.setResultMessage(ResponseCode.SELECT_ERROR.getMessage());
         }
 
-        return resultVO;
-    }
-
-    public ResultVO setCkEditorFiles(List<MultipartFile> files) {
-        ResultVO resultVO = new ResultVO();
-        List<TblComFile> fileList = new ArrayList<>();
-        try{
-            if(files != null){
-                fileList = fileUtil.devFilesInf(
-                    files,
-                    "/ckeditor/",
-                    "ckeditor",
-                    0
-                );
-            }
-
-            resultVO.putResult("files", fileList);
-            resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
-        }catch (IOException e) {
-            resultVO.setResultCode(ResponseCode.DELETE_ERROR.getCode());
-        }
         return resultVO;
     }
 
@@ -319,10 +298,10 @@ public class CommonService {
         return resultVO;
     }
 
-    public ResultVO uploadImage(MultipartFile image) {
+    public ResultVO uploadImage(MultipartFile image, long me) {
         ResultVO resultVO = new ResultVO();
         try{
-            resultVO.putResult("url", fileUtil.devImageUpload(image, "/editor/"));
+            resultVO.putResult("url", fileUtil.uploadImage(image, me, FileUtil.CAT_EDITOR));
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
         }catch (IOException e) {
             resultVO.setResultCode(ResponseCode.DELETE_ERROR.getCode());

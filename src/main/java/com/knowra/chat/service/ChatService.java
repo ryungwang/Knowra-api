@@ -81,7 +81,7 @@ public class ChatService {
             QTblComFile pfp = new QTblComFile("pfp");
             com.knowra.chat.entity.QTblChatRoomMbr m = com.knowra.chat.entity.QTblChatRoomMbr.tblChatRoomMbr;
             List<Tuple> peers = new JPAQueryFactory(em)
-                    .select(m.roomSn, u.userSn, u.nickName, u.name, pfp.atchFilePathNm, pfp.strgFileNm, pfp.atchFileExtnNm)
+                    .select(m.roomSn, u.userSn, u.nickName, u.name, pfp.atchFilePathNm, pfp.strgFileNm, pfp.atchFileExtnNm, pfp.fileKey)
                     .from(m).join(u).on(m.userSn.eq(u.userSn)).leftJoin(u.pfp, pfp)
                     .where(m.roomSn.in(roomSns).and(m.userSn.ne(userSn)))
                     .fetch();
@@ -92,7 +92,7 @@ public class ChatService {
                 p.put("userSn",   t.get(u.userSn));
                 p.put("nickName", t.get(u.nickName));
                 p.put("name",     t.get(u.name));
-                p.put("pfpUrl",   path != null ? path + "/" + t.get(pfp.strgFileNm) + "." + t.get(pfp.atchFileExtnNm) : null);
+                p.put("pfpUrl",   com.knowra.cmm.storage.StorageUrls.of(path, t.get(pfp.strgFileNm), t.get(pfp.atchFileExtnNm), t.get(pfp.fileKey)));
                 peerByRoom.put(t.get(m.roomSn), p);
             }
 

@@ -63,102 +63,42 @@ public class FileUtil {
 		return ext;
 	}
 
+	private final com.knowra.cmm.storage.StorageService storage;
+
+	public FileUtil(com.knowra.cmm.storage.StorageService storage) { this.storage = storage; }
+
+	/** 업로드 분류(전역 규칙 키의 {category}). 새 분류는 여기에만 추가한다. */
+	public static final String CAT_PROFILE = "profile", CAT_COMMUNITY_LOGO = "community-logo",
+			CAT_COMMUNITY_BANNER = "community-banner", CAT_EDITOR = "editor";
+
 	/**
-	 * 첨부파일 저장
-	 * @param files
-	 * @return
-	 * @throws Exception
+	 * 업로드는 전부 StorageService 로 간다(prod=S3, 그 밖=로컬 디스크 — 전역 규칙 「파일 스토리지 추상화」).
+	 * 키는 전역 규칙 {@code {AWS_S3_PREFIX}/{tenant}/{category}/{uuid}.{ext}} 를 공개 prefix 아래에 둔 모양:
+	 * {@code public/{prefix}/{소유자 userSn}/{category}/{uuid}.{ext}}. Knowra 엔 회사 같은 테넌트가 없어 올린 사람을 쓴다.
+	 * 확장자 허용 목록(이미지) 검사를 먼저 한다.
 	 */
-	public List<TblComFile> devFilesInf(List<MultipartFile> files, String subPath, String psnTblSn, long fileCnt) throws IOException {
-		long fileKey = fileCnt;
-		String storePathString = fileStorePath + subPath;
-		String relativePathString = "/upload" + subPath;
-
-		File saveFolder = new File(filePathBlackList(storePathString));
-		if (!saveFolder.exists() || saveFolder.isFile()) {
-			saveFolder.mkdirs();
-		}
-
-		String filePath = "";
-		List<TblComFile> result  = new ArrayList<>();
-
-		for(MultipartFile f : files){
-			TblComFile comFile = new TblComFile();
-			String orginFileName = f.getOriginalFilename();
-			String fileExt = requireAllowedExtension(orginFileName);
-			String newName = getTimeStamp() + "_" + fileKey;
-			long _size = f.getSize();
-			if (!"".equals(orginFileName)) {
-				filePath = storePathString + File.separator + newName + "." + fileExt;
-				f.transferTo(new File(filePathBlackList(filePath)).getAbsoluteFile());
-			}
-			comFile.setStrgFileNm(newName);
-			comFile.setAtchFileNm(orginFileName);
-			comFile.setAtchFilePathNm(relativePathString);
-			comFile.setAtchFileSz(_size);
-			comFile.setAtchFileExtnNm(fileExt);
-			comFile.setPsnTblSn(psnTblSn);
-
-			fileKey++;
-
-			result.add(comFile);
-		}
-
-		return result;
+	public TblComFile storeImage(MultipartFile f, long ownerSn, String category, String psnTblSn) throws IOException {
+		String origin = f.getOriginalFilename();
+		String ext = requireAllowedExtension(origin);
+		com.knowra.cmm.storage.StorageService.PublicFile saved = storage.storePublic(f.getBytes(), ownerSn + "/" + category, "x." + ext);
+		String key = saved.key();
+		int slash = key.lastIndexOf('/');
+		String file = key.substring(slash + 1);
+		TblComFile c = new TblComFile();
+		c.setFileKey(key);
+		c.setAtchFilePathNm(key.substring(0, slash));
+		c.setStrgFileNm(file.contains(".") ? file.substring(0, file.lastIndexOf('.')) : file);
+		c.setAtchFileExtnNm(ext);
+		c.setAtchFileNm(origin == null ? "" : (origin.length() > 100 ? origin.substring(origin.length() - 100) : origin));
+		c.setAtchFileSz(f.getSize());
+		c.setPsnTblSn(psnTblSn);
+		return c;
 	}
 
-	public TblComFile devFileInf(MultipartFile file, String subPath, String psnTblSn) throws IOException {
-		String storePathString = fileStorePath + subPath;
-		String relativePathString = "/upload" + subPath;
-
-		File saveFolder = new File(filePathBlackList(storePathString));
-		if (!saveFolder.exists() || saveFolder.isFile()) {
-			saveFolder.mkdirs();
-		}
-
-		String filePath = "";
-		TblComFile result  = new TblComFile();
-
-		String orginFileName = file.getOriginalFilename();
-		String fileExt = requireAllowedExtension(orginFileName);
-		String newName = getTimeStamp() + "_" + 0;
-		long _size = file.getSize();
-		if (!"".equals(orginFileName)) {
-			filePath = storePathString + File.separator + newName + "." + fileExt;
-			file.transferTo(new File(filePathBlackList(filePath)).getAbsoluteFile());
-		}
-		result.setStrgFileNm(newName);
-		result.setAtchFileNm(orginFileName);
-		result.setAtchFilePathNm(relativePathString);
-		result.setAtchFileSz(_size);
-		result.setAtchFileExtnNm(fileExt);
-		result.setPsnTblSn(psnTblSn);
-
-		return result;
-	}
-
-	public String devImageUpload(MultipartFile file, String subPath) throws IOException {
-		SimpleDateFormat sdf = new SimpleDateFormat("yyyy/MM/dd", Locale.KOREA);
-		Date date = new Date();
-
-		String storePathString = fileStorePath + subPath + sdf.format(date);
-		String relativePathString = "/upload" + subPath + sdf.format(date);
-
-		File saveFolder = new File(filePathBlackList(storePathString));
-		if (!saveFolder.exists() || saveFolder.isFile()) {
-			saveFolder.mkdirs();
-		}
-
-		String filePath = "";
-
-		String orginFileName = file.getOriginalFilename();
-		String fileExt = requireAllowedExtension(orginFileName);
-		String newName = getTimeStamp() + "_" + 0;
-		if (!"".equals(orginFileName)) {
-			filePath = storePathString + File.separator + newName + "." + fileExt;
-			file.transferTo(new File(filePathBlackList(filePath)).getAbsoluteFile());
-		}
-		return relativePathString + "/" + newName + "." + fileExt;
+	/** 에디터·댓글·DM 사진 — 공개 URL(운영은 S3 절대 주소)을 돌려준다. 그대로 본문 HTML 에 박힌다. */
+	public String uploadImage(MultipartFile file, long ownerSn, String category) throws IOException {
+		String ext = requireAllowedExtension(file.getOriginalFilename());
+		return storage.storePublic(file.getBytes(), ownerSn + "/" + category, "x." + ext).url();
 	}
 
 	/**
@@ -167,29 +107,14 @@ public class FileUtil {
 	 * 파일이 이미 없으면 지운 것으로 본다.
 	 */
 	public boolean deleteStored(TblComFile f) {
-		if (f == null || f.getAtchFilePathNm() == null) return true;
+		if (f == null) return true;
+		if (f.getFileKey() != null) { storage.delete(f.getFileKey()); return true; }   // 저장소 파일
+		if (f.getAtchFilePathNm() == null) return true;                                  // 아래는 예전 /upload 파일
 		String rel = f.getAtchFilePathNm().startsWith("/upload") ? f.getAtchFilePathNm().substring("/upload".length()) : f.getAtchFilePathNm();
 		File target = new File(filePathBlackList(fileStorePath + rel), f.getStrgFileNm() + "." + f.getAtchFileExtnNm()).getAbsoluteFile();
 		return !target.exists() || target.delete();
 	}
 
-	public boolean deleteFile(String[] fileNames, String filePath) {
-		boolean returnFlag = true;
-		if(fileNames != null && fileNames.length > 0){
-			for(int i = 0 ; i < fileNames.length; i++){
-				File orifile = new File(filePath + "/" + fileNames[i]);
-				if(orifile.exists()){
-					boolean deleteFlag = orifile.delete();
-					if(!deleteFlag){
-						returnFlag = false;
-						break;
-					}
-				}
-			}
-		}
-
-		return returnFlag;
-	}
 
 	public static String filePathBlackList(String value) {
 		String returnValue = value;

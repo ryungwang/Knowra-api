@@ -216,6 +216,7 @@ public class InviteService {
     private static Map<String, Object> fileOf(TblComFile f) {
         if (f == null) return null;
         Map<String, Object> m = new HashMap<>();
+        m.put("url", f.getUrl());   // 화면은 url 을 쓴다(저장소 주소)
         m.put("atchFilePathNm", f.getAtchFilePathNm());
         m.put("strgFileNm", f.getStrgFileNm());
         m.put("atchFileExtnNm", f.getAtchFileExtnNm());

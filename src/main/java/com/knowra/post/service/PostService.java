@@ -804,14 +804,19 @@ public class PostService {
     }
 
     /**
-     * 댓글 사진 경로 — 이 서버 업로드 모양(/upload/editor/yyyy/MM/dd/숫자_0.확장자)만 받는다.
+     * 댓글 사진 경로 — 이 서버가 올린 사진만 받는다(저장소 공개 URL, 또는 예전 /upload/editor/...).
      * 아무 URL 이나 받으면 남의 서버 이미지를 끌어와 열람자 IP 를 모으는 데 쓸 수 있다.
      */
     public static String cleanImgUrl(Object raw) {
         if (raw == null) return null;
         String s = raw.toString().trim();
         if (s.isEmpty()) return null;
-        if (!s.matches("^/upload/editor/\\d{4}/\\d{2}/\\d{2}/\\d+_\\d+\\.(png|jpe?g|gif|webp)$")) throw new IllegalArgumentException("사진 경로가 올바르지 않아요.");
+        // 예전 모양(/upload/editor/...) 또는 우리 저장소가 만든 공개 이미지(public/{prefix}/editor/...)만
+        boolean legacy = s.matches("^/upload/editor/\\d{4}/\\d{2}/\\d{2}/\\d+_\\d+\\.(png|jpe?g|gif|webp)$");
+        String key = legacy ? null : com.knowra.cmm.storage.StorageUrls.keyFromUrl(s);
+        // 키 모양: public/{prefix}/{소유자}/editor/{uuid}.{ext} (FileUtil — 전역 규칙 키 구조)
+        boolean ours = key != null && key.matches("^public/[A-Za-z0-9_-]+/\\d+/editor/[0-9a-f]{32}\\.(png|jpe?g|gif|webp)$");
+        if (!legacy && !ours) throw new IllegalArgumentException("사진 경로가 올바르지 않아요.");
         return s;
     }
 
@@ -934,7 +939,7 @@ public class PostService {
             Long nextCursorOverride = null;
             List<Tuple> rootTuples;
             com.querydsl.core.types.Expression<?>[] cols = { cmt, cmtUser.nickName, cmtUser.name,
-                    cmtPfpFile.atchFilePathNm, cmtPfpFile.strgFileNm, cmtPfpFile.atchFileExtnNm };
+                    cmtPfpFile.atchFilePathNm, cmtPfpFile.strgFileNm, cmtPfpFile.atchFileExtnNm, cmtPfpFile.fileKey };
             if ("top".equals(sort)) {
                 List<Long> allRoots = q.select(cmt.postCmtSn).from(cmt).where(rootCondition).orderBy(cmt.postCmtSn.asc()).fetch();
                 Map<Long, Long> score = new HashMap<>();
@@ -978,7 +983,7 @@ public class PostService {
 
             // ── 2. 대댓글 배치 로드 ────────────────────────────────────────────
             List<Tuple> replyTuples = q.select(cmt, cmtUser.nickName, cmtUser.name,
-                            cmtPfpFile.atchFilePathNm, cmtPfpFile.strgFileNm, cmtPfpFile.atchFileExtnNm)
+                            cmtPfpFile.atchFilePathNm, cmtPfpFile.strgFileNm, cmtPfpFile.atchFileExtnNm, cmtPfpFile.fileKey)
                     .from(cmt)
                     .join(cmtUser).on(cmt.userSn.eq(cmtUser.userSn))
                     .leftJoin(cmtUser.pfp, cmtPfpFile)
@@ -1010,8 +1015,7 @@ public class PostService {
                 TblPostCmt c      = t.get(cmt);
                 long       sn     = c.getPostCmtSn();
                 String     pathNm = t.get(cmtPfpFile.atchFilePathNm);
-                String     pfpUrl = pathNm != null
-                        ? pathNm + "/" + t.get(cmtPfpFile.strgFileNm) + "." + t.get(cmtPfpFile.atchFileExtnNm) : null;
+                String     pfpUrl = com.knowra.cmm.storage.StorageUrls.of(pathNm, t.get(cmtPfpFile.strgFileNm), t.get(cmtPfpFile.atchFileExtnNm), t.get(cmtPfpFile.fileKey));
                 boolean deleted = !"ACTIVE".equals(c.getStat());
                 return new CmtDTO(
                         sn, c.getUserSn(), t.get(cmtUser.nickName), t.get(cmtUser.name),

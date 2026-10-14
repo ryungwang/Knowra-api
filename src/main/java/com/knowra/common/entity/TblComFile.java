@@ -30,7 +30,7 @@ public class TblComFile {
     @Comment("첨부파일명")
     private String atchFileNm;
 
-    @Column(name = "ATCH_FILE_PATH_NM", length = 100, nullable = false)
+    @Column(name = "ATCH_FILE_PATH_NM", length = 300, nullable = false)
     @Comment("첨부파일경로")
     private String atchFilePathNm;
 
@@ -66,4 +66,18 @@ public class TblComFile {
     @Column(name = "MDFCN_DT")
     @Comment("수정일")
     private LocalDateTime mdfcnDt;
+
+    /** 저장소 객체 키(V22). 있으면 공개 URL 은 저장소가 만든다. 없으면 예전 /upload 파일. */
+    @Column(name = "FILE_KEY", length = 300)
+    private String fileKey;
+
+    /**
+     * 화면이 쓰는 주소. 새 파일은 저장소의 공개 URL(운영은 S3, 절대 주소), 예전 파일은 {@code /upload/...}
+     * 상대 경로 — 화면은 절대 주소면 그대로, 상대면 API 주소를 붙인다(fileSrc).
+     */
+    @jakarta.persistence.Transient
+    public String getUrl() {
+        if (fileKey != null) return com.knowra.cmm.storage.StorageUrls.publicUrl(fileKey);
+        return atchFilePathNm == null ? null : atchFilePathNm + "/" + strgFileNm + "." + atchFileExtnNm;
+    }
 }
