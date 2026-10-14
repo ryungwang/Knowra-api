@@ -1292,4 +1292,54 @@ public class PostService {
         }
         return resultVO;
     }
+
+    /**
+     * 최근 본 글 — 지난 30일 동안 연 글을 마지막으로 본 순서대로, 최대 50개.
+     *
+     * <p>근거는 행동 로그의 POST VIEW 다(따로 테이블을 두지 않는다). 지워졌거나 이제 볼 수 없는 글은 건너뛴다 —
+     * 비공개 커뮤니티에서 나왔으면 제목도 보여 주면 안 된다.
+     */
+    public ResultVO getRecentViewList(Long me) {
+        ResultVO resultVO = new ResultVO();
+        try {
+            List<Long> postSns = jdbc.queryForList("""
+                    SELECT target_sn FROM knowra_user.tbl_user_action_log
+                    WHERE user_sn = ? AND target_type = ? AND action_type = ? AND reg_dt >= ?
+                    GROUP BY target_sn ORDER BY MAX(reg_dt) DESC LIMIT 50""", Long.class,
+                    me, TblUserActionLog.TARGET_POST, TblUserActionLog.ACTION_VIEW, LocalDateTime.now().minusDays(30));
+            Map<Long, Tuple> byPostSn = new HashMap<>();
+            if (!postSns.isEmpty()) {
+                postQuery.base()
+                        .where(POST.postSn.in(postSns), PostQuery.alive(), PostQuery.visibleTo(me))
+                        .fetch()
+                        .forEach(t -> byPostSn.put(t.get(POST).getPostSn(), t));
+            }
+            List<Tuple> ordered = postSns.stream().map(byPostSn::get).filter(java.util.Objects::nonNull).toList();
+            resultVO.putResult("list", postQuery.decorate(ordered, me));
+            resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
+            resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
+        } catch (Exception e) {
+            ErrorLog.report(e);
+            resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
+            resultVO.setResultMessage(ResponseCode.SELECT_ERROR.getMessage());
+        }
+        return resultVO;
+    }
+
+    /** 최근 본 글 지우기 — 글 조회 기록만 지운다(커뮤니티 방문 기록은 추천에 쓰여 남긴다) */
+    public ResultVO clearRecentView(Long me) {
+        ResultVO resultVO = new ResultVO();
+        try {
+            int n = jdbc.update("DELETE FROM knowra_user.tbl_user_action_log WHERE user_sn = ? AND target_type = ? AND action_type = ?",
+                    me, TblUserActionLog.TARGET_POST, TblUserActionLog.ACTION_VIEW);
+            resultVO.putResult("cleared", n);
+            resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
+            resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
+        } catch (Exception e) {
+            ErrorLog.report(e);
+            resultVO.setResultCode(ResponseCode.DELETE_ERROR.getCode());
+            resultVO.setResultMessage(ResponseCode.DELETE_ERROR.getMessage());
+        }
+        return resultVO;
+    }
 }

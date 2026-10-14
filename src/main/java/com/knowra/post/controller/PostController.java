@@ -115,4 +115,14 @@ public class PostController {
     public ResultVO getPostSaveList(@RequestBody Map<String, Object> params, @CurrentUser Long me) {
         return postService.getPostSaveList(params, me);
     }
+
+    @PostMapping("/getRecentViewList")
+    public ResultVO getRecentViewList(@CurrentUser Long me) {
+        return postService.getRecentViewList(me);
+    }
+
+    @PostMapping("/clearRecentView")
+    public ResultVO clearRecentView(@CurrentUser Long me) {
+        return postService.clearRecentView(me);
+    }
 }
