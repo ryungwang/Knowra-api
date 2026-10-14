@@ -1,9 +1,12 @@
 package com.knowra.series;
 
+import com.knowra.cmm.event.NotifTriggerEvent;
 import com.knowra.post.entity.PostDTO;
+import com.knowra.post.entity.TblPost;
 import com.knowra.post.service.PostQuery;
 import com.querydsl.core.Tuple;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,9 +28,10 @@ import static com.knowra.post.service.PostQuery.POST;
 @RequiredArgsConstructor
 public class SeriesService {
 
-    public static final int MAX_PER_USER = 30;
+    public static final int MAX_PER_USER = 30, MAX_NOTIFY = 1000;
     private final JdbcTemplate jdbc;
     private final PostQuery postQuery;
+    private final ApplicationEventPublisher events;
 
     public List<Map<String, Object>> mine(long me) {
         return jdbc.queryForList("""
@@ -53,6 +57,7 @@ public class SeriesService {
     public void remove(long me, long seriesSn) {
         own(me, seriesSn);
         jdbc.update("UPDATE knowra_post.tbl_post SET series_sn = NULL WHERE series_sn = ?", seriesSn);
+        jdbc.update("DELETE FROM knowra_post.tbl_series_sub WHERE series_sn = ?", seriesSn);
         jdbc.update("DELETE FROM knowra_post.tbl_series WHERE series_sn = ?", seriesSn);
     }
 
@@ -80,6 +85,8 @@ public class SeriesService {
         if (rows.isEmpty()) throw new IllegalArgumentException("없는 연재예요.");
         Map<String, Object> out = new LinkedHashMap<>(rows.get(0));
         out.put("mine", viewer != null && viewer == ((Number) out.get("userSn")).longValue());
+        out.put("subscribers", jdbc.queryForObject("SELECT COUNT(*) FROM knowra_post.tbl_series_sub WHERE series_sn = ?", Long.class, seriesSn));
+        out.put("subscribed", viewer != null && jdbc.queryForObject("SELECT COUNT(*) FROM knowra_post.tbl_series_sub WHERE series_sn = ? AND user_sn = ?", Long.class, seriesSn, viewer) > 0);
 
         List<Tuple> tuples = postQuery.base()
                 .where(POST.seriesSn.eq(seriesSn), PostQuery.alive(), PostQuery.visibleTo(viewer))
@@ -88,6 +95,36 @@ public class SeriesService {
         List<PostDTO> posts = postQuery.decorate(tuples, viewer).stream().filter(p -> !p.isAnonymous()).toList();
         out.put("posts", posts);
         return out;
+    }
+
+    /** 구독 켜기·끄기 — 자기 연재는 구독하지 않는다(새 편은 자기가 올린다) */
+    public void subscribe(long me, long seriesSn, boolean on) {
+        Long owner = jdbc.query("SELECT user_sn FROM knowra_post.tbl_series WHERE series_sn = ?", rs -> rs.next() ? rs.getLong(1) : null, seriesSn);
+        if (owner == null) throw new IllegalArgumentException("없는 연재예요.");
+        if (owner == me) throw new IllegalArgumentException("내 연재는 구독하지 않아도 돼요.");
+        if (on) jdbc.update("INSERT INTO knowra_post.tbl_series_sub (series_sn, user_sn, created_at) VALUES (?, ?, ?) ON CONFLICT DO NOTHING", seriesSn, me, java.time.LocalDateTime.now());
+        else jdbc.update("DELETE FROM knowra_post.tbl_series_sub WHERE series_sn = ? AND user_sn = ?", seriesSn, me);
+    }
+
+    /**
+     * 연재 글이 올라갔다(바로 게시·예약 게시 모두) — 구독자에게 새 편 알림.
+     * 그 커뮤니티 새 글 알림을 켠 멤버는 뺀다(같은 글로 알림 두 개). 볼 수 없는 사람·작성자를 숨긴 사람도 뺀다.
+     */
+    public void onPublished(TblPost post) {
+        if (post.getSeriesSn() == null) return;
+        String title = jdbc.query("SELECT title FROM knowra_post.tbl_series WHERE series_sn = ?", rs -> rs.next() ? rs.getString(1) : null, post.getSeriesSn());
+        if (title == null) return;
+        List<Long> subs = jdbc.queryForList("""
+                SELECT s.user_sn FROM knowra_post.tbl_series_sub s
+                JOIN knowra_user.tbl_user u ON u.user_sn = s.user_sn AND u.status = 'Y' AND u.actvtn_yn = 'Y'
+                WHERE s.series_sn = ? AND s.user_sn <> ?
+                  AND NOT EXISTS (SELECT 1 FROM knowra_community.tbl_comm_mbr m
+                                  WHERE m.comm_sn = ? AND m.user_sn = s.user_sn AND m.stat = 'ACTIVE' AND m.notif_yn = 'Y')
+                LIMIT ?""", Long.class, post.getSeriesSn(), post.getUserSn(), post.getCommSn(), MAX_NOTIFY);
+        for (Long u : subs) {
+            boolean canSee = postQuery.base().where(POST.postSn.eq(post.getPostSn()), PostQuery.alive(), PostQuery.visibleTo(u), PostQuery.notMuted(u)).fetchFirst() != null;
+            if (canSee) events.publishEvent(new NotifTriggerEvent(u, post.getUserSn(), "SERIES_NEW", post.getPostSn(), "POST", title.replace("|", "｜") + "|" + post.getPostTtl()));   // 「|」 는 메시지 조립의 구분자
+        }
     }
 
     private void own(long me, long seriesSn) {

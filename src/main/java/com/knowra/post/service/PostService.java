@@ -268,6 +268,7 @@ public class PostService {
         eventPublisher.publishEvent(new PostCreatedEvent(post.getPostSn(), userSn, post.getCommSn(), post.getFrstCrtDt()));
         notifyCommunityMembers(post, userSn);
         mentionService.notify(post.getPostSn(), userSn, post.getPostCntnt(), null, List.of());
+        seriesService.onPublished(post);    // 연재 구독자에게 새 편 — 키워드보다 먼저(키워드는 구독자를 뺀다)
         keywordService.onPublished(post);   // 관심 키워드 알림
         badgeService.evaluate(userSn);   // 첫 글·글 10개·첫 투표 같은 뱃지
     }

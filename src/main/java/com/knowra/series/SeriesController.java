@@ -45,6 +45,12 @@ public class SeriesController {
         return run(r -> series.remove(me, Long.parseLong(String.valueOf(b.get("seriesSn")))));
     }
 
+    /** body: seriesSn, on(true=구독) */
+    @PostMapping("/subscribe")
+    public ResultVO subscribe(@RequestBody Map<String, Object> b, @CurrentUser Long me) {
+        return run(r -> series.subscribe(me, Long.parseLong(String.valueOf(b.get("seriesSn"))), Boolean.parseBoolean(String.valueOf(b.get("on")))));
+    }
+
     private static String str(Object o) { return o == null ? null : String.valueOf(o); }
 
     private static ResultVO run(Consumer<ResultVO> body) {

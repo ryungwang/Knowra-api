@@ -53,7 +53,8 @@ public class KeywordService {
                   AND EXISTS (SELECT 1 FROM knowra_user.tbl_user u WHERE u.user_sn = w.user_sn AND u.status = 'Y' AND u.actvtn_yn = 'Y')
                   AND NOT EXISTS (SELECT 1 FROM knowra_community.tbl_comm_mbr m
                                   WHERE m.comm_sn = ? AND m.user_sn = w.user_sn AND m.stat = 'ACTIVE' AND m.notif_yn = 'Y')
-                GROUP BY w.user_sn LIMIT ?""", post.getUserSn(), text, post.getCommSn(), MAX_TARGETS);
+                  AND NOT EXISTS (SELECT 1 FROM knowra_post.tbl_series_sub ss WHERE ss.series_sn = ? AND ss.user_sn = w.user_sn)
+                GROUP BY w.user_sn LIMIT ?""", post.getUserSn(), text, post.getCommSn(), post.getSeriesSn(), MAX_TARGETS);
         QTblPost P = QTblPost.tblPost;
         for (Map<String, Object> h : hits) {
             long u = ((Number) h.get("user_sn")).longValue();

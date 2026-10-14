@@ -115,6 +115,7 @@ public class NotificationEventListener {
         String yn = switch (typ) {
             case "LIKE" -> st.getLikeNtfctnYn();
             case "COMMENT", "REPLY", "MENTION" -> st.getCmtNtfctnYn();
+            case "SERIES_NEW", "KEYWORD" -> st.getSysNtfctnYn();
             case "FOLLOW" -> st.getFlwrNtfctnYn();
             default -> st.getSysNtfctnYn();   // 모임(EVENT_*)도 커뮤니티 소식 쪽
         };
@@ -156,6 +157,7 @@ public class NotificationEventListener {
             case "COMM_ADMIN_OFF" -> place + "의 운영진에서 해제됐습니다.";
             case "COMM_OWNER"     -> sender + "이 " + place + "의 주인 자리를 넘겼습니다.";
             case "KEYWORD"        -> { String[] x = nz(extra).split("\\|", 2); yield "관심 키워드 「" + x[0] + "」 새 글: " + (x.length > 1 ? x[1] : ""); }
+            case "SERIES_NEW"     -> { String[] x = nz(extra).split("\\|", 2); yield "구독 중인 연재 「" + x[0] + "」 새 편: " + (x.length > 1 ? x[1] : ""); }
             case "NEW_LOGIN"      -> "새 기기에서 로그인했어요: " + nz(extra) + ". 본인이 아니면 비밀번호를 바꾸고 그 기기를 로그아웃하세요.";
             case "REPORT_HIDDEN"  -> "신고가 여러 건 들어와 회원님의 " + nz(extra) + subjectJosa(nz(extra)) + " 검토 중이에요. 문제가 없으면 다시 보여요.";
             default            -> "새 알림이 있습니다. (" + notifTyp + ")";
