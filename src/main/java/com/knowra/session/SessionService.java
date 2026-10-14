@@ -108,7 +108,7 @@ public class SessionService {
     }
 
     /** 사람이 알아볼 이름 — "Chrome · macOS". 정확할 필요는 없고 "내 폰인가"만 알면 된다. */
-    static String describe(String ua) {
+    public static String describe(String ua) {
         if (ua == null || ua.isBlank()) return "알 수 없는 기기";
         String b = ua.contains("Edg/") ? "Edge" : ua.contains("SamsungBrowser") ? "삼성 인터넷" : ua.contains("Whale") ? "웨일"
                 : ua.contains("Firefox/") ? "Firefox" : ua.contains("Chrome/") ? "Chrome" : ua.contains("Safari/") ? "Safari"
@@ -120,7 +120,7 @@ public class SessionService {
     }
 
     /** 목록엔 IP 를 다 보이지 않는다 — 대역만으로 "내 집인가"는 충분하다. */
-    static String maskIp(String ip) {
+    public static String maskIp(String ip) {
         if (ip == null) return null;
         if (ip.contains(".")) { String[] p = ip.split("\\."); return p.length == 4 ? p[0] + "." + p[1] + ".*.*" : ip; }
         if (ip.contains(":")) { String[] p = ip.split(":"); return p.length > 2 ? p[0] + ":" + p[1] + ":…" : ip; }

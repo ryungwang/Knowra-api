@@ -110,6 +110,7 @@ public class NotificationEventListener {
     /** 알림 설정: 좋아요=like, 댓글·답글=cmt, 팔로우=flwr, 나머지(커뮤니티 소식)=sys. 설정 행이 없으면 기본값. */
     private boolean wantsPush(long userSn, String typ) {
         com.knowra.user.entity.TblUserStng st = stngRepository.findByUserSn(userSn);
+        if ("NEW_LOGIN".equals(typ)) return true;   // 보안 알림은 설정과 상관없이 보낸다
         if (st == null) return !"LIKE".equals(typ);
         String yn = switch (typ) {
             case "LIKE" -> st.getLikeNtfctnYn();
@@ -122,6 +123,7 @@ public class NotificationEventListener {
 
     /** 알림을 눌렀을 때 갈 곳 — 헤더 알림 목록과 같은 규칙. */
     private String linkFor(NotifTriggerEvent e, String senderNick) {
+        if ("NEW_LOGIN".equals(e.notifTyp())) return "/user/settings?tab=security";
         if ("POST".equals(e.targetKind()) && e.targetSn() != null) return "/posts/" + e.targetSn();
         if ("FOLLOW".equals(e.notifTyp()) && senderNick != null) return "/user/" + senderNick;
         if ("COMM".equals(e.targetKind()) && e.targetSn() != null) {
@@ -154,6 +156,7 @@ public class NotificationEventListener {
             case "COMM_ADMIN_OFF" -> place + "의 운영진에서 해제됐습니다.";
             case "COMM_OWNER"     -> sender + "이 " + place + "의 주인 자리를 넘겼습니다.";
             case "KEYWORD"        -> { String[] x = nz(extra).split("\\|", 2); yield "관심 키워드 「" + x[0] + "」 새 글: " + (x.length > 1 ? x[1] : ""); }
+            case "NEW_LOGIN"      -> "새 기기에서 로그인했어요: " + nz(extra) + ". 본인이 아니면 비밀번호를 바꾸고 그 기기를 로그아웃하세요.";
             case "REPORT_HIDDEN"  -> "신고가 여러 건 들어와 회원님의 " + nz(extra) + subjectJosa(nz(extra)) + " 검토 중이에요. 문제가 없으면 다시 보여요.";
             default            -> "새 알림이 있습니다. (" + notifTyp + ")";
         };
