@@ -32,6 +32,12 @@ public class PostController {
     }
 
     /** 수정 기록 — params: postSn */
+    /** 댓글의 이전 내용 — 비로그인도(그 글을 볼 수 있으면) */
+    @GetMapping("/getCmtHistory")
+    public ResultVO getCmtHistory(@RequestParam Map<String, Object> params, @CurrentUser Long me) {
+        return postService.getCmtHistory(params, me);
+    }
+
     @GetMapping("/getPostHistory")
     public ResultVO getPostHistory(@RequestParam Map<String, Object> params, @CurrentUser Long me) {
         return postService.getPostHistory(params, me);

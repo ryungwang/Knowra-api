@@ -497,6 +497,36 @@ public class PostService {
         return resultVO;
     }
 
+    /**
+     * 댓글의 이전 내용 — 그 글을 볼 수 있고 그 댓글이 보이는 사람에게만(지운 댓글·차단 관계는 안 된다,
+     * 신고로 가려진 댓글은 쓴 사람만). params: postCmtSn
+     */
+    public ResultVO getCmtHistory(Map<String, Object> params, Long me) {
+        ResultVO resultVO = new ResultVO();
+        try {
+            long cmtSn = Long.parseLong(String.valueOf(params.get("postCmtSn")));
+            TblPostCmt c = tblPostCmtRepository.findById(cmtSn).orElseThrow(() -> new IllegalArgumentException("댓글을 찾을 수 없어요."));
+            boolean mine = me != null && c.getUserSn() == me;
+            boolean visible = "Y".equals(c.getActvtnYn()) && ("ACTIVE".equals(c.getStat()) || (mine && com.knowra.safety.service.ReportAutoHide.REVIEW.equals(c.getStat())));
+            if (!visible || !canReadPost(c.getPostSn(), me)) throw new IllegalArgumentException("댓글을 찾을 수 없어요.");
+            // 차단은 양방향 — 목록에서 빠지는 댓글은 기록도 안 보인다
+            if (me != null && !mine && jdbc.queryForObject("SELECT COUNT(*) FROM knowra_user.tbl_user_block WHERE (user_sn = ? AND blocked_sn = ?) OR (user_sn = ? AND blocked_sn = ?)",
+                    Long.class, me, c.getUserSn(), c.getUserSn(), me) > 0) throw new IllegalArgumentException("댓글을 찾을 수 없어요.");
+            resultVO.putResult("list", jdbc.queryForList("""
+                    SELECT hist_sn AS "histSn", cmt_cntnt AS content, img_url AS "imgUrl", edited_at AS "editedAt"
+                    FROM knowra_post.tbl_cmt_hist WHERE post_cmt_sn = ? ORDER BY hist_sn DESC LIMIT 50""", cmtSn));
+            resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
+        } catch (IllegalArgumentException e) {
+            resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
+            resultVO.setResultMessage(e.getMessage());
+        } catch (Exception e) {
+            ErrorLog.report(e);
+            resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
+            resultVO.setResultMessage(ResponseCode.SELECT_ERROR.getMessage());
+        }
+        return resultVO;
+    }
+
     /** 이 글 알림 끄기/켜기 — params: postSn, mute(true|false) */
     public ResultVO setPostMute(Map<String, Object> params, Long me) {
         ResultVO resultVO = new ResultVO();
@@ -817,6 +847,10 @@ public class PostService {
             // 실패로 답해도 바뀐 값이 그대로 커밋됐다(거절된 수정이 사진을 지워 버렸다).
             String nextImg = params.containsKey("imgUrl") ? cleanImgUrl(params.get("imgUrl")) : cmt.getImgUrl();
             if (cntnt.isEmpty() && nextImg == null) throw new IllegalArgumentException("내용이 비어 있습니다.");
+            // 본문이나 사진이 실제로 바뀌면 고치기 전 판을 남긴다 — 이전 내용 보기의 근거
+            if (!cntnt.equals(beforeText == null ? "" : beforeText) || !java.util.Objects.equals(nextImg, cmt.getImgUrl()))
+                jdbc.update("INSERT INTO knowra_post.tbl_cmt_hist (post_cmt_sn, cmt_cntnt, img_url, edited_at) VALUES (?, ?, ?, ?)",
+                        postCmtSn, beforeText == null ? "" : beforeText, cmt.getImgUrl(), java.time.LocalDateTime.now());
             cmt.setImgUrl(nextImg);
             cmt.setCmtCntnt(cntnt);
             cmt.setMdfrSn(userSn);
@@ -1218,8 +1252,13 @@ public class PostService {
                         reactionsMap.getOrDefault(sn, new HashMap<>()),
                         myReactMap.get(sn), pfpUrl,
                         review ? "REVIEW" : "ACTIVE".equals(c.getStat()) ? "ACTIVE" : "DELETED", c.getMdfcnDt(),
-                        hideBody ? null : c.getImgUrl(), false, mine, false, false);
+                        hideBody ? null : c.getImgUrl(), false, mine, false, false, 0);
             };
+            // 수정 기록 수 — 한 번에 센다
+            Map<Long, Integer> editCounts = new HashMap<>();
+            if (!allSns.isEmpty())
+                jdbc.query("SELECT post_cmt_sn, COUNT(*) FROM knowra_post.tbl_cmt_hist WHERE post_cmt_sn IN (" + String.join(",", java.util.Collections.nCopies(allSns.size(), "?")) + ") GROUP BY post_cmt_sn",
+                        rs -> { editCounts.put(rs.getLong(1), rs.getInt(2)); }, allSns.toArray());
             Map<Long, CmtDTO> rootMap = new LinkedHashMap<>();
             rootTuples.forEach(t -> rootMap.put(t.get(cmt).getPostCmtSn(), toDto.apply(t)));
             replyTuples.forEach(t -> {
@@ -1227,6 +1266,10 @@ public class PostService {
                 if (parent != null) parent.getReplies().add(toDto.apply(t));
             });
             List<CmtDTO> list = new ArrayList<>(rootMap.values());
+            for (CmtDTO d : list) {
+                if (!"DELETED".equals(d.getStat())) d.setEditCount(editCounts.getOrDefault(d.getCmtSn(), 0));
+                for (CmtDTO rp : d.getReplies()) if (!"DELETED".equals(rp.getStat())) rp.setEditCount(editCounts.getOrDefault(rp.getCmtSn(), 0));
+            }
             if (pinnedSn != null) list.forEach(d -> { if (d.getCmtSn() == pinnedSn) d.setPinned(true); });
 
             // ── 익명 커뮤니티: 글쓴이는 「글쓴이」, 나머지는 이 글에 처음 댓글을 단 순서대로 「익명1·익명2…」.

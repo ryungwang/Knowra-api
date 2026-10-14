@@ -44,4 +44,6 @@ public class CmtDTO {
     private boolean muted;
     /** 맨 위에 고정된 댓글(글쓴이·운영진이 고른 것) */
     private boolean pinned;
+    /** 남아 있는 수정 기록 수 — 0 보다 크면 「수정됨」을 눌러 이전 내용을 본다 */
+    private int editCount;
 }
