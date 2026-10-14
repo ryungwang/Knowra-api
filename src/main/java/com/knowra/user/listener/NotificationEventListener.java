@@ -153,6 +153,7 @@ public class NotificationEventListener {
             case "COMM_ADMIN"     -> place + "의 운영진이 됐습니다.";
             case "COMM_ADMIN_OFF" -> place + "의 운영진에서 해제됐습니다.";
             case "COMM_OWNER"     -> sender + "이 " + place + "의 주인 자리를 넘겼습니다.";
+            case "KEYWORD"        -> { String[] x = nz(extra).split("\\|", 2); yield "관심 키워드 「" + x[0] + "」 새 글: " + (x.length > 1 ? x[1] : ""); }
             case "REPORT_HIDDEN"  -> "신고가 여러 건 들어와 회원님의 " + nz(extra) + subjectJosa(nz(extra)) + " 검토 중이에요. 문제가 없으면 다시 보여요.";
             default            -> "새 알림이 있습니다. (" + notifTyp + ")";
         };

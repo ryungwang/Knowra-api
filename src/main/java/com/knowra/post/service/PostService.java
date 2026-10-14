@@ -95,6 +95,7 @@ public class PostService {
     private final com.knowra.badge.BadgeService badgeService;
     private final com.knowra.community.modlog.ModLogService modLog;
     private final org.springframework.jdbc.core.JdbcTemplate jdbc;
+    private final com.knowra.keyword.KeywordService keywordService;
     private final com.knowra.community.flair.FlairService flairService;
 
     private static final int REDIS_DB  = 15;
@@ -262,6 +263,7 @@ public class PostService {
         eventPublisher.publishEvent(new PostCreatedEvent(post.getPostSn(), userSn, post.getCommSn(), post.getFrstCrtDt()));
         notifyCommunityMembers(post, userSn);
         mentionService.notify(post.getPostSn(), userSn, post.getPostCntnt(), null, List.of());
+        keywordService.onPublished(post);   // 관심 키워드 알림
         badgeService.evaluate(userSn);   // 첫 글·글 10개·첫 투표 같은 뱃지
     }
 
