@@ -34,7 +34,7 @@ public abstract class BasePostEntity extends BaseAuditEntity {
     private int viewCnt = 0;
 
     @Column(name = "LIKE_CNT", nullable = false)
-    @Comment("순 추천수 (UP - DOWN 캐시)")
+    @Comment("좋아요 수 (UP 행 수 캐시)")
     @Builder.Default
     private int likeCnt = 0;
 

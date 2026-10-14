@@ -423,8 +423,9 @@ public class PostService {
                     interestScoreService.updateForTags(userSn, tagService.fetchTagSns(postSn), -3);
                 }
             } else {
-                // 반대 반응으로 전환 (DOWN→UP: +2, UP→DOWN: -2)
-                delta = up ? 2 : -2;
+                // 옛 DOWN 행 → UP 전환. DOWN 은 V16 에서 지웠고 like_cnt 는 UP 행 수라 +1 이다
+                // (예전 +2 는 DOWN 이 수를 깎던 시절 계산).
+                delta = 1;
                 like.setLikeTyp(postLike);
                 tblPostLikeRepository.save(like);
                 double tagDelta = up ? 3 : -3;
