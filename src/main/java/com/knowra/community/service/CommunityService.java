@@ -301,8 +301,10 @@ public class CommunityService {
                     throw new RuntimeException(ResponseCode.COMMUNITY_OWNER_CANNOT_LEAVE.getMessage());
                 }
 
+                // 일괄 update 는 @UpdateTimestamp 를 안 탄다 — 나간 때를 직접 남긴다(통계의 「나간 멤버」가 이걸 센다)
                 q.update(qTblCommMbr)
                     .set(qTblCommMbr.stat, "WITHDRAWN")
+                    .set(qTblCommMbr.mdfcnDt, java.time.LocalDateTime.now())
                     .where(
                         qTblCommMbr.commSn.eq(tblComm.getCommSn())
                         .and(qTblCommMbr.userSn.eq(userSn))

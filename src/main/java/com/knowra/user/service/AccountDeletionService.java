@@ -93,7 +93,7 @@ public class AccountDeletionService {
         jdbc.update("""
                 UPDATE knowra_community.tbl_comm c SET member_cnt = GREATEST(0, c.member_cnt - 1)
                 FROM knowra_community.tbl_comm_mbr m WHERE m.comm_sn = c.comm_sn AND m.user_sn = ? AND m.stat = 'ACTIVE' AND c.stat = 'Y'""", me);
-        jdbc.update("UPDATE knowra_community.tbl_comm_mbr SET stat = 'WITHDRAWN', role = 'MEMBER', notif_yn = 'N' WHERE user_sn = ?", me);
+        jdbc.update("UPDATE knowra_community.tbl_comm_mbr SET stat = 'WITHDRAWN', role = 'MEMBER', notif_yn = 'N', mdfcn_dt = ? WHERE user_sn = ? AND stat <> 'WITHDRAWN'", java.time.LocalDateTime.now(), me);
 
         // 4) 개인정보 지우기 — 줄은 남긴다(대화·글 자리의 주인 표시용)
         if (u.getPfp() != null) {
