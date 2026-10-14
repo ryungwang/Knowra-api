@@ -46,6 +46,10 @@ public class TwoFactorService {
 
     private final JdbcTemplate jdbc;
     private final RedisApiService redis;
+    private final com.knowra.cmm.crypto.SecretBox box;
+
+    /** 암호문에 묶는 주인 표시 — 다른 사람 줄로 옮긴 암호문은 풀리지 않는다 */
+    static String aad(long userSn) { return "totp:" + userSn; }
 
     public boolean isEnabled(long userSn) {
         Boolean on = jdbc.query("SELECT totp_enabled_at IS NOT NULL AND totp_secret IS NOT NULL FROM knowra_user.tbl_user WHERE user_sn = ?",
@@ -80,7 +84,7 @@ public class TwoFactorService {
         long c = Totp.verify(pending.toString(), code, Instant.now().getEpochSecond());
         if (c < 0) throw new IllegalArgumentException("코드가 맞지 않아요. 인증 앱의 지금 코드를 넣어 주세요.");
         markUsed(me, c);
-        jdbc.update("UPDATE knowra_user.tbl_user SET totp_secret = ?, totp_enabled_at = ? WHERE user_sn = ?", pending.toString(), LocalDateTime.now(), me);
+        jdbc.update("UPDATE knowra_user.tbl_user SET totp_secret = ?, totp_enabled_at = ? WHERE user_sn = ?", box.seal(pending.toString(), aad(me)), LocalDateTime.now(), me);
         redis.delRedis(DB, "2fa:setup:" + me);
         return newRecoveryCodes(me);
     }
@@ -139,7 +143,7 @@ public class TwoFactorService {
 
     /** 인증 앱 코드(6자리) 또는 복구 코드(XXXX-XXXX). 복구 코드는 쓰면 끝 */
     private boolean checkCode(long userSn, String code) {
-        String secret = jdbc.queryForObject("SELECT totp_secret FROM knowra_user.tbl_user WHERE user_sn = ?", String.class, userSn);
+        String secret = box.open(jdbc.queryForObject("SELECT totp_secret FROM knowra_user.tbl_user WHERE user_sn = ?", String.class, userSn), aad(userSn));
         if (secret == null || code == null) return false;
         String c = code.trim();
         if (c.replaceAll("\\s", "").matches("\\d{6}")) {
