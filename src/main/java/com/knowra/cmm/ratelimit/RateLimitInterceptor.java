@@ -56,6 +56,9 @@ public class RateLimitInterceptor implements HandlerInterceptor {
             // 인증·계정 — 대입·남용 창구
             Map.entry("/api/auth/verify/check",       new Rule("verify-check", 30, 600)),
             Map.entry("/api/auth/refresh",            new Rule("refresh", 60, 600)),
+            Map.entry("/api/auth/login/2fa",          new Rule("2fa", 20, 600)),       // 확인표마다 5번 + IP 단위 상한
+            Map.entry("/api/account/2fa/disable",     new Rule("2fa-mgmt", 10, 600)),
+            Map.entry("/api/account/2fa/recovery",    new Rule("2fa-mgmt", 10, 600)),
             Map.entry("/api/auth/snsLogin",           new Rule("sns", 30, 600)),      // 매번 제공자에게 바깥 요청이 나간다
             Map.entry("/api/auth/password/reset",     new Rule("pw-reset", 10, 600)),
             Map.entry("/api/account/changeEmail",     new Rule("chg-email", 10, 600)), // 비밀번호 대입 창구

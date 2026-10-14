@@ -64,6 +64,7 @@ public class AuthService {
     private final SmsService smsService;
     private final com.knowra.cmm.ratelimit.RateLimiter rateLimiter;
     private final com.knowra.user.suspension.SuspensionService suspensionService;
+    private final com.knowra.user.twofactor.TwoFactorService twoFactorService;
 
     /*
      * 로그인 실패 제한(15분 창). 세 겹인 이유:
@@ -128,19 +129,9 @@ public class AuthService {
                 if (suspensionService.isSuspended(u)) throw new IllegalStateException("SUSPENDED|" + com.knowra.user.suspension.SuspensionService.message(u));
                 if (!"Y".equals(u.getActvtnYn())) throw new IllegalStateException("DELETED");   // 탈퇴한 계정 — 예전엔 비밀번호로 다시 들어왔다
             });
-            String sid = sessionService.start(userSn);   // 이 로그인 = 기기 목록의 한 줄
-            String accessToken = jwtProvider.generateAccessToken(userSn, loginId, sid);
-            String refreshToken = jwtProvider.generateRefreshToken(userSn, loginId, sid);
-
-            resultVO.putResult("accessToken", accessToken);
-            response.addHeader("Set-Cookie", refreshCookie.issue(refreshToken)); // 본문엔 안 싣는다
-
-            TblUserLgnHstry tblUserLgnHstry = new TblUserLgnHstry();
-            tblUserLgnHstry.setUserSn(userSn);
-            tblUserLgnHstry.setLgnIp(clientIp);
-            tblUserLgnHstryRepository.save(tblUserLgnHstry);
-
-            resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
+            // 2단계 인증이 켜져 있으면 토큰 대신 확인표 — 인증 앱 코드까지 맞아야 /login/2fa 가 토큰을 준다
+            if (twoFactorService.isEnabled(userSn)) return twoFactorRequired(resultVO, userSn);
+            finishLogin(userSn, loginId, clientIp, response, resultVO);
         } catch (BadCredentialsException e) {
             resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
             resultVO.setResultMessage("이메일 또는 비밀번호가 올바르지 않습니다.");
@@ -148,6 +139,46 @@ public class AuthService {
             resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
             String m = String.valueOf(e.getMessage());
             resultVO.setResultMessage(m.startsWith("SUSPENDED|") ? m.substring("SUSPENDED|".length()) : "이메일 또는 비밀번호가 올바르지 않습니다.");
+        } catch (Exception e) {
+            ErrorLog.report(e);
+            resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
+            resultVO.setResultMessage(ResponseCode.SELECT_ERROR.getMessage());
+        }
+        return resultVO;
+    }
+
+    /** 로그인 마무리 — 세션(기기 목록의 한 줄)·토큰·리프레시 쿠키·로그인 기록. 비밀번호·소셜·2단계가 같이 쓴다 */
+    private void finishLogin(long userSn, String loginId, String clientIp, HttpServletResponse response, ResultVO resultVO) {
+        String sid = sessionService.start(userSn);
+        resultVO.putResult("accessToken", jwtProvider.generateAccessToken(userSn, loginId, sid));
+        response.addHeader("Set-Cookie", refreshCookie.issue(jwtProvider.generateRefreshToken(userSn, loginId, sid))); // 본문엔 안 싣는다
+        TblUserLgnHstry h = new TblUserLgnHstry();
+        h.setUserSn(userSn);
+        h.setLgnIp(clientIp);
+        tblUserLgnHstryRepository.save(h);
+        resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
+    }
+
+    private ResultVO twoFactorRequired(ResultVO resultVO, long userSn) {
+        resultVO.putResult("twoFactor", true);
+        resultVO.putResult("ticket", twoFactorService.issueTicket(userSn));
+        resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
+        return resultVO;
+    }
+
+    /** 2단계: params ticket, code(인증 앱 6자리 또는 복구 코드) */
+    public ResultVO loginTwoFactor(Map<String, String> params, String clientIp, HttpServletResponse response) {
+        ResultVO resultVO = new ResultVO();
+        try {
+            long userSn = twoFactorService.completeLogin(params.get("ticket"), params.get("code"));
+            TblUser u = tblUserRepository.findById(userSn).orElseThrow(() -> new IllegalArgumentException("계정을 찾을 수 없어요."));
+            // 확인표를 받은 뒤 5분 사이에 정지·탈퇴됐을 수 있다
+            if (suspensionService.isSuspended(u)) throw new IllegalArgumentException(com.knowra.user.suspension.SuspensionService.message(u));
+            if (!"Y".equals(u.getActvtnYn())) throw new IllegalArgumentException("탈퇴한 계정입니다.");
+            finishLogin(userSn, u.getLoginId(), clientIp, response, resultVO);
+        } catch (IllegalArgumentException e) {
+            resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
+            resultVO.setResultMessage(e.getMessage());
         } catch (Exception e) {
             ErrorLog.report(e);
             resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
@@ -200,16 +231,10 @@ public class AuthService {
                 }
                 // 이메일로만 찾은 예전 계정은 제공자 ID 를 이번에 묶어 둔다 — 다음부터 ①로 바로 찾는다.
                 if (!StringUtils.hasText(u.getSnsId())) { u.setSnsYn("Y"); u.setSnsName(id.provider()); u.setSnsId(id.id()); tblUserRepository.save(u); }
-                String sid = sessionService.start(u.getUserSn());
-                String accessToken = jwtProvider.generateAccessToken(u.getUserSn(), u.getLoginId(), sid);
-                String refreshToken = jwtProvider.generateRefreshToken(u.getUserSn(), u.getLoginId(), sid);
-                resultVO.putResult("accessToken", accessToken);
-                httpResponse.addHeader("Set-Cookie", refreshCookie.issue(refreshToken));
-
-                TblUserLgnHstry tblUserLgnHstry = new TblUserLgnHstry();
-                tblUserLgnHstry.setUserSn(u.getUserSn());
-                tblUserLgnHstry.setLgnIp(clientIp);
-                tblUserLgnHstryRepository.save(tblUserLgnHstry);
+                // 소셜 로그인도 2단계를 탄다 — 소셜 계정을 뺏기면 그대로 들어오면 안 된다
+                if (twoFactorService.isEnabled(u.getUserSn())) return twoFactorRequired(resultVO, u.getUserSn());
+                finishLogin(u.getUserSn(), u.getLoginId(), clientIp, httpResponse, resultVO);
+                return resultVO;
             }
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
         } catch (IllegalArgumentException | IllegalStateException e) {

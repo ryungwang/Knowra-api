@@ -79,7 +79,7 @@ public class SecurityConfig {
                         // 인증 자체. 로그아웃도 공개다 — 액세스 토큰이 이미 만료된 유저도
                         // 로그아웃(쿠키 삭제)은 할 수 있어야 한다. 서비스가 있는 토큰만 폐기한다.
                         .requestMatchers(HttpMethod.POST,
-                                "/api/auth/login", "/api/auth/snsLogin", "/api/auth/join",
+                                "/api/auth/login", "/api/auth/login/2fa", "/api/auth/snsLogin", "/api/auth/join",
                                 "/api/auth/refresh", "/api/auth/logout",
                                 // 가입 전 인증 코드(메일·문자) · 비밀번호 재설정 — 로그인 전에 쓰는 것들
                                 "/api/auth/verify/send", "/api/auth/verify/check",

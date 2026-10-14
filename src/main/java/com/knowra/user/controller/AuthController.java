@@ -36,6 +36,13 @@ public class AuthController {
         return authService.login(params, ComUtil.extractClientIp(request), response);
     }
 
+    /** 2단계 인증 — body: ticket(로그인이 준 확인표), code(인증 앱 6자리 또는 복구 코드) */
+    @PostMapping("/login/2fa")
+    public ResultVO loginTwoFactor(@RequestBody Map<String, String> params,
+                                   HttpServletRequest request, HttpServletResponse response) {
+        return authService.loginTwoFactor(params, ComUtil.extractClientIp(request), response);
+    }
+
     @PostMapping("/snsLogin")
     public ResultVO snsLogin(@RequestBody Map<String, String> params,
                              HttpServletRequest request, HttpServletResponse response) {

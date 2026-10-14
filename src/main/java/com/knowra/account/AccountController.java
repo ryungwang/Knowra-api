@@ -35,6 +35,53 @@ public class AccountController {
     private final DataExportService dataExport;
     private final tools.jackson.databind.ObjectMapper objectMapper;
 
+    private final com.knowra.user.twofactor.TwoFactorService twoFactor;
+
+    // ── 2단계 인증 ── 실패 메시지(코드 틀림 등)는 그대로 화면에 띄운다
+    @PostMapping("/2fa/status")
+    public ResultVO twoFactorStatus(@CurrentUser Long me) {
+        ResultVO r = new ResultVO();
+        twoFactor.status(me).forEach(r::putResult);
+        r.setResultCode(ResponseCode.SUCCESS.getCode());
+        return r;
+    }
+
+    @PostMapping("/2fa/setup")
+    public ResultVO twoFactorSetup(@CurrentUser Long me) {
+        return attempt(() -> twoFactor.setup(me));
+    }
+
+    @PostMapping("/2fa/enable")
+    public ResultVO twoFactorEnable(@RequestBody Map<String, Object> b, @CurrentUser Long me) {
+        return attempt(() -> Map.of("recoveryCodes", twoFactor.enable(me, String.valueOf(b.get("code")))));
+    }
+
+    @PostMapping("/2fa/disable")
+    public ResultVO twoFactorDisable(@RequestBody Map<String, Object> b, @CurrentUser Long me) {
+        return attempt(() -> { twoFactor.disable(me, String.valueOf(b.get("code"))); return Map.of("enabled", false); });
+    }
+
+    @PostMapping("/2fa/recovery")
+    public ResultVO twoFactorRecovery(@RequestBody Map<String, Object> b, @CurrentUser Long me) {
+        return attempt(() -> Map.of("recoveryCodes", twoFactor.regenerateRecovery(me, String.valueOf(b.get("code")))));
+    }
+
+    private ResultVO attempt(java.util.function.Supplier<Map<String, ?>> body) {
+        ResultVO r = new ResultVO();
+        try {
+            body.get().forEach(r::putResult);
+            r.setResultCode(ResponseCode.SUCCESS.getCode());
+        } catch (IllegalArgumentException e) {
+            r.setResultCode(ResponseCode.UPDATE_ERROR.getCode());
+            r.setResultMessage(e.getMessage());
+        } catch (Exception e) {
+            com.knowra.cmm.errlog.ErrorLog.report(e);
+            r.setResultCode(ResponseCode.UPDATE_ERROR.getCode());
+            r.setResultMessage(ResponseCode.UPDATE_ERROR.getMessage());
+        }
+        return r;
+    }
+
     /** 내 데이터 내려받기 — JSON 파일 한 개. 비싼 조회라 횟수 제한(RateLimitInterceptor) */
     @PostMapping("/export")
     public org.springframework.http.ResponseEntity<byte[]> export(@CurrentUser Long me) throws Exception {
