@@ -153,6 +153,7 @@ public class PostService {
                 tblPost.setPostCntnt(com.knowra.cmm.util.HtmlSanitizer.clean(params.get("postCntnt").toString()));
                 tblPost.setPostTyp(resolvePostTyp(params, tblPost.getCommSn(), userSn, tblPost.getPostTyp()));
                 tblPost.setMdfrSn(userSn);
+                if (STAT_SCHEDULED.equals(tblPost.getStat())) resultVO.putResult("rsrvAt", tblPost.getRsrvAt());   // 수정해도 예약은 그대로
             } else {
                 tblPost = modelMapper.map(params, TblPost.class);
                 tblPost.setPostCntnt(com.knowra.cmm.util.HtmlSanitizer.clean(tblPost.getPostCntnt()));   // XSS — HtmlSanitizer 주석
@@ -166,14 +167,18 @@ public class PostService {
                 tblPost.setUserSn(userSn);
                 tblPost.setCreatrSn(userSn);
                 tblPost.setPostTyp(resolvePostTyp(params, tblPost.getCommSn(), userSn, "NORMAL"));
+                // ⚠️ 본문을 엔티티에 통째로 매핑하므로 서버가 정하는 값은 여기서 다시 박는다. 예전엔 likeCnt·viewCnt 를
+                // 실어 보내면 그대로 저장돼 인기 피드를 조작할 수 있었다(좋아요 9999 로 재현). 고정은 setPostPin 으로만.
+                tblPost.setLikeCnt(0); tblPost.setViewCnt(0); tblPost.setCmtCnt(0);
+                tblPost.setActvtnYn("Y"); tblPost.setPinnedAt(null);
+                tblPost.setStat("ACTIVE"); tblPost.setRsrvAt(null);
+                tblPost.setFrstCrtDt(java.time.LocalDateTime.now());
+                java.time.LocalDateTime rsrvAt = parseReservation(params.get("rsrvAt"));
+                if (rsrvAt != null) { tblPost.setStat(STAT_SCHEDULED); tblPost.setRsrvAt(rsrvAt); }
                 tblPostRepository.save(tblPost);
                 if (poll != null) pollService.create(tblPost.getPostSn(), poll);
-                actionLogService.log(userSn, TblUserActionLog.TARGET_POST, tblPost.getPostSn(), TblUserActionLog.ACTION_POST);
-                eventPublisher.publishEvent(new PostCreatedEvent(
-                        tblPost.getPostSn(), userSn, tblPost.getCommSn(), tblPost.getFrstCrtDt()));
-                notifyCommunityMembers(tblPost, userSn);
-                mentionService.notify(tblPost.getPostSn(), userSn, tblPost.getPostCntnt(), null, List.of());
-                badgeService.evaluate(userSn);   // 첫 글·글 10개·첫 투표 같은 뱃지
+                if (rsrvAt == null) publishEffects(tblPost, userSn);   // 예약 글은 올라갈 때 낸다
+                else resultVO.putResult("rsrvAt", rsrvAt);
             }
 
             @SuppressWarnings("unchecked")
@@ -193,6 +198,115 @@ public class PostService {
             resultVO.setResultMessage(ResponseCode.SAVE_ERROR.getMessage());
         }
         return resultVO;
+    }
+
+    static final String STAT_SCHEDULED = "SCHEDULED";
+    static final int RSRV_MIN_MINUTES = 5, RSRV_MAX_DAYS = 30;
+
+    /** 예약 시각(ISO, 서버 시간대 기준 로컬 시각). 없으면 null(바로 게시). 5분 뒤~30일 안만 받는다. */
+    private static java.time.LocalDateTime parseReservation(Object raw) {
+        if (raw == null || raw.toString().isBlank()) return null;
+        java.time.LocalDateTime t;
+        try {
+            String v = raw.toString();
+            t = v.endsWith("Z") || v.matches(".*[+-]\\d{2}:\\d{2}$")
+                    ? java.time.OffsetDateTime.parse(v).atZoneSameInstant(java.time.ZoneId.systemDefault()).toLocalDateTime()
+                    : java.time.LocalDateTime.parse(v);
+        } catch (Exception e) {
+            throw new IllegalArgumentException("예약 시각을 읽지 못했어요.");
+        }
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        if (t.isBefore(now.plusMinutes(RSRV_MIN_MINUTES - 1)))
+            throw new IllegalArgumentException("예약은 " + RSRV_MIN_MINUTES + "분 뒤부터 걸 수 있어요.");
+        if (t.isAfter(now.plusDays(RSRV_MAX_DAYS)))
+            throw new IllegalArgumentException("예약은 " + RSRV_MAX_DAYS + "일 안으로만 걸 수 있어요.");
+        return t.withSecond(0).withNano(0);
+    }
+
+    /** 새 글이 "세상에 나올 때" 한 번만 하는 일 — 바로 올릴 때와 예약 글이 올라갈 때 똑같이. */
+    private void publishEffects(TblPost post, long userSn) {
+        actionLogService.log(userSn, TblUserActionLog.TARGET_POST, post.getPostSn(), TblUserActionLog.ACTION_POST);
+        eventPublisher.publishEvent(new PostCreatedEvent(post.getPostSn(), userSn, post.getCommSn(), post.getFrstCrtDt()));
+        notifyCommunityMembers(post, userSn);
+        mentionService.notify(post.getPostSn(), userSn, post.getPostCntnt(), null, List.of());
+        badgeService.evaluate(userSn);   // 첫 글·글 10개·첫 투표 같은 뱃지
+    }
+
+    /**
+     * 예약 글 하나를 올린다. 조건부 갱신(STAT='SCHEDULED' 일 때만)이라 서버가 여러 대여도 한 번만 올라간다.
+     * 작성 시각을 지금으로 옮긴다 — 예약을 건 시각으로 두면 최신 피드에서 묻힌다.
+     * @return 이번에 올렸으면 true
+     */
+    public boolean publishScheduled(long postSn) {
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        long n = new JPAQueryFactory(em).update(POST)
+                .set(POST.stat, "ACTIVE").set(POST.frstCrtDt, now)
+                .where(POST.postSn.eq(postSn), POST.stat.eq(STAT_SCHEDULED))
+                .execute();
+        if (n == 0) return false;
+        em.flush();
+        em.clear();
+        TblPost post = tblPostRepository.findById(postSn).orElseThrow();
+        publishEffects(post, post.getUserSn());
+        return true;
+    }
+
+    /** 예약 글 관리 — 쓴 사람만. params: postSn, action(PUBLISH=지금 올리기 | RESCHEDULE), rsrvAt(RESCHEDULE 때) */
+    public ResultVO updateReservation(Map<String, Object> params, long me) {
+        ResultVO r = new ResultVO();
+        try {
+            long postSn = Long.parseLong(String.valueOf(params.get("postSn")));
+            TblPost post = tblPostRepository.findById(postSn).orElse(null);
+            if (post == null || post.getUserSn() != me || !"Y".equals(post.getActvtnYn()) || !STAT_SCHEDULED.equals(post.getStat())) {
+                r.setResultCode(ResponseCode.SAVE_ERROR.getCode());
+                r.setResultMessage("예약된 내 글이 아니에요. 이미 올라갔을 수 있어요.");
+                return r;
+            }
+            if ("PUBLISH".equals(params.get("action"))) {
+                publishScheduled(postSn);
+            } else {
+                post.setRsrvAt(parseReservation(params.get("rsrvAt")));
+                post.setMdfrSn(me);
+                tblPostRepository.save(post);
+                r.putResult("rsrvAt", post.getRsrvAt());
+            }
+            r.setResultCode(ResponseCode.SUCCESS.getCode());
+        } catch (IllegalArgumentException e) {
+            r.setResultCode(ResponseCode.SAVE_ERROR.getCode());
+            r.setResultMessage(e.getMessage());
+        }
+        return r;
+    }
+
+    /** 때가 된 예약 글 번호들. */
+    @Transactional(readOnly = true)
+    public List<Long> dueScheduled() {
+        return new JPAQueryFactory(em).select(POST.postSn).from(POST)
+                .where(POST.stat.eq(STAT_SCHEDULED), POST.actvtnYn.eq("Y"), POST.rsrvAt.loe(java.time.LocalDateTime.now()))
+                .orderBy(POST.rsrvAt.asc()).limit(100).fetch();
+    }
+
+    /** 내 예약 글 — 내 프로필의 「예약된 글」. */
+    @Transactional(readOnly = true)
+    public ResultVO getMyScheduled(long me) {
+        ResultVO r = new ResultVO();
+        QTblComm comm = QTblComm.tblComm;
+        List<Map<String, Object>> list = new java.util.ArrayList<>();
+        for (Tuple t : new JPAQueryFactory(em).select(POST.postSn, POST.postTtl, POST.rsrvAt, comm.commNm, comm.commDsplNm)
+                .from(POST).leftJoin(comm).on(comm.commSn.eq(POST.commSn))
+                .where(POST.userSn.eq(me), POST.stat.eq(STAT_SCHEDULED), POST.actvtnYn.eq("Y"))
+                .orderBy(POST.rsrvAt.asc()).fetch()) {
+            Map<String, Object> m = new java.util.LinkedHashMap<>();
+            m.put("postSn", t.get(POST.postSn));
+            m.put("postTtl", t.get(POST.postTtl));
+            m.put("rsrvAt", t.get(POST.rsrvAt));
+            m.put("commNm", t.get(comm.commNm));
+            m.put("commDsplNm", t.get(comm.commDsplNm));
+            list.add(m);
+        }
+        r.putResult("list", list);
+        r.setResultCode(ResponseCode.SUCCESS.getCode());
+        return r;
     }
 
     /**
@@ -235,8 +349,11 @@ public class PostService {
         ResultVO resultVO = new ResultVO();
         try {
             long postSn = tblPost.getPostSn();
+            // 예약 글은 쓴 사람에게만 보인다(올라가기 전 확인·수정·취소용)
+            com.querydsl.core.types.dsl.BooleanExpression aliveOrMine = me == null ? PostQuery.alive()
+                    : PostQuery.alive().or(POST.stat.eq(STAT_SCHEDULED).and(POST.actvtnYn.eq("Y")).and(POST.userSn.eq(me)));
             Tuple t = postQuery.base()
-                    .where(POST.postSn.eq(postSn), PostQuery.alive(), PostQuery.visibleTo(me))
+                    .where(POST.postSn.eq(postSn), aliveOrMine, PostQuery.visibleTo(me))
                     .fetchOne();
             if (t == null) {
                 resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
@@ -245,6 +362,8 @@ public class PostService {
             }
             PostDTO dto = postQuery.decorate(List.of(t), me).get(0);
             resultVO.putResult("post", dto);
+            tblPostRepository.findById(postSn).filter(p -> STAT_SCHEDULED.equals(p.getStat()))
+                    .ifPresent(p -> resultVO.putResult("rsrvAt", p.getRsrvAt()));
             resultVO.putResult("myLikeTyp", dto.getMyLikeTyp());
             resultVO.putResult("poll", pollService.view(postSn, dto.getUserSn(), me));
             if (dto.getCommSn() != null) {

@@ -30,6 +30,18 @@ public class PostController {
         return postService.getPost(tblPost, me);
     }
 
+    /** 내 예약 글 — 내 프로필 「예약된 글」 */
+    @GetMapping("/getMyScheduled")
+    public ResultVO getMyScheduled(@CurrentUser Long me) {
+        return postService.getMyScheduled(me);
+    }
+
+    /** 예약 글: 지금 올리기 / 시각 바꾸기. body: postSn, action(PUBLISH|RESCHEDULE), rsrvAt */
+    @PostMapping("/setReservation")
+    public ResultVO setReservation(@RequestBody Map<String, Object> params, @CurrentUser Long me) {
+        return postService.updateReservation(params, me);
+    }
+
     /** 커뮤니티 게시판 목록 — params: commSn, listTyp(LATEST|POPULAR|NOTICE), cursor | page */
     @PostMapping("/getCommPostList")
     public ResultVO getCommPostList(@RequestBody Map<String, Object> params, @CurrentUser Long me) {

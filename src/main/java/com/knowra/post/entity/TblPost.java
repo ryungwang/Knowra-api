@@ -48,4 +48,8 @@ public class TblPost extends BasePostEntity {
     /** 커뮤니티 상단 고정 시각. NULL 이면 고정 아님. 커뮤니티 운영진만, 커뮤니티당 최대 3개. */
     @Column(name = "PINNED_AT")
     private java.time.LocalDateTime pinnedAt;
+
+    /** 예약 게시 시각. STAT='SCHEDULED' 인 동안 의미가 있고, 올라간 뒤엔 기록으로 남는다. V20. */
+    @Column(name = "RSRV_AT")
+    private java.time.LocalDateTime rsrvAt;
 }
