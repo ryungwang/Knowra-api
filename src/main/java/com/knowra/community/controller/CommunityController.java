@@ -41,6 +41,47 @@ public class CommunityController {
         return r;
     }
 
+    private final com.knowra.community.report.CommunityReportService reportService;
+
+    /** 운영진 신고함 — stat: OPEN | DONE */
+    @GetMapping("/api/community/reports")
+    public ResultVO reports(@RequestParam long commSn, @RequestParam(defaultValue = "OPEN") String stat, @CurrentUser Long me) {
+        ResultVO r = new ResultVO();
+        try {
+            if (me == null) throw new IllegalArgumentException("로그인이 필요해요.");
+            r.putResult("list", reportService.list(commSn, stat, me));
+            r.setResultCode(com.knowra.cmm.model.ResponseCode.SUCCESS.getCode());
+        } catch (IllegalArgumentException e) {
+            r.setResultCode(com.knowra.cmm.model.ResponseCode.SELECT_ERROR.getCode());
+            r.setResultMessage(e.getMessage());
+        } catch (Exception e) {
+            com.knowra.cmm.errlog.ErrorLog.report(e);
+            r.setResultCode(com.knowra.cmm.model.ResponseCode.SELECT_ERROR.getCode());
+            r.setResultMessage(com.knowra.cmm.model.ResponseCode.SELECT_ERROR.getMessage());
+        }
+        return r;
+    }
+
+    /** body: commSn, targetKind(POST|CMT), targetSn, action(RESOLVE|DISMISS) */
+    @PostMapping("/api/community/reports/handle")
+    public ResultVO handleReport(@RequestBody Map<String, Object> b, @CurrentUser Long me) {
+        ResultVO r = new ResultVO();
+        try {
+            int n = reportService.handle(Long.parseLong(String.valueOf(b.get("commSn"))), String.valueOf(b.get("targetKind")),
+                    Long.parseLong(String.valueOf(b.get("targetSn"))), String.valueOf(b.get("action")), me);
+            r.putResult("handled", n);
+            r.setResultCode(com.knowra.cmm.model.ResponseCode.SUCCESS.getCode());
+        } catch (IllegalArgumentException e) {
+            r.setResultCode(com.knowra.cmm.model.ResponseCode.UPDATE_ERROR.getCode());
+            r.setResultMessage(e.getMessage());
+        } catch (Exception e) {
+            com.knowra.cmm.errlog.ErrorLog.report(e);
+            r.setResultCode(com.knowra.cmm.model.ResponseCode.UPDATE_ERROR.getCode());
+            r.setResultMessage(com.knowra.cmm.model.ResponseCode.UPDATE_ERROR.getMessage());
+        }
+        return r;
+    }
+
     /** 운영 기록 — 운영진만. cursor: 이보다 오래된 logSn */
     @GetMapping("/api/community/modLog")
     public ResultVO modLog(@RequestParam long commSn, @RequestParam(required = false) Long cursor, @CurrentUser Long me) {

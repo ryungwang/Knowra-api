@@ -18,5 +18,10 @@ public class TblReport {
     @Builder.Default @Column(name = "STAT", length = 10, nullable = false) private String stat = "OPEN";
     @Column(name = "HANDLED_BY") private Long handledBy;
     @Column(name = "HANDLED_AT") private LocalDateTime handledAt;
+    /** 글·댓글이 속한 커뮤니티 — 그 운영진의 신고함에 뜬다(V28). 운영진 처리는 사이트 관리자 처리(stat)와 따로다 */
+    @Column(name = "COMM_SN") private Long commSn;
+    @Column(name = "COMM_STAT", length = 10) private String commStat;
+    @Column(name = "COMM_HANDLED_BY") private Long commHandledBy;
+    @Column(name = "COMM_HANDLED_AT") private LocalDateTime commHandledAt;
     @Builder.Default @Column(name = "FRST_CRT_DT", nullable = false, updatable = false) private LocalDateTime frstCrtDt = LocalDateTime.now();
 }

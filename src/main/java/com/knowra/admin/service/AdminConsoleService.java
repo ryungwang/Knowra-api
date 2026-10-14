@@ -101,6 +101,8 @@ public class AdminConsoleService {
         row.put("reportSn", r.getReportSn()); row.put("targetKind", r.getTargetKind()); row.put("targetSn", r.getTargetSn());
         row.put("reason", r.getReason()); row.put("detail", r.getDetail()); row.put("stat", r.getStat());
         row.put("createdAt", r.getFrstCrtDt()); row.put("handledAt", r.getHandledAt());
+        // 커뮤니티 운영진이 이미 손댔는지 — 「문제없음」으로 덮은 걸 사이트 관리자가 알아보게
+        if (r.getCommSn() != null) { row.put("commStat", r.getCommStat()); row.put("commSn", r.getCommSn()); }
         userRepository.findById(r.getReporterSn()).ifPresent(u -> row.put("reporter", userBrief(u)));
         row.put("sameTargetCnt", reportRepository.countByTargetKindAndTargetSn(r.getTargetKind(), r.getTargetSn()));
 

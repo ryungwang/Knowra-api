@@ -53,6 +53,7 @@ public class CommunityService {
     private final InterestScoreService interestScoreService;
     private final ApplicationEventPublisher eventPublisher;
     private final com.knowra.community.modlog.ModLogService modLog;
+    private final com.knowra.community.report.CommunityReportService communityReports;
 
     @PersistenceContext
     private EntityManager em;
@@ -194,6 +195,7 @@ public class CommunityService {
             if (myMember != null && "ACTIVE".equals(myMember.getStat()) && isManager(myMember.getRole())) {
                 long pending = tblComm.getMembers().stream().filter(x -> "PENDING".equals(x.getStat()) && "Y".equals(x.getActvtnYn())).count();
                 resultVO.putResult("pendingCnt", pending);
+                resultVO.putResult("reportCnt", communityReports.openCount(tblComm.getCommSn()));
             }
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
             resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());

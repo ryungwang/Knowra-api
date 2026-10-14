@@ -65,7 +65,15 @@ public class SafetyService {
                 return resultVO;
             }
             if (detail != null && detail.length() > 500) detail = detail.substring(0, 500);
-            reportRepository.save(TblReport.builder().reporterSn(me).targetKind(kind).targetSn(target).reason(reason).detail(detail).build());
+            // 글·댓글이면 그 커뮤니티 운영진 신고함에도 올린다
+            Long commSn = switch (kind) {
+                case "POST" -> jdbc.query("SELECT comm_sn FROM knowra_post.tbl_post WHERE post_sn = ?", rs -> rs.next() ? (Long) rs.getObject(1, Long.class) : null, target);
+                case "CMT"  -> jdbc.query("SELECT p.comm_sn FROM knowra_post.tbl_post_cmt c JOIN knowra_post.tbl_post p ON p.post_sn = c.post_sn WHERE c.post_cmt_sn = ?",
+                        rs -> rs.next() ? (Long) rs.getObject(1, Long.class) : null, target);
+                default -> null;
+            };
+            reportRepository.save(TblReport.builder().reporterSn(me).targetKind(kind).targetSn(target).reason(reason).detail(detail)
+                    .commSn(commSn).commStat(commSn == null ? null : "OPEN").build());
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
             resultVO.setResultMessage("신고가 접수됐어요. 확인 후 조치할게요.");
         } catch (IllegalArgumentException e) {
