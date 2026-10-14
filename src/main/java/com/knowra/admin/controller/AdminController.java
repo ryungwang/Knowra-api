@@ -14,13 +14,15 @@ import org.springframework.web.bind.annotation.RestController;
 public class AdminController {
 
     private final ContentGenerationService contentGenerationService;
+    private final com.knowra.admin.service.AdminLogService adminLog;
 
     /** 전체 실행 (커뮤니티 + 게시글 + 댓글) */
     @PostMapping("/generate")
-    public ResultVO generate() {
+    public ResultVO generate(@com.knowra.cmm.security.CurrentUser Long me) {
         ResultVO resultVO = new ResultVO();
         try {
             resultVO.putResult("summary", contentGenerationService.generate());
+            adminLog.record(me, "CONTENT_GENERATE", null, null, "전체");
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
         } catch (Exception e) {
             resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
@@ -31,10 +33,11 @@ public class AdminController {
 
     /** 유저만 생성 */
     @PostMapping("/generate/user")
-    public ResultVO generateUser() {
+    public ResultVO generateUser(@com.knowra.cmm.security.CurrentUser Long me) {
         ResultVO resultVO = new ResultVO();
         try {
             int count = contentGenerationService.generateUser();
+            adminLog.record(me, "CONTENT_GENERATE", null, null, "사용자 " + count);
             resultVO.putResult("userCount", count);
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
         } catch (Exception e) {
@@ -46,10 +49,11 @@ public class AdminController {
 
     /** 커뮤니티만 생성 */
     @PostMapping("/generate/community")
-    public ResultVO generateCommunity() {
+    public ResultVO generateCommunity(@com.knowra.cmm.security.CurrentUser Long me) {
         ResultVO resultVO = new ResultVO();
         try {
             int count = contentGenerationService.generateCommunity();
+            adminLog.record(me, "CONTENT_GENERATE", null, null, "커뮤니티 " + count);
             resultVO.putResult("communityCount", count);
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
         } catch (Exception e) {

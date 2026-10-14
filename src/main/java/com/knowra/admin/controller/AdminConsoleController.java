@@ -35,6 +35,18 @@ public class AdminConsoleController {
     @PostMapping("/deleteCmt")
     public ResultVO deleteCmt(@RequestBody Map<String, Object> params, @CurrentUser Long me) { return service.deleteCmt(params, me); }
 
+    private final com.knowra.admin.service.AdminLogService adminLog;
+
+    /** 관리자 조치 기록 — body: cursor(이보다 오래된 logSn) */
+    @PostMapping("/auditLog")
+    public ResultVO auditLog(@RequestBody(required = false) Map<String, Object> b) {
+        ResultVO r = new ResultVO();
+        Object c = b == null ? null : b.get("cursor");
+        adminLog.list(c == null ? null : Long.valueOf(String.valueOf(c))).forEach(r::putResult);
+        r.setResultCode(com.knowra.cmm.model.ResponseCode.SUCCESS.getCode());
+        return r;
+    }
+
     /** body: msgSn — 신고된 DM 가리기 */
     @PostMapping("/hideMsg")
     public ResultVO hideMsg(@RequestBody Map<String, Object> params, @CurrentUser Long me) { return service.hideMsg(params, me); }

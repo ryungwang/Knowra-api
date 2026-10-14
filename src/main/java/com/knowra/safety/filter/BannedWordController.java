@@ -18,6 +18,7 @@ public class BannedWordController {
 
     private final JdbcTemplate jdbc;
     private final ContentFilter filter;
+    private final com.knowra.admin.service.AdminLogService adminLog;
 
     @PostMapping("/bannedWords")
     public ResultVO list() {
@@ -47,15 +48,19 @@ public class BannedWordController {
             return r;
         }
         filter.invalidate();
+        adminLog.record(me, "BANNED_ADD", null, null, word);
         r.setResultCode(ResponseCode.SUCCESS.getCode());
         return r;
     }
 
     /** body: wordSn */
     @PostMapping("/bannedWordDelete")
-    public ResultVO delete(@RequestBody Map<String, Object> b) {
+    public ResultVO delete(@RequestBody Map<String, Object> b, @CurrentUser Long me) {
         ResultVO r = new ResultVO();
-        jdbc.update("DELETE FROM knowra_com.tbl_banned_word WHERE WORD_SN = ?", Long.parseLong(String.valueOf(b.get("wordSn"))));
+        long sn = Long.parseLong(String.valueOf(b.get("wordSn")));
+        String word = jdbc.query("SELECT WORD FROM knowra_com.tbl_banned_word WHERE WORD_SN = ?", rs -> rs.next() ? rs.getString(1) : null, sn);
+        jdbc.update("DELETE FROM knowra_com.tbl_banned_word WHERE WORD_SN = ?", sn);
+        if (word != null) adminLog.record(me, "BANNED_DELETE", null, null, word);
         filter.invalidate();
         r.setResultCode(ResponseCode.SUCCESS.getCode());
         return r;

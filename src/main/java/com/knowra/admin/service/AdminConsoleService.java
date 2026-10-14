@@ -49,6 +49,7 @@ public class AdminConsoleService {
     private final org.springframework.jdbc.core.JdbcTemplate jdbc;
     private final com.knowra.session.SessionService sessionService;
     private final com.knowra.safety.service.ReportAutoHide autoHide;
+    private final AdminLogService adminLog;
 
     public ResultVO getStats() {
         ResultVO resultVO = new ResultVO();
@@ -188,6 +189,7 @@ public class AdminConsoleService {
             reportRepository.save(r);
             // 기각이면 신고 누적으로 가려 둔 것을 되돌린다 — 몰려와서 신고로 남의 글을 가리는 걸 여기서 푼다
             if ("DISMISSED".equals(stat)) autoHide.restore(r.getTargetKind(), r.getTargetSn());
+            adminLog.record(admin, "REPORT_" + action, "REPORT", reportSn, r.getTargetKind() + " #" + r.getTargetSn() + " · " + r.getReason());
             resultVO.putResult("report", toRow(r));
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
         } catch (IllegalArgumentException e) {
@@ -206,7 +208,9 @@ public class AdminConsoleService {
         ResultVO resultVO = new ResultVO();
         try {
             long postSn = Long.parseLong(String.valueOf(params.get("postSn")));
+            String title = postRepository.findById(postSn).map(TblPost::getPostTtl).orElse(null);
             boolean done = postService.adminDeletePost(postSn, admin);
+            if (done) adminLog.record(admin, "POST_DELETE", "POST", postSn, title);
             resultVO.putResult("deleted", done);
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
             if (!done) resultVO.setResultMessage("이미 삭제된 글이에요.");
@@ -225,6 +229,7 @@ public class AdminConsoleService {
             long msgSn = Long.parseLong(String.valueOf(params.get("msgSn")));
             int n = jdbc.update("UPDATE knowra_user.tbl_chat_msg SET hidden_at = ? WHERE msg_sn = ? AND hidden_at IS NULL", java.time.LocalDateTime.now(), msgSn);
             resultVO.putResult("hidden", n == 1);
+            if (n == 1) adminLog.record(admin, "MSG_HIDE", "MSG", msgSn, null);
             if (n == 0) resultVO.setResultMessage("이미 가려졌거나 없는 메시지예요.");
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
         } catch (Exception e) {
@@ -240,7 +245,9 @@ public class AdminConsoleService {
         ResultVO resultVO = new ResultVO();
         try {
             long cmtSn = Long.parseLong(String.valueOf(params.get("postCmtSn")));
+            String text = cmtRepository.findById(cmtSn).map(c -> snippet(c.getCmtCntnt())).orElse(null);
             boolean done = postService.adminDeleteCmt(cmtSn, admin);
+            if (done) adminLog.record(admin, "CMT_DELETE", "CMT", cmtSn, text);
             resultVO.putResult("deleted", done);
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
             if (!done) resultVO.setResultMessage("이미 삭제된 댓글이에요.");
@@ -303,6 +310,9 @@ public class AdminConsoleService {
                 u.setStatus("Y"); u.setSuspendedUntil(null); u.setSuspendReason(null);
             }
             userRepository.save(u);
+            adminLog.record(admin, suspend ? "USER_SUSPEND" : "USER_UNSUSPEND", "USER", userSn, suspend
+                    ? (u.getSuspendedUntil() == null ? "무기한" : u.getSuspendedUntil().toLocalDate() + "까지") + (u.getSuspendReason() == null ? "" : " · " + u.getSuspendReason())
+                    : null);
             // 정지된 사람의 열린 알림 소켓도 닫는다(새 요청만 막으면 이미 열린 소켓으로 알림이 계속 간다)
             // 정지하면 모든 세션을 끊는다 — 소켓만 닫던 시절엔 이미 받은 토큰으로 한 시간 동안 글·DM 을 계속 썼다
             if (suspend) sessionService.revokeOthers(userSn, null);

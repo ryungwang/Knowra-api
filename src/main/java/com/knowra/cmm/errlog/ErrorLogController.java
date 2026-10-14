@@ -23,6 +23,7 @@ public class ErrorLogController {
 
     private final ErrorCollector collector;
     private final JdbcTemplate jdbc;
+    private final com.knowra.admin.service.AdminLogService adminLog;
 
     /** body: message, stack, url, kind(error|rejection|render) */
     @PostMapping("/api/err/report")
@@ -65,10 +66,11 @@ public class ErrorLogController {
 
     /** body: errSn, resolved(bool) — 해결 표시해도 다시 나면 자동으로 열린다. */
     @PostMapping("/api/admin/console/errorResolve")
-    public ResultVO resolve(@RequestBody Map<String, Object> b) {
+    public ResultVO resolve(@RequestBody Map<String, Object> b, @CurrentUser Long me) {
         long errSn = Long.parseLong(String.valueOf(b.get("errSn")));
         boolean resolved = !Boolean.FALSE.equals(b.get("resolved"));
         int n = jdbc.update("UPDATE knowra_com.tbl_err_log SET RESOLVED = ? WHERE ERR_SN = ?", resolved, errSn);
+        if (n == 1) adminLog.record(me, resolved ? "ERROR_RESOLVE" : "ERROR_REOPEN", "ERROR", errSn, null);
         ResultVO r = new ResultVO();
         r.setResultCode(n == 1 ? ResponseCode.SUCCESS.getCode() : ResponseCode.SAVE_ERROR.getCode());
         if (n != 1) r.setResultMessage("없는 오류예요.");
