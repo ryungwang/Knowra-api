@@ -32,6 +32,20 @@ public class AccountController {
     private final VerificationService verification;
     private final PasswordEncoder passwordEncoder;
     private final MailService mail;
+    private final DataExportService dataExport;
+    private final tools.jackson.databind.ObjectMapper objectMapper;
+
+    /** 내 데이터 내려받기 — JSON 파일 한 개. 비싼 조회라 횟수 제한(RateLimitInterceptor) */
+    @PostMapping("/export")
+    public org.springframework.http.ResponseEntity<byte[]> export(@CurrentUser Long me) throws Exception {
+        byte[] body = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsBytes(dataExport.export(me));
+        String name = "knowra-data-" + java.time.LocalDate.now() + ".json";
+        return org.springframework.http.ResponseEntity.ok()
+                .header("Content-Disposition", "attachment; filename=\"" + name + "\"")
+                .header("Cache-Control", "no-store")
+                .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                .body(body);
+    }
 
     /** 지금 요청을 보낸 토큰의 세션 id — 목록에서 「이 기기」를 표시하고, 「다른 기기 모두」에서 남긴다. */
     private String currentSid(HttpServletRequest req) {
