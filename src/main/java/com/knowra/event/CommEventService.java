@@ -38,6 +38,7 @@ public class CommEventService {
     private final WikiService wiki;   // 보기 권한(비공개 커뮤니티) 판정을 같이 쓴다
     private final ApplicationEventPublisher publisher;
     private final com.knowra.community.modlog.ModLogService modLog;
+    private final com.knowra.chat.service.ChatGroupService chatGroups;
 
     private String activeRole(long commSn, Long me) {
         if (me == null) return null;
@@ -98,6 +99,13 @@ public class CommEventService {
         m.put("capacity", e.getCapacity()); m.put("stat", e.getStat()); m.put("goingCnt", rs.size());
         m.put("going", me != null && rs.stream().anyMatch(r -> r.getUserSn() == me));
         m.put("canEdit", me != null && (e.getCreatedBy() == me || "OWNER".equals(myRole) || "ADMIN".equals(myRole)));
+        // 모임 대화방 — 있고 내가 들어 있으면 번호(바로 연다), 만들 수 있는 사람이면 canOpenChat
+        if (me != null) {
+            java.util.List<?> rows = em.createNativeQuery("SELECT r.room_sn FROM knowra_user.tbl_chat_room r JOIN knowra_user.tbl_chat_room_mbr m ON m.room_sn = r.room_sn AND m.user_sn = ?1 AND m.stat = 'ACTIVE' WHERE r.event_sn = ?2")
+                    .setParameter(1, me).setParameter(2, e.getEventSn()).getResultList();
+            Long room = rows.isEmpty() ? null : ((Number) rows.get(0)).longValue();
+            m.put("chatRoomSn", room);
+        }
         m.put("past", e.getStartsAt().isBefore(LocalDateTime.now()));
         return m;
     }
@@ -156,6 +164,7 @@ public class CommEventService {
             if (e.getCapacity() != null && rsvps.countByEventSn(eventSn) >= e.getCapacity()) throw new IllegalArgumentException("정원이 찼어요.");
             rsvps.save(TblCommEventRsvp.builder().eventSn(eventSn).userSn(me).build());
         } else if (!going) mine.ifPresent(rsvps::delete);
+        chatGroups.onRsvp(eventSn, me, going);   // 모임 대화방이 있으면 참석한 사람을 넣는다
         return detail(eventSn, me);
     }
 

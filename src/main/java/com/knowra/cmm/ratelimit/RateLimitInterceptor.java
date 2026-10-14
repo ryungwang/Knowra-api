@@ -35,6 +35,8 @@ public class RateLimitInterceptor implements HandlerInterceptor {
             Map.entry("/api/post/setPostCmt",         new Rule("cmt", 15, 60)),
             Map.entry("/api/chat/sendMsg",            new Rule("msg", 30, 60)),
             Map.entry("/api/chat/openDm",             new Rule("dm", 20, 600)),
+            Map.entry("/api/chat/createGroup",        new Rule("group", 10, 3600)),   // 모르는 사람을 방에 몰아넣는 도배
+            Map.entry("/api/chat/inviteGroup",        new Rule("group-inv", 30, 3600)),
             Map.entry("/api/community/setCommunity",  new Rule("comm", 5, 3600)),
             Map.entry("/api/community/event/save",    new Rule("event", 10, 600)),
             Map.entry("/api/community/invite/create", new Rule("invite", 20, 3600)),

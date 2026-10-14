@@ -27,7 +27,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 /**
- * 1:1 채팅.
+ * 채팅 — 1:1 DM 과 그룹(ChatGroupService).
  *
  * <p>메시지는 REST 로 보내고(저장이 먼저다), 상대가 접속 중이면 알림 소켓으로
  * {@code type:"CHAT"} 이벤트를 밀어 준다. 소켓이 끊겨 있어도 다음에 방을 열면 DB 에서 읽는다 —
@@ -49,6 +49,7 @@ public class ChatService {
     private final TblUserRepository userRepository;
     private final NotificationWebSocketHandler wsHandler;
     private final com.knowra.safety.service.SafetyService safetyService;
+    private final ChatGroupService groupService;
 
     @PersistenceContext
     private EntityManager em;
@@ -116,7 +117,14 @@ public class ChatService {
                 TblChatMsg last = room.getLastMsgSn() != null ? lastMsgs.get(room.getLastMsgSn()) : null;
                 Map<String, Object> row = new HashMap<>();
                 row.put("roomSn",    room.getRoomSn());
-                row.put("peer",      peerByRoom.get(room.getRoomSn()));
+                row.put("roomTyp",   room.getRoomTyp());
+                if (ChatGroupService.GROUP.equals(room.getRoomTyp())) {
+                    // 그룹은 상대 한 명이 아니라 방 이름·인원
+                    long cnt = roomMbrRepository.findAllByRoomSn(room.getRoomSn()).stream().filter(x -> "ACTIVE".equals(x.getStat())).count();
+                    row.put("group", Map.of("name", room.getName() == null ? "그룹" : room.getName(), "memberCnt", cnt));
+                } else {
+                    row.put("peer",  peerByRoom.get(room.getRoomSn()));
+                }
                 row.put("lastMsg",   last == null ? null : last.getHiddenAt() != null ? "가려진 메시지" : (last.getMsgCntnt().isEmpty() && last.getImgUrl() != null ? "사진" : last.getMsgCntnt()));
                 row.put("stat",      mb.getStat());
                 row.put("lastMsgAt", room.getLastMsgAt() != null ? room.getLastMsgAt().format(ISO) : null);
@@ -202,10 +210,28 @@ public class ChatService {
             if (more) rows = rows.subList(0, size);
             Collections.reverse(rows);   // 화면은 위가 과거
 
-            List<Map<String, Object>> list = rows.stream().map(this::toDto).toList();
+            TblChatRoom room = roomRepository.findById(roomSn).orElseThrow();
+            boolean group = ChatGroupService.GROUP.equals(room.getRoomTyp());
+            // 그룹에선 차단 관계인 사람의 메시지를 서로 안 보여 준다(방은 같이 쓴다) — DM 은 애초에 보낼 수 없다
+            Set<Long> blocked = new HashSet<>();
+            if (group) for (TblChatRoomMbr x : roomMbrRepository.findAllByRoomSn(roomSn))
+                if (x.getUserSn() != userSn && safetyService.blockedEitherWay(userSn, x.getUserSn())) blocked.add(x.getUserSn());
+            List<Map<String, Object>> list = rows.stream().filter(x -> !blocked.contains(x.getUserSn())).map(this::toDto).toList();
             resultVO.putResult("list", list);
+            Map<String, Object> roomInfo = new HashMap<>();
+            roomInfo.put("roomTyp", room.getRoomTyp());
+            if (group) {
+                roomInfo.put("name", room.getName());
+                roomInfo.put("createdBy", room.getCreatedBy());
+                roomInfo.put("eventSn", room.getEventSn());
+                resultVO.putResult("members", groupService.members(roomSn));
+            }
+            resultVO.putResult("room", roomInfo);
             resultVO.putResult("nextCursor", more && !rows.isEmpty() ? rows.get(0).getMsgSn() : null);
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
+        } catch (IllegalArgumentException e) {   // 나간 방·남의 방 — 오류가 아니라 안내
+            resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
+            resultVO.setResultMessage(e.getMessage());
         } catch (Exception e) {
             ErrorLog.report(e);
             resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
@@ -227,7 +253,9 @@ public class ChatService {
             if (text.length() > MAX_LEN) text = text.substring(0, MAX_LEN);
             TblChatRoomMbr myMb = requireMember(roomSn, userSn);
             if (!"ACTIVE".equals(myMb.getStat())) { myMb.setStat("ACTIVE"); roomMbrRepository.save(myMb); }   // 답장 = 수락
-            for (TblChatRoomMbr other : roomMbrRepository.findAllByRoomSn(roomSn)) {
+            boolean group = ChatGroupService.GROUP.equals(roomRepository.findById(roomSn).map(TblChatRoom::getRoomTyp).orElse("DM"));
+            // DM 은 차단 관계면 못 보낸다. 그룹은 보내되 차단 관계인 사람에겐 가지 않는다(아래)
+            if (!group) for (TblChatRoomMbr other : roomMbrRepository.findAllByRoomSn(roomSn)) {
                 if (other.getUserSn() != userSn && safetyService.blockedEitherWay(userSn, other.getUserSn()))
                     throw new IllegalArgumentException("대화할 수 없는 상대예요.");
             }
@@ -244,7 +272,8 @@ public class ChatService {
 
             Map<String, Object> dto = toDto(saved);
             for (TblChatRoomMbr mb : roomMbrRepository.findAllByRoomSn(roomSn)) {
-                if (mb.getUserSn() == userSn || "DECLINED".equals(mb.getStat())) continue;   // 거절한 사람에겐 아무것도 안 간다
+                if (mb.getUserSn() == userSn || "DECLINED".equals(mb.getStat()) || "LEFT".equals(mb.getStat())) continue;   // 거절·나간 사람에겐 아무것도 안 간다
+                if (group && safetyService.blockedEitherWay(userSn, mb.getUserSn())) continue;
                 Map<String, Object> ev = new HashMap<>(dto);
                 ev.put("request", "REQUEST".equals(mb.getStat()));   // 요청함 쪽은 배지만, 대화 목록·안 읽은 수엔 안 섞는다
                 wsHandler.pushEvent(mb.getUserSn(), "CHAT", ev);
@@ -304,7 +333,7 @@ public class ChatService {
     }
 
     private TblChatRoomMbr requireMember(long roomSn, long userSn) {
-        return roomMbrRepository.findByRoomSnAndUserSn(roomSn, userSn)
+        return roomMbrRepository.findByRoomSnAndUserSn(roomSn, userSn).filter(m -> !"LEFT".equals(m.getStat()))
                 .orElseThrow(() -> new IllegalArgumentException("참여하지 않은 대화방입니다."));
     }
 
