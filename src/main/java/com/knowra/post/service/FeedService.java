@@ -640,7 +640,7 @@ public class FeedService {
 
         // 가입한 커뮤니티 게시글 (날짜 제한 없음)
         if (!joinedCommSns.isEmpty()) {
-            fetchPostsByComms(joinedCommSns).stream()
+            fetchPostsByComms(joinedCommSns, userSn).stream()
                     .filter(p -> dedup.add(p.postSn()))
                     .forEach(result::add);
         }
@@ -706,10 +706,10 @@ public class FeedService {
                 .fetch());
     }
 
-    /** 가입한 커뮤니티의 글 — 가입했으니 접근 조건은 볼 필요 없다. */
-    private List<FeedPost> fetchPostsByComms(Set<Long> commSns) {
+    /** 가입한 커뮤니티의 글. 접근은 되지만 차단·숨김은 여기서도 빼야 한다(visibleTo) — 예전엔 빠져 있었다. */
+    private List<FeedPost> fetchPostsByComms(Set<Long> commSns, Long viewerSn) {
         return toFeedPosts(postQuery.base()
-                .where(POST.commSn.in(commSns), PostQuery.alive())
+                .where(POST.commSn.in(commSns), PostQuery.alive(), PostQuery.visibleTo(viewerSn))
                 .orderBy(POST.frstCrtDt.desc())
                 .fetch());
     }

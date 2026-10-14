@@ -158,7 +158,9 @@ public class CommEventService {
     public Map<String, Object> cancel(long eventSn, long me) {
         TblCommEvent e = events.findById(eventSn).orElseThrow(() -> new IllegalArgumentException("모임을 찾을 수 없어요."));
         String role = activeRole(e.getCommSn(), me);
-        if (e.getCreatedBy() != me && !"OWNER".equals(role) && !"ADMIN".equals(role)) throw new IllegalArgumentException("만든 사람이나 운영진만 취소할 수 있어요.");
+        // 만든 사람도 아직 활성 멤버여야 한다 — 나가거나 내보내진 뒤에 참석자 전원에게 취소 알림을 보낼 수 있었다
+        boolean creator = e.getCreatedBy() == me && role != null;
+        if (!creator && !"OWNER".equals(role) && !"ADMIN".equals(role)) throw new IllegalArgumentException("만든 사람이나 운영진만 취소할 수 있어요.");
         if (!"CANCELLED".equals(e.getStat())) {
             e.setStat("CANCELLED");
             events.save(e);

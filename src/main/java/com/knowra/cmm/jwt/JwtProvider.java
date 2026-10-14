@@ -47,13 +47,7 @@ public class JwtProvider {
         this.tblUserRepository = tblUserRepository;
     }
 
-    public String generateAccessToken(long userSn, String loginId) {
-        return buildToken(userSn, loginId, accessTokenExpiration, TYP_ACCESS, null);
-    }
-
-    public String generateRefreshToken(long userSn, String loginId) {
-        return buildToken(userSn, loginId, refreshTokenExpiration, TYP_REFRESH, null);
-    }
+    // 세션 id 없는 발급은 없앴다 — 그런 토큰은 기기 로그아웃·정지로 끊을 수 없고, 필터도 이제 거절한다.
 
     /** 세션(로그인한 기기) id 를 싣는다 — 기기 목록·「이 기기 로그아웃」이 이걸로 끊는다(SessionService). */
     public String generateAccessToken(long userSn, String loginId, String sid) {

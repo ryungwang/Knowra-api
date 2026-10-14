@@ -53,6 +53,21 @@ public class RateLimitInterceptor implements HandlerInterceptor {
             Map.entry("/api/auth/verify/send",        new Rule("verify", 10, 3600)),
             Map.entry("/api/auth/password/forgot",    new Rule("forgot", 5, 600)),
             Map.entry("/api/auth/join",               new Rule("join", 10, 3600)),
+            // 인증·계정 — 대입·남용 창구
+            Map.entry("/api/auth/verify/check",       new Rule("verify-check", 30, 600)),
+            Map.entry("/api/auth/refresh",            new Rule("refresh", 60, 600)),
+            Map.entry("/api/auth/snsLogin",           new Rule("sns", 30, 600)),      // 매번 제공자에게 바깥 요청이 나간다
+            Map.entry("/api/auth/password/reset",     new Rule("pw-reset", 10, 600)),
+            Map.entry("/api/account/changeEmail",     new Rule("chg-email", 10, 600)), // 비밀번호 대입 창구
+            Map.entry("/api/account/sessions/revoke", new Rule("sess", 30, 600)),
+            Map.entry("/api/user/setUserInfo",        new Rule("profile", 20, 600)),
+            Map.entry("/api/user/changePassword",     new Rule("chg-pw", 10, 600)),
+            Map.entry("/api/user/deleteAccount",      new Rule("del-acct", 10, 600)),
+            // 무거운 조회·발송
+            Map.entry("/api/search",                  new Rule("search", 60, 60)),
+            Map.entry("/api/search/suggest",          new Rule("suggest", 120, 60)),
+            Map.entry("/api/push/test",               new Rule("push-test", 5, 600)),
+            Map.entry("/api/digest/preview",          new Rule("digest", 20, 600)),
             // 화면 오류 접수 — 오류 루프 한 번에 DB 가 차지 않게
             Map.entry("/api/err/report",              new Rule("err", 20, 60))
     );

@@ -70,40 +70,46 @@ public class LinkPreviewService {
 
     /** OG → 트위터 카드 → title/description 순으로 채운다. 이미지는 절대 주소로. */
     static Map<String, Object> parse(String html, String baseUrl, String originalUrl) {
-        String head = html.length() > 200_000 ? html.substring(0, 200_000) : html;
+        String raw = html.length() > 200_000 ? html.substring(0, 200_000) : html;
+        org.jsoup.nodes.Document head = org.jsoup.Jsoup.parse(raw);
         String title = first(meta(head, "og:title"), meta(head, "twitter:title"), tag(head, "title"));
         if (title == null) return null;
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("url", originalUrl);
-        m.put("title", clip(unescape(title), 120));
+        m.put("title", clip(title, 120));   // Jsoup 이 이미 엔티티를 풀었다
         String desc = first(meta(head, "og:description"), meta(head, "twitter:description"), meta(head, "description"));
-        m.put("description", desc == null ? null : clip(unescape(desc), 200));
+        m.put("description", desc == null ? null : clip(desc, 200));
         String site = first(meta(head, "og:site_name"), null, null);
         String host = java.net.URI.create(baseUrl).getHost();
-        m.put("siteName", site != null ? clip(unescape(site), 60) : (host == null ? null : host.replaceFirst("^www\\.", "")));
+        m.put("siteName", site != null ? clip(site, 60) : (host == null ? null : host.replaceFirst("^www\\.", "")));
         String img = first(meta(head, "og:image"), meta(head, "og:image:url"), meta(head, "twitter:image"));
         if (img != null) {
-            try { img = java.net.URI.create(baseUrl).resolve(unescape(img).trim()).toString(); } catch (Exception e) { img = null; }
+            try { img = java.net.URI.create(baseUrl).resolve(img.trim()).toString(); } catch (Exception e) { img = null; }
             if (img != null && !img.startsWith("http")) img = null;
         }
         m.put("image", img);
         return m;
     }
 
-    private static String meta(String html, String key) {
-        // property/name 과 content 순서가 어느 쪽이든
-        Pattern p1 = Pattern.compile("<meta[^>]+(?:property|name)=[\"']" + Pattern.quote(key) + "[\"'][^>]*content=[\"']([^\"']*)[\"']", Pattern.CASE_INSENSITIVE);
-        Pattern p2 = Pattern.compile("<meta[^>]+content=[\"']([^\"']*)[\"'][^>]*(?:property|name)=[\"']" + Pattern.quote(key) + "[\"']", Pattern.CASE_INSENSITIVE);
-        Matcher m = p1.matcher(html);
-        if (m.find() && !m.group(1).isBlank()) return m.group(1);
-        m = p2.matcher(html);
-        if (m.find() && !m.group(1).isBlank()) return m.group(1);
+    /**
+     * ⚠️ 정규식으로 찾지 않는다. 예전 {@code <meta[^>]+...} 는 닫히지 않은 {@code <meta } 를 수만 번 반복한
+     * 페이지에서 되짚기가 제곱으로 늘어(200KB 면 패턴 하나에 20초) 미리보기 요청 하나가 서버를 몇 분씩 붙잡았다.
+     * Jsoup 파서는 입력 길이에 비례한다. 문서는 parse() 에서 한 번만 만든다.
+     */
+    private static String meta(org.jsoup.nodes.Document doc, String key) {
+        for (org.jsoup.nodes.Element e : doc.select("meta")) {
+            String k = e.hasAttr("property") ? e.attr("property") : e.attr("name");
+            if (key.equalsIgnoreCase(k.trim())) {
+                String v = e.attr("content");
+                if (!v.isBlank()) return v;
+            }
+        }
         return null;
     }
 
-    private static String tag(String html, String name) {
-        Matcher m = Pattern.compile("<" + name + "[^>]*>([^<]{1,500})</" + name + ">", Pattern.CASE_INSENSITIVE).matcher(html);
-        return m.find() ? m.group(1).trim() : null;
+    private static String tag(org.jsoup.nodes.Document doc, String name) {
+        String t = doc.title();
+        return t == null || t.isBlank() ? null : (t.length() > 500 ? t.substring(0, 500) : t.trim());
     }
 
     private static String first(String a, String b, String c) { return a != null ? a : b != null ? b : c; }

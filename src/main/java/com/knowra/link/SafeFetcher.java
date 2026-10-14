@@ -34,6 +34,10 @@ public final class SafeFetcher {
             .followRedirects(HttpClient.Redirect.NEVER)
             .build();
 
+    private static final int BODY_DEADLINE_SEC = 8;
+    private static final java.util.concurrent.ScheduledExecutorService CLOSER =
+            java.util.concurrent.Executors.newSingleThreadScheduledExecutor(r -> { Thread t = new Thread(r, "safe-fetch-closer"); t.setDaemon(true); return t; });
+
     public static Result get(String url, String accept, int maxBytes) throws Exception {
         String current = url;
         for (int hop = 0; hop <= 3; hop++) {
@@ -54,7 +58,14 @@ public final class SafeFetcher {
                 continue;
             }
             byte[] body;
-            try (InputStream in = res.body()) { body = readLimited(in, maxBytes); }
+            // 본문 읽기 전체에 마감을 건다 — 요청 timeout 은 헤더까지만이라 1바이트씩 흘리는 서버가 스레드를 무한정
+            // 붙잡았다. 마감이 되면 다른 스레드가 스트림을 닫아 막힌 read() 를 풀어 준다.
+            try (InputStream in = res.body()) {
+                var closer = CLOSER.schedule(() -> { try { in.close(); } catch (Exception ignored) { } }, BODY_DEADLINE_SEC, java.util.concurrent.TimeUnit.SECONDS);
+                try { body = readLimited(in, maxBytes); }
+                catch (java.io.IOException e) { throw new IllegalArgumentException("본문을 제때 받지 못했다"); }
+                finally { closer.cancel(false); }
+            }
             return new Result(code, res.headers().firstValue("Content-Type").orElse(""), body, u.toString());
         }
         throw new IllegalArgumentException("리다이렉트가 너무 많다");
@@ -99,6 +110,13 @@ public final class SafeFetcher {
             if (b0 >= 224) return false;                               // 멀티캐스트·예약
         } else {
             if ((b[0] & 0xfe) == 0xfc) return false;                   // IPv6 ULA fc00::/7
+            // 안에 IPv4 를 품은 주소는 그 v4 로 다시 본다 — 6to4(2002::/16), NAT64(64:ff9b::/96)
+            if ((b[0] & 0xff) == 0x20 && (b[1] & 0xff) == 0x02) {
+                try { return isPublic(InetAddress.getByAddress(new byte[]{b[2], b[3], b[4], b[5]})); } catch (UnknownHostException e) { return false; }
+            }
+            if ((b[0] & 0xff) == 0x00 && (b[1] & 0xff) == 0x64 && (b[2] & 0xff) == 0xff && (b[3] & 0xff) == 0x9b) {
+                try { return isPublic(InetAddress.getByAddress(new byte[]{b[12], b[13], b[14], b[15]})); } catch (UnknownHostException e) { return false; }
+            }
             if (a instanceof Inet6Address i6 && i6.isIPv4CompatibleAddress()) return false;
             // IPv4-mapped(::ffff:a.b.c.d) 는 안의 v4 로 다시 본다
             boolean mapped = true;

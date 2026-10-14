@@ -71,6 +71,7 @@ public class UserService {
     private EntityManager em;
 
     private final RedisApiService redisApiService;
+    private final com.knowra.session.SessionService sessionService;
 
     /** 로그인 폼이 보내는 건 아이디다. 닉네임으로 먼저 찾던 시절엔 닉네임 ≠ 아이디인 계정이 로그인 직후 여기서 죽었다. */
     public Long getUserSn(String loginId) {
@@ -146,13 +147,24 @@ public class UserService {
             Long userSn = me;
 
             TblUser tblUser = tblUserRepository.findByUserSn(userSn);
+            // 닉네임은 프로필 주소이자 멘션 대상이다 — 규칙과 중복을 서버가 본다. 예전엔 검사가 없어 남의 닉네임으로
+            // 바꾸면 그 사람의 프로필·DM·신고·멘션이 전부 깨졌다(같은 닉네임 두 줄 → 조회 오류).
+            String nickName = ComUtil.getStrValue(params.get("nickName")).trim();
+            String nickErr = com.knowra.user.UserRules.nickNameError(nickName);
+            if (nickErr == null && !nickName.equals(tblUser.getNickName())
+                    && tblUserRepository.findByNickName(nickName).isPresent()) nickErr = "이미 사용 중인 닉네임입니다.";
+            if (nickErr != null) {
+                resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
+                resultVO.setResultMessage(nickErr);
+                return resultVO;
+            }
             tblUser.setName(ComUtil.getStrValue(params.get("name")));
-            tblUser.setNickName(ComUtil.getStrValue(params.get("nickName")));
+            tblUser.setNickName(nickName);
             tblUser.setBio(ComUtil.getStrValue(params.get("bio")));
             tblUser.setInterest(ComUtil.getStrValue(params.get("interest")));
 
-            if(params.get("removeProfileImage") != null){
-                boolean isDelete = fileUtil.deleteFile(new String[]{tblUser.getPfp().getStrgFileNm() + "." + tblUser.getPfp().getAtchFileExtnNm()}, tblUser.getPfp().getAtchFilePathNm());
+            if(params.get("removeProfileImage") != null && tblUser.getPfp() != null){
+                boolean isDelete = fileUtil.deleteStored(tblUser.getPfp());
                 if(isDelete){
                     tblComFileRepository.delete(tblUser.getPfp());
                     tblUser.setPfp(null);
@@ -167,7 +179,10 @@ public class UserService {
             // 토큰에 nickName 이 들어 있어, 프로필을 고쳤으면 액세스 토큰을 새로 내려준다.
             // 리프레시 토큰은 쿠키에 그대로 있으니 건드리지 않는다. 예전엔 프로필 사진 URL 이
             // 토큰에 박혀 있어 사진만 바꿔도 토큰 둘을 다 재발급했다 — 그 클레임은 뺐다.
-            resultVO.putResult("accessToken", jwtProvider.generateAccessToken(userSn, tblUser.getLoginId()));
+            // 같은 세션 id 로 — 예전엔 세션 없는 토큰을 내줘서, 이걸로 계속 새 토큰을 받으면 기기 로그아웃·정지로도 못 끊었다
+            Object sid = org.springframework.web.context.request.RequestContextHolder.currentRequestAttributes()
+                    .getAttribute(com.knowra.cmm.jwt.JwtAuthenticationFilter.SID_ATTR, org.springframework.web.context.request.RequestAttributes.SCOPE_REQUEST);
+            resultVO.putResult("accessToken", jwtProvider.generateAccessToken(userSn, tblUser.getLoginId(), (String) sid));
 
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
             resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
@@ -225,6 +240,7 @@ public class UserService {
             TblComFile pfp = tblComFileRepository.save(proFile);
 
             if(tblUser.getPfp() != null){
+                fileUtil.deleteStored(tblUser.getPfp());   // 바꾼 옛 사진 파일도 지운다 — 예전엔 DB 줄만 지워 파일이 공개 주소에 남았다
                 tblComFileRepository.delete(tblUser.getPfp());
             }
 
@@ -370,6 +386,13 @@ public class UserService {
             TblUserFlwr existing = tblUserFlwrRepository
                     .findByFlwrUserSnAndFlwngUserSn(myUserSn, targetUserSn)
                     .orElse(null);
+            // 차단한·차단당한 사이는 새로 팔로우할 수 없다(언팔로우는 된다) — 예전엔 차단당한 사람이 팔로우해 상대의 팔로워 목록에 떴다
+            if ((existing == null || !"Y".equals(existing.getActvtnYn())) && (tblUserBlockRepository.existsByUserSnAndBlockedSn(myUserSn, targetUserSn)
+                    || tblUserBlockRepository.existsByUserSnAndBlockedSn(targetUserSn, myUserSn))) {
+                resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
+                resultVO.setResultMessage("팔로우할 수 없는 사용자예요.");
+                return resultVO;
+            }
 
             String newState;
             if (existing == null) {
@@ -418,6 +441,13 @@ public class UserService {
                 .fetch());
     }
 
+    /** 이 요청의 세션 id (JwtAuthenticationFilter 가 요청 속성에 넣어 둔다) */
+    private static String currentSid() {
+        Object v = org.springframework.web.context.request.RequestContextHolder.currentRequestAttributes()
+                .getAttribute(com.knowra.cmm.jwt.JwtAuthenticationFilter.SID_ATTR, org.springframework.web.context.request.RequestAttributes.SCOPE_REQUEST);
+        return v == null ? null : v.toString();
+    }
+
     public ResultVO changePassword(Map<String, Object> params, Long me) {
         ResultVO resultVO = new ResultVO();
 
@@ -427,6 +457,11 @@ public class UserService {
 
             String currentPw = params.get("currentPw").toString();
             String newPw = params.get("newPw").toString();
+            if (newPw.length() < 8) {   // 재설정과 같은 기준 — 예전엔 변경에만 길이 제한이 없었다
+                resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
+                resultVO.setResultMessage("비밀번호는 8자 이상이어야 합니다.");
+                return resultVO;
+            }
 
             PasswordEncoder encoder = new BCryptPasswordEncoder();
             if(!encoder.matches(currentPw, tblUser.getPassword())){
@@ -447,6 +482,9 @@ public class UserService {
 
             tblUser.setPassword(encoder.encode(newPw));
             tblUserRepository.save(tblUser);
+            // 비밀번호를 바꾸는 이유의 대부분은 "누가 들어온 것 같아서"다 — 지금 기기만 남기고 다른 세션을 끊는다.
+            // 예전엔 끊지 않아서, 훔친 리프레시 쿠키가 비밀번호를 바꾼 뒤에도 계속 살았다.
+            sessionService.revokeOthers(me, currentSid());
 
             resultVO.setResultCode(ResponseCode.CHANGE_PW_SUCCESS.getCode());
             resultVO.setResultMessage(ResponseCode.CHANGE_PW_SUCCESS.getMessage());
@@ -476,6 +514,7 @@ public class UserService {
             }
             tblUser.setActvtnYn("N");
             tblUserRepository.save(tblUser);
+            sessionService.revokeOthers(me, null);   // 탈퇴하면 모든 기기에서 끊는다 — 예전엔 리프레시로 계속 살아 있었다
 
             resultVO.setResultCode(ResponseCode.CHANGE_PW_SUCCESS.getCode());
             resultVO.setResultMessage(ResponseCode.CHANGE_PW_SUCCESS.getMessage());

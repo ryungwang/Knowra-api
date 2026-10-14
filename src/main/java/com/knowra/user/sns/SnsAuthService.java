@@ -119,13 +119,23 @@ public class SnsAuthService {
         };
     }
 
+    /**
+     * ⚠️ 액세스 토큰이 <b>우리 앱에 발급된 것</b>인지(aud/azp == googleClientId) 먼저 본다. 예전엔 userinfo 만
+     * 불러서, 다른 사이트가 「구글로 로그인」으로 받아 둔 피해자 토큰을 들고 오면 그 사람으로 로그인됐다.
+     */
     @SuppressWarnings("unchecked")
     private SnsIdentity google(String accessToken) {
+        if (!StringUtils.hasText(googleClientId)) throw new IllegalArgumentException("구글 로그인이 아직 준비되지 않았어요.");
         if (!StringUtils.hasText(accessToken)) throw new IllegalArgumentException("구글 인증 정보를 받지 못했어요.");
+        Map<String, Object> ti = getJson("https://oauth2.googleapis.com/tokeninfo?access_token=" + enc(accessToken), null);
+        if (ti == null || !(googleClientId.equals(str(ti.get("aud"))) || googleClientId.equals(str(ti.get("azp")))))
+            throw new IllegalArgumentException("구글 인증 정보를 확인하지 못했어요. 다시 시도해 주세요.");
         Map<String, Object> info = getJson("https://www.googleapis.com/oauth2/v1/userinfo?access_token=" + enc(accessToken), null);
         if (info == null || info.get("id") == null) throw new IllegalArgumentException("구글 사용자 정보를 가져오지 못했어요.");
-        if (Boolean.FALSE.equals(info.get("verified_email"))) throw new IllegalArgumentException("검증되지 않은 구글 이메일이에요.");
-        return new SnsIdentity(GOOGLE, str(info.get("id")), str(info.get("email")), str(info.get("name")), str(info.get("picture")));
+        if (ti.get("sub") != null && !str(ti.get("sub")).equals(str(info.get("id"))))
+            throw new IllegalArgumentException("구글 인증 정보를 확인하지 못했어요. 다시 시도해 주세요.");
+        boolean verified = Boolean.TRUE.equals(info.get("verified_email")) || "true".equals(str(ti.get("email_verified")));
+        return new SnsIdentity(GOOGLE, str(info.get("id")), str(info.get("email")), str(info.get("name")), str(info.get("picture")), verified);
     }
 
     @SuppressWarnings("unchecked")
@@ -143,8 +153,9 @@ public class SnsAuthService {
         if (me == null || me.get("id") == null) throw new IllegalArgumentException("카카오 사용자 정보를 가져오지 못했어요.");
         Map<String, Object> acct = (Map<String, Object>) me.getOrDefault("kakao_account", Map.of());
         Map<String, Object> prof = (Map<String, Object>) acct.getOrDefault("profile", Map.of());
-        String email = Boolean.FALSE.equals(acct.get("is_email_verified")) ? null : str(acct.get("email"));
-        return new SnsIdentity(KAKAO, str(me.get("id")), email, str(prof.get("nickname")), str(prof.get("profile_image_url")));
+        // 「확인됨」이라고 분명히 밝힌 이메일만 믿는다 — 예전엔 값이 빠져 있어도 믿었다
+        boolean verified = Boolean.TRUE.equals(acct.get("is_email_verified")) && !Boolean.FALSE.equals(acct.get("is_email_valid"));
+        return new SnsIdentity(KAKAO, str(me.get("id")), str(acct.get("email")), str(prof.get("nickname")), str(prof.get("profile_image_url")), verified);
     }
 
     @SuppressWarnings("unchecked")
@@ -161,7 +172,8 @@ public class SnsAuthService {
         Map<String, Object> r = me == null ? null : (Map<String, Object>) me.get("response");
         if (r == null || r.get("id") == null) throw new IllegalArgumentException("네이버 사용자 정보를 가져오지 못했어요.");
         String name = StringUtils.hasText(str(r.get("name"))) ? str(r.get("name")) : str(r.get("nickname"));
-        return new SnsIdentity(NAVER, str(r.get("id")), str(r.get("email")), name, str(r.get("profile_image")));
+        // 네이버는 이메일 확인 여부를 알려 주지 않는다 — 미리 채우기에만 쓰고 계정 찾기·아이디로는 쓰지 않는다
+        return new SnsIdentity(NAVER, str(r.get("id")), str(r.get("email")), name, str(r.get("profile_image")), false);
     }
 
     /**
@@ -182,8 +194,8 @@ public class SnsAuthService {
                     .requireIssuer("https://appleid.apple.com").requireAudience(appleClientId)
                     .build().parseSignedClaims(idToken).getPayload();
             String email = c.get("email", String.class);
-            if (Boolean.FALSE.equals(toBool(c.get("email_verified")))) email = null;
-            return new SnsIdentity(APPLE, c.getSubject(), email, StringUtils.hasText(userName) ? userName.trim() : null, null);
+            boolean verified = Boolean.TRUE.equals(toBool(c.get("email_verified")));
+            return new SnsIdentity(APPLE, c.getSubject(), email, StringUtils.hasText(userName) ? userName.trim() : null, null, verified);
         } catch (IllegalArgumentException e) {
             throw e;
         } catch (Exception e) {

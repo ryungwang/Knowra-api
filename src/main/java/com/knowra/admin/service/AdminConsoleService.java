@@ -47,6 +47,7 @@ public class AdminConsoleService {
     private final PostService postService;
     private final org.springframework.context.ApplicationEventPublisher publisher;
     private final org.springframework.jdbc.core.JdbcTemplate jdbc;
+    private final com.knowra.session.SessionService sessionService;
 
     public ResultVO getStats() {
         ResultVO resultVO = new ResultVO();
@@ -242,6 +243,8 @@ public class AdminConsoleService {
             u.setStatus(suspend ? "S" : "Y");
             userRepository.save(u);
             // 정지된 사람의 열린 알림 소켓도 닫는다(새 요청만 막으면 이미 열린 소켓으로 알림이 계속 간다)
+            // 정지하면 모든 세션을 끊는다 — 소켓만 닫던 시절엔 이미 받은 토큰으로 한 시간 동안 글·DM 을 계속 썼다
+            if (suspend) sessionService.revokeOthers(userSn, null);
             if (suspend) publisher.publishEvent(new com.knowra.session.SessionRevokedEvent(userSn, null));
             resultVO.putResult("user", userBrief(u));
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());

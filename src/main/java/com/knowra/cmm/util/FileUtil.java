@@ -161,6 +161,18 @@ public class FileUtil {
 		return relativePathString + "/" + newName + "." + fileExt;
 	}
 
+	/**
+	 * 첨부 한 건의 실제 파일을 지운다. DB 의 경로({@code /upload/...})는 <b>공개 주소</b>라 그대로 파일 경로로 쓰면 안 된다 —
+	 * 예전엔 그렇게 해서 「없는 파일」로 보고 성공 처리돼, 지운 프로필 사진이 주소로 계속 열렸다.
+	 * 파일이 이미 없으면 지운 것으로 본다.
+	 */
+	public boolean deleteStored(TblComFile f) {
+		if (f == null || f.getAtchFilePathNm() == null) return true;
+		String rel = f.getAtchFilePathNm().startsWith("/upload") ? f.getAtchFilePathNm().substring("/upload".length()) : f.getAtchFilePathNm();
+		File target = new File(filePathBlackList(fileStorePath + rel), f.getStrgFileNm() + "." + f.getAtchFileExtnNm()).getAbsoluteFile();
+		return !target.exists() || target.delete();
+	}
+
 	public boolean deleteFile(String[] fileNames, String filePath) {
 		boolean returnFlag = true;
 		if(fileNames != null && fileNames.length > 0){
@@ -195,7 +207,7 @@ public class FileUtil {
 		String rtnStr = null;
 
 		// 문자열로 변환하기 위한 패턴 설정(년도-월-일 시:분:초:초(자정이후 초))
-		String pattern = "yyyyMMddhhmmssSSS";
+		String pattern = "yyyyMMddHHmmssSSS";   // HH(24시) — hh 였을 땐 오전·오후 같은 시각 업로드가 같은 이름으로 덮였다
 
 		SimpleDateFormat sdfCurrent = new SimpleDateFormat(pattern, Locale.KOREA);
 		Timestamp ts = new Timestamp(System.currentTimeMillis());

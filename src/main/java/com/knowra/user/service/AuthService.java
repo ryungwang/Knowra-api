@@ -125,6 +125,7 @@ public class AuthService {
             // 정지(status='S')된 계정은 비밀번호가 맞아도 들여보내지 않는다 — 관리자 콘솔이 정지한다
             tblUserRepository.findById(userSn).ifPresent(u -> {
                 if ("S".equals(u.getStatus())) throw new IllegalStateException("SUSPENDED");
+                if (!"Y".equals(u.getActvtnYn())) throw new IllegalStateException("DELETED");   // 탈퇴한 계정 — 예전엔 비밀번호로 다시 들어왔다
             });
             String sid = sessionService.start(userSn);   // 이 로그인 = 기기 목록의 한 줄
             String accessToken = jwtProvider.generateAccessToken(userSn, loginId, sid);
@@ -144,7 +145,7 @@ public class AuthService {
             resultVO.setResultMessage("이메일 또는 비밀번호가 올바르지 않습니다.");
         } catch (IllegalStateException e) {
             resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
-            resultVO.setResultMessage("이용이 정지된 계정입니다. 문의해 주세요.");
+            resultVO.setResultMessage("DELETED".equals(e.getMessage()) ? "이메일 또는 비밀번호가 올바르지 않습니다." : "이용이 정지된 계정입니다. 문의해 주세요.");
         } catch (Exception e) {
             ErrorLog.report(e);
             resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
@@ -167,7 +168,14 @@ public class AuthService {
             SnsIdentity id = snsAuthService.fetchIdentity(provider, params);
 
             Optional<TblUser> tblUser = tblUserRepository.findBySnsNameAndSnsId(id.provider(), id.id());
-            if (tblUser.isEmpty() && StringUtils.hasText(id.email())) tblUser = tblUserRepository.findByLoginId(id.email());
+            // 이메일로 찾는 건 "예전 구글 가입(제공자 ID 없이 loginId=이메일)"을 잇는 용도뿐이다. ⚠️ 좁게 건다:
+            // 제공자가 확인한 이메일 + 그 계정이 소셜 계정 + 아직 제공자가 안 묶임 + 구글. 예전엔 아무 계정이나
+            // loginId 가 같으면 들어가서, 남이 이메일 아이디를 먼저 만들어 두거나(비밀번호 계정) 확인 안 된
+            // 이메일을 적은 다른 제공자 계정으로 그 사람 계정에 로그인할 수 있었다.
+            if (tblUser.isEmpty() && id.emailVerified() && StringUtils.hasText(id.email()) && SnsAuthService.GOOGLE.equals(id.provider()))
+                tblUser = tblUserRepository.findByLoginId(id.email())
+                        .filter(u -> "Y".equals(u.getSnsYn()) && !StringUtils.hasText(u.getSnsId())
+                                && (u.getSnsName() == null || SnsAuthService.GOOGLE.equals(u.getSnsName())));
 
             if (tblUser.isEmpty()) {
                 resultVO.putResult("needsProfile", true);
@@ -181,6 +189,11 @@ public class AuthService {
                 if ("S".equals(u.getStatus())) {
                     resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
                     resultVO.setResultMessage("이용이 정지된 계정입니다. 문의해 주세요.");
+                    return resultVO;
+                }
+                if (!"Y".equals(u.getActvtnYn())) {
+                    resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
+                    resultVO.setResultMessage("탈퇴한 계정입니다.");
                     return resultVO;
                 }
                 // 이메일로만 찾은 예전 계정은 제공자 ID 를 이번에 묶어 둔다 — 다음부터 ①로 바로 찾는다.
@@ -266,7 +279,7 @@ public class AuthService {
             long userSn = jwtProvider.extractUserSn(refreshToken);
 
             // 정지된 계정은 갱신으로도 살아나면 안 된다 — 로그인만 막으면 리프레시 쿠키로 7일을 더 쓴다.
-            if (tblUserRepository.findById(userSn).map(u -> "S".equals(u.getStatus())).orElse(true)) {
+            if (tblUserRepository.findById(userSn).map(u -> "S".equals(u.getStatus()) || !"Y".equals(u.getActvtnYn())).orElse(true)) {   // 정지·탈퇴
                 revokeIfValid(refreshToken);
                 response.addHeader("Set-Cookie", refreshCookie.clear());
                 resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
@@ -314,7 +327,9 @@ public class AuthService {
             if (!"Y".equals(snsYn)) {
                 boolean emailOk = !email.isEmpty() && verificationService.isVerified(VerificationService.EMAIL, email);
                 boolean phoneOk = !phone.isEmpty() && verificationService.isVerified(VerificationService.PHONE, phone);
-                if (!emailOk && !phoneOk) {
+                // 적은 연락처는 전부 확인된 것이어야 한다 — 하나만 확인하고 다른 칸에 남의 이메일·번호를 적으면
+                // 그 주인이 「이미 가입된」 으로 막히고, 비밀번호 찾기 메일도 엉뚱한 계정 것으로 간다.
+                if ((!emailOk && !phoneOk) || (!email.isEmpty() && !emailOk) || (!phone.isEmpty() && !phoneOk)) {
                     resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
                     resultVO.setResultMessage("본인 확인이 끝나지 않았습니다. 인증 코드를 먼저 확인해주세요.");
                     return resultVO;
@@ -324,6 +339,21 @@ public class AuthService {
                     resultVO.setResultMessage("비밀번호는 8자 이상이어야 합니다.");
                     return resultVO;
                 }
+            }
+            // 아이디 규칙(소셜 가입 아이디는 서버가 정한다). 이메일 가입은 화면이 이메일을 아이디로 쓰므로 허용하되,
+            // ⚠️ 이번에 인증까지 마친 그 이메일과 같을 때만 — 남의 이메일을 아이디로 먼저 잡아 두는 길을 막는다.
+            String ruleErr = null;
+            if (!"Y".equals(snsYn)) {
+                boolean ownEmailId = !email.isEmpty() && loginId.equalsIgnoreCase(email)
+                        && verificationService.isVerified(VerificationService.EMAIL, email);
+                if (!ownEmailId) ruleErr = com.knowra.user.UserRules.loginIdError(loginId);
+                if (ownEmailId) loginId = email;   // 정규화된(소문자) 주소로
+            }
+            if (ruleErr == null) ruleErr = com.knowra.user.UserRules.nickNameError(ComUtil.getStrValue(params.get("nickName")));
+            if (ruleErr != null) {
+                resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
+                resultVO.setResultMessage(ruleErr);
+                return resultVO;
             }
             if (tblUserRepository.findByLoginId(loginId).isPresent()) {
                 resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
@@ -365,7 +395,9 @@ public class AuthService {
                     resultVO.setResultMessage("이미 가입된 소셜 계정이에요. 로그인해 주세요.");
                     return resultVO;
                 }
-                String snsLoginId = StringUtils.hasText(id.email()) ? id.email() : id.provider().toLowerCase() + "_" + id.id();
+                // 확인된 이메일만 아이디·이메일로 쓴다 — 확인 안 된 이메일을 아이디로 박으면 그 주소 주인의 자리를 선점한다
+                String verifiedEmail = id.emailVerified() && StringUtils.hasText(id.email()) ? id.email() : null;
+                String snsLoginId = verifiedEmail != null ? verifiedEmail : id.provider().toLowerCase() + "_" + id.id();
                 if (tblUserRepository.findByLoginId(snsLoginId).isPresent()) {
                     resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
                     resultVO.setResultMessage("이미 가입된 이메일이에요. 로그인해 주세요.");
@@ -373,7 +405,7 @@ public class AuthService {
                 }
                 loginId = snsLoginId;
                 tblUser.setLoginId(snsLoginId);
-                tblUser.setEmail(StringUtils.hasText(id.email()) ? id.email() : null);
+                tblUser.setEmail(verifiedEmail);
                 tblUser.setSnsYn("Y");
                 tblUser.setSnsId(id.id());
                 tblUser.setSnsName(id.provider());
@@ -519,6 +551,7 @@ public class AuthService {
             user.setPassword(passwordEncoder.encode(newPw));
             tblUserRepository.save(user);
             redisApiService.delRedis(REDIS_DB, "pwreset:" + token);
+            sessionService.revokeOthers(user.getUserSn(), null);   // 비밀번호를 잊었거나 뺏겼다 — 모든 기기를 끊는다
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
             resultVO.setResultMessage("비밀번호가 바뀌었습니다. 새 비밀번호로 로그인해주세요.");
         } catch (Exception e) {

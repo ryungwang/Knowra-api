@@ -42,6 +42,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final com.knowra.session.SessionService sessionService;
 
     public static final int REDIS_DB = 15;
+    /** 이 요청의 세션 id(요청 속성 이름) */
+    public static final String SID_ATTR = "knowra.sid";
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -54,10 +56,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
+        String sid = jwtProvider.isValid(token) ? jwtProvider.extractSid(token) : null;
         if (!jwtProvider.isValid(token)
                 || !jwtProvider.isAccessToken(token)
+                || sid == null   // 세션 없는 토큰은 끊을 수가 없다 — 프로필 수정이 그런 토큰을 내줘 「다른 기기 로그아웃」·정지로도 못 막았다
                 || redisApiService.isBlocklisted(REDIS_DB, token)
-                || sessionService.isRevoked(jwtProvider.extractSid(token))) {   // 다른 기기에서 끊은 세션
+                || sessionService.isRevoked(sid)) {   // 다른 기기에서 끊은 세션
             jsonAuthErrorHandler.commence(request, response,
                     new BadCredentialsException("invalid or revoked access token"));
             return;
@@ -71,6 +75,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         UsernamePasswordAuthenticationToken authentication =
                 new UsernamePasswordAuthenticationToken(userSn, null, authorities);
         authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+        request.setAttribute(SID_ATTR, sid);   // 토큰을 새로 내줄 때(프로필 수정 등) 같은 세션에 싣는다
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
         filterChain.doFilter(request, response);

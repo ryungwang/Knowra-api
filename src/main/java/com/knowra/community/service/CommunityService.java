@@ -631,6 +631,10 @@ public class CommunityService {
             if ("OWNER".equals(mb.getRole())) throw new IllegalArgumentException("만든 사람은 내보낼 수 없습니다.");
             if ("ADMIN".equals(mb.getRole()) && !"OWNER".equals(myRole)) throw new IllegalArgumentException("운영진은 만든 사람만 바꿀 수 있습니다.");
 
+            // 승인(ACTIVE)은 가입 신청 중(PENDING)이거나 차단 해제(BANNED)일 때만 — 스스로 나간 사람(WITHDRAWN)·거절된 사람을
+            // 운영진이 동의 없이 다시 끌어넣을 수 있었다(알림까지 켜진 채로).
+            if ("ACTIVE".equals(stat) && !java.util.Set.of("PENDING", "BANNED", "ACTIVE").contains(mb.getStat()))
+                throw new IllegalArgumentException("스스로 나갔거나 거절된 사람은 다시 넣을 수 없어요. 초대 링크를 보내 주세요.");
             TblComm comm = tblCommRepository.findByCommSn(commSn);
             boolean wasActive = "ACTIVE".equals(mb.getStat());
             boolean nowActive = "ACTIVE".equals(stat);
@@ -712,7 +716,11 @@ public class CommunityService {
             if (dspl != null && dspl.trim().length() >= 2) comm.setCommDsplNm(dspl.trim());
             if (request.getParameter("commDesc") != null) comm.setCommDesc(request.getParameter("commDesc").trim());
             String prv = request.getParameter("prvcyStng");
-            if (prv != null && java.util.Set.of("public", "restricted", "anonymous", "private").contains(prv)) comm.setPrvcyStng(prv);
+            if (prv != null && java.util.Set.of("public", "restricted", "anonymous", "private").contains(prv) && !prv.equals(comm.getPrvcyStng())) {
+                // 공개 범위는 OWNER 만 — 비공개를 공개로 돌리면 지난 글 전부가 피드·검색에 열린다. 운영진(ADMIN)이 혼자 바꿀 일이 아니다.
+                if (!"OWNER".equals(roleOf(commSn, me))) throw new IllegalArgumentException("공개 범위는 커뮤니티 주인만 바꿀 수 있어요.");
+                comm.setPrvcyStng(prv);
+            }
 
             String psnTblSn = "community_" + commSn;
             if (request.getFile("logoImage") != null) {

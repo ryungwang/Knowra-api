@@ -14,9 +14,13 @@ public class WebSocketConfig implements WebSocketConfigurer {
 
     private final NotificationWebSocketHandler notificationWebSocketHandler;
 
+    /** REST(CORS)와 같은 출처 목록 — 예전엔 "*" 였다 */
+    @org.springframework.beans.factory.annotation.Value("${knowra.cors.allowed-origins:http://localhost:5111,http://localhost:5173}")
+    private String allowedOrigins;
+
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         registry.addHandler(notificationWebSocketHandler, "/ws/notification")
-                .setAllowedOriginPatterns("*");
+                .setAllowedOriginPatterns(java.util.Arrays.stream(allowedOrigins.split(",")).map(String::trim).filter(o -> !o.isEmpty()).toArray(String[]::new));
     }
 }

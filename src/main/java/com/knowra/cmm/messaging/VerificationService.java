@@ -66,11 +66,12 @@ public class VerificationService {
         String base = key(channel, target);
         Object saved = redis.getRedis(REDIS_DB, base);
         if (saved == null) return false;
-        Object triesRaw = redis.getRedis(REDIS_DB, base + ":tries");
-        int tries = triesRaw == null ? 0 : Integer.parseInt(triesRaw.toString());
-        if (tries >= MAX_TRIES) { redis.delRedis(REDIS_DB, base); return false; }
-        if (!saved.toString().equals(code == null ? "" : code.trim())) {
-            redis.setRedis(REDIS_DB, base + ":tries", String.valueOf(tries + 1), CODE_TTL);
+        // 시도 횟수는 먼저 원자적으로 센다(INCR). 예전엔 읽고→비교하고→쓰는 세 단계라, 동시에 수백 번 보내면
+        // 전부 tries=0 을 읽어 5회 제한이 거의 걸리지 않았다(6자리 코드를 10분 안에 대입할 수 있었다).
+        long tries = redis.incr(REDIS_DB, base + ":tries", CODE_TTL);
+        if (tries > MAX_TRIES) { redis.delRedis(REDIS_DB, base); return false; }
+        if (!java.security.MessageDigest.isEqual(saved.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                (code == null ? "" : code.trim()).getBytes(java.nio.charset.StandardCharsets.UTF_8))) {
             return false;
         }
         redis.delRedis(REDIS_DB, base);
