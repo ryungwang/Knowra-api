@@ -30,6 +30,24 @@ public class RedisApiService {
         return Boolean.TRUE.equals(getRedisTemplate(templateIndex).opsForValue().setIfAbsent(key, value, ttlSeconds, TimeUnit.SECONDS));
     }
 
+    /**
+     * +1 하고 새 값을 돌려준다. 키가 이번에 생겼거나 만료가 빠져 있으면 {@code ttlSeconds} 를 건다
+     * — 고정 창(window) 카운터. 만료 설정이 따로 실패해도 다음 호출이 다시 건다.
+     */
+    public long incr(int templateIndex, String key, long ttlSeconds) {
+        RedisTemplate<String, Object> t = getRedisTemplate(templateIndex);
+        Long n = t.opsForValue().increment(key);
+        Long ttl = t.getExpire(key, TimeUnit.SECONDS);
+        if (n != null && (n == 1 || ttl == null || ttl < 0)) t.expire(key, ttlSeconds, TimeUnit.SECONDS);
+        return n == null ? 0 : n;
+    }
+
+    /** 남은 만료 시간(초). 키가 없으면 0. */
+    public long ttlSeconds(int templateIndex, String key) {
+        Long ttl = getRedisTemplate(templateIndex).getExpire(key, TimeUnit.SECONDS);
+        return ttl == null || ttl < 0 ? 0 : ttl;
+    }
+
     public Object getRedis(int templateIndex, String key) {
         RedisTemplate<String, Object> redisTemplate = getRedisTemplate(templateIndex);
         return redisTemplate.opsForValue().get(key);

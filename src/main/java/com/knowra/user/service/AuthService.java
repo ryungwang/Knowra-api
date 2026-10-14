@@ -61,6 +61,17 @@ public class AuthService {
     private final VerificationService verificationService;
     private final MailService mailService;
     private final SmsService smsService;
+    private final com.knowra.cmm.ratelimit.RateLimiter rateLimiter;
+
+    /*
+     * 로그인 실패 제한(15분 창). 세 겹인 이유:
+     *  - 계정+IP 5회: 한 사람이 한 계정을 두드리는 경우. 성공하면 초기화.
+     *  - IP 30회: 한 곳에서 여러 계정을 돌아가며 두드리는 경우.
+     *  - 계정 50회: 여러 IP 로 한 계정을 두드리는 경우. 넉넉하게 둔 건 남이 일부러 틀려서
+     *    주인을 잠가 버리는 걸 어렵게 하려는 것이다(주인은 보통 IP 가 달라 앞의 5회에 안 걸린다).
+     */
+    private static final long LOGIN_WINDOW_SEC = 900;
+    private static final int LOGIN_FAIL_ACCT_IP = 5, LOGIN_FAIL_IP = 30, LOGIN_FAIL_ACCT = 50;
 
     private static final int REDIS_DB = JwtAuthenticationFilter.REDIS_DB;
     private static final int PW_RESET_TTL = 1800;
@@ -85,9 +96,28 @@ public class AuthService {
             String loginId = params.get("loginId");
 
             if (!skipPassword) {
-                authenticationManager.authenticate(
-                        new UsernamePasswordAuthenticationToken(loginId, params.get("password"))
-                );
+                String acct = loginId == null ? "" : loginId.trim().toLowerCase(java.util.Locale.ROOT);
+                String kAcctIp = "login:fail:" + acct + ":" + clientIp, kIp = "login:fail-ip:" + clientIp, kAcct = "login:fail-acct:" + acct;
+                String over = rateLimiter.isOver(kAcctIp, LOGIN_FAIL_ACCT_IP) ? kAcctIp
+                        : rateLimiter.isOver(kIp, LOGIN_FAIL_IP) ? kIp
+                        : rateLimiter.isOver(kAcct, LOGIN_FAIL_ACCT) ? kAcct : null;
+                if (over != null) {
+                    // 잠긴 동안은 비밀번호가 맞아도 들이지 않는다 — 맞는지 여부를 알려 주면 잠금이 무의미하다
+                    resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
+                    resultVO.setResultMessage("로그인 시도가 너무 많아요. " + rateLimiter.minutesLeft(over) + "분 뒤에 다시 시도해 주세요.");
+                    return resultVO;
+                }
+                try {
+                    authenticationManager.authenticate(
+                            new UsernamePasswordAuthenticationToken(loginId, params.get("password"))
+                    );
+                } catch (BadCredentialsException e) {
+                    rateLimiter.count(kAcctIp, LOGIN_WINDOW_SEC);
+                    rateLimiter.count(kIp, LOGIN_WINDOW_SEC);
+                    rateLimiter.count(kAcct, LOGIN_WINDOW_SEC);
+                    throw e;
+                }
+                rateLimiter.reset(kAcctIp);
             }
 
             long userSn = userService.getUserSn(loginId);
