@@ -63,6 +63,7 @@ public class AuthService {
     private final MailService mailService;
     private final SmsService smsService;
     private final com.knowra.cmm.ratelimit.RateLimiter rateLimiter;
+    private final com.knowra.user.suspension.SuspensionService suspensionService;
 
     /*
      * 로그인 실패 제한(15분 창). 세 겹인 이유:
@@ -124,7 +125,7 @@ public class AuthService {
             long userSn = userService.getUserSn(loginId);
             // 정지(status='S')된 계정은 비밀번호가 맞아도 들여보내지 않는다 — 관리자 콘솔이 정지한다
             tblUserRepository.findById(userSn).ifPresent(u -> {
-                if ("S".equals(u.getStatus())) throw new IllegalStateException("SUSPENDED");
+                if (suspensionService.isSuspended(u)) throw new IllegalStateException("SUSPENDED|" + com.knowra.user.suspension.SuspensionService.message(u));
                 if (!"Y".equals(u.getActvtnYn())) throw new IllegalStateException("DELETED");   // 탈퇴한 계정 — 예전엔 비밀번호로 다시 들어왔다
             });
             String sid = sessionService.start(userSn);   // 이 로그인 = 기기 목록의 한 줄
@@ -145,7 +146,8 @@ public class AuthService {
             resultVO.setResultMessage("이메일 또는 비밀번호가 올바르지 않습니다.");
         } catch (IllegalStateException e) {
             resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
-            resultVO.setResultMessage("DELETED".equals(e.getMessage()) ? "이메일 또는 비밀번호가 올바르지 않습니다." : "이용이 정지된 계정입니다. 문의해 주세요.");
+            String m = String.valueOf(e.getMessage());
+            resultVO.setResultMessage(m.startsWith("SUSPENDED|") ? m.substring("SUSPENDED|".length()) : "이메일 또는 비밀번호가 올바르지 않습니다.");
         } catch (Exception e) {
             ErrorLog.report(e);
             resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
@@ -186,9 +188,9 @@ public class AuthService {
                 resultVO.putResult("googleInfo", info); // 예전 프론트 호환
             } else {
                 TblUser u = tblUser.get();
-                if ("S".equals(u.getStatus())) {
+                if (suspensionService.isSuspended(u)) {
                     resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
-                    resultVO.setResultMessage("이용이 정지된 계정입니다. 문의해 주세요.");
+                    resultVO.setResultMessage(com.knowra.user.suspension.SuspensionService.message(u));
                     return resultVO;
                 }
                 if (!"Y".equals(u.getActvtnYn())) {
@@ -278,7 +280,7 @@ public class AuthService {
             long userSn = jwtProvider.extractUserSn(refreshToken);
 
             // 정지된 계정은 갱신으로도 살아나면 안 된다 — 로그인만 막으면 리프레시 쿠키로 7일을 더 쓴다.
-            if (tblUserRepository.findById(userSn).map(u -> "S".equals(u.getStatus()) || !"Y".equals(u.getActvtnYn())).orElse(true)) {   // 정지·탈퇴
+            if (tblUserRepository.findById(userSn).map(u -> suspensionService.isSuspended(u) || !"Y".equals(u.getActvtnYn())).orElse(true)) {   // 정지·탈퇴
                 revokeIfValid(refreshToken);
                 response.addHeader("Set-Cookie", refreshCookie.clear());
                 resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());

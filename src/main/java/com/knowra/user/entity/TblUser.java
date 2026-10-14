@@ -75,6 +75,16 @@ public class TblUser {
   @Comment("상태")
   private String status = "Y";
 
+  @Column(name = "SUSPENDED_UNTIL")
+  @Comment("정지 끝나는 때 — status='S' 인데 NULL 이면 무기한")
+  @com.fasterxml.jackson.annotation.JsonIgnore
+  private LocalDateTime suspendedUntil;
+
+  @Column(name = "SUSPEND_REASON", length = 200)
+  @Comment("정지 사유 — 로그인 화면에 보인다")
+  @com.fasterxml.jackson.annotation.JsonIgnore
+  private String suspendReason;
+
   @Column(name = "SNS_YN", length = 20, nullable = false, updatable = false)
   @Comment("SNS 여부")
   private String snsYn = "N";

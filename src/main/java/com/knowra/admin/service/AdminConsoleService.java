@@ -138,6 +138,7 @@ public class AdminConsoleService {
     private static Map<String, Object> userBrief(TblUser u) {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("userSn", u.getUserSn()); m.put("nickName", u.getNickName()); m.put("name", u.getName()); m.put("status", u.getStatus());
+        if ("S".equals(u.getStatus())) { m.put("suspendedUntil", u.getSuspendedUntil()); m.put("suspendReason", u.getSuspendReason()); }
         return m;
     }
 
@@ -231,7 +232,10 @@ public class AdminConsoleService {
         return resultVO;
     }
 
-    /** params: userSn, suspend(true|false). 관리자 자신은 정지할 수 없다. */
+    /**
+     * params: userSn, suspend(true|false), days(1~365, 없거나 0 이면 무기한), reason(200자, 본인 로그인 화면에 보인다).
+     * 관리자 자신은 정지할 수 없다. 이미 정지 중인 사람에게 다시 걸면 기간·사유를 새로 덮는다.
+     */
     @Transactional
     public ResultVO setUserSuspend(Map<String, Object> params, Long admin) {
         ResultVO resultVO = new ResultVO();
@@ -240,7 +244,18 @@ public class AdminConsoleService {
             boolean suspend = Boolean.parseBoolean(String.valueOf(params.get("suspend")));
             if (userSn == admin) throw new IllegalArgumentException("자기 자신은 정지할 수 없습니다.");
             TblUser u = userRepository.findById(userSn).orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
-            u.setStatus(suspend ? "S" : "Y");
+            if (suspend) {
+                Object d = params.get("days");
+                int days = d == null || String.valueOf(d).isBlank() ? 0 : Integer.parseInt(String.valueOf(d));
+                if (days < 0 || days > 365) throw new IllegalArgumentException("정지 기간은 1~365일이에요.");
+                String reason = params.get("reason") == null ? null : String.valueOf(params.get("reason")).strip();
+                if (reason != null && reason.length() > 200) throw new IllegalArgumentException("사유는 200자까지예요.");
+                u.setStatus("S");
+                u.setSuspendedUntil(days == 0 ? null : java.time.LocalDateTime.now().plusDays(days));
+                u.setSuspendReason(reason == null || reason.isEmpty() ? null : reason);
+            } else {
+                u.setStatus("Y"); u.setSuspendedUntil(null); u.setSuspendReason(null);
+            }
             userRepository.save(u);
             // 정지된 사람의 열린 알림 소켓도 닫는다(새 요청만 막으면 이미 열린 소켓으로 알림이 계속 간다)
             // 정지하면 모든 세션을 끊는다 — 소켓만 닫던 시절엔 이미 받은 토큰으로 한 시간 동안 글·DM 을 계속 썼다
