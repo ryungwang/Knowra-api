@@ -21,6 +21,8 @@ public class UserController {
 
     private final UserService userService;
 
+    private final com.knowra.user.service.AccountDeletionService accountDeletionService;
+
     private final CommunityService communityService;
 
     @PostMapping("/api/user/getUserProfile")
@@ -68,7 +70,7 @@ public class UserController {
 
     @PostMapping("/api/user/deleteAccount")
     public ResultVO deleteAccount(@RequestBody Map<String, Object> params, @CurrentUser Long me) {
-        return userService.deleteAccount(params, me);
+        return accountDeletionService.delete(params, me);   // 실제로 지운다 — AccountDeletionService 머리말
     }
 
     @PostMapping("/api/user/getMyTagList")

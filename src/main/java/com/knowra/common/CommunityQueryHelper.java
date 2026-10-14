@@ -20,7 +20,9 @@ public class CommunityQueryHelper {
      * @param viewerSn  조회자 SN (비회원이면 null → 공개 커뮤니티만)
      */
     public static BooleanExpression accessCondition(QTblComm qComm, Long viewerSn) {
-        BooleanExpression isPublic = qComm.prvcyStng.in("public", "anonymous");
+        // 제한적(restricted)은 "누구나 볼 수 있지만 가입은 승인제" — 만들 때 그렇게 안내한다. 예전엔 여기서 빠져
+        // 글은 멤버만 보였고(위키·모임은 누구나) 안내와 어긋났다. 글쓰기는 여전히 승인된 멤버만.
+        BooleanExpression isPublic = qComm.prvcyStng.in("public", "anonymous", "restricted");
         if (viewerSn == null) return isPublic;
         QTblCommMbr qMbr = QTblCommMbr.tblCommMbr;
         BooleanExpression isMember = JPAExpressions.selectOne().from(qMbr)
