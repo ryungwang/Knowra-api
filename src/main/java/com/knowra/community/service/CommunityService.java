@@ -75,6 +75,19 @@ public class CommunityService {
                 return resultVO;
             }
 
+            // ⚠️ 폼을 엔티티에 그대로 바인딩하므로 서버가 정하는 값은 다시 박는다. 예전엔 commSn 을 실어 보내면
+            // save() 가 그 커뮤니티를 덮어쓰고 보낸 사람을 OWNER 로 넣었다 — 남의 커뮤니티를 통째로 가져갈 수 있었다.
+            tblComm.setCommSn(null);
+            tblComm.setMembers(null);
+            tblComm.setMemberCnt(0);
+            tblComm.setStat("Y");
+            tblComm.setActvtnYn("Y");
+            tblComm.setLogoFileSn(null); tblComm.setLogoFile(null);
+            tblComm.setBnrFileSn(null);  tblComm.setBnrFile(null);
+            tblComm.setFrstCrtDt(java.time.LocalDateTime.now());
+            tblComm.setMdfrSn(null); tblComm.setMdfcnDt(null);
+            if (!java.util.Set.of("public", "restricted", "anonymous", "private").contains(tblComm.getPrvcyStng()))
+                tblComm.setPrvcyStng("public");
             tblComm.setCreatrSn(userSn);
             tblCommRepository.save(tblComm);
 
