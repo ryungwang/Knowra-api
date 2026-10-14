@@ -134,7 +134,7 @@ public class AdminConsoleService {
             case "MSG" -> {
                 // 신고된 메시지와 바로 앞 대화 몇 줄 — 앞뒤 없이는 괴롭힘인지 농담인지 판단할 수 없다. 그 이상은 보이지 않는다
                 List<Map<String, Object>> ctx = jdbc.queryForList("""
-                        SELECT m.msg_sn, m.user_sn, u.nick_name, u.name, m.msg_cntnt, m.img_url, m.hidden_at, m.frst_crt_dt
+                        SELECT m.msg_sn, m.user_sn, u.nick_name, u.name, m.msg_cntnt, m.img_url, m.hidden_at, m.deleted_at, m.frst_crt_dt
                         FROM knowra_user.tbl_chat_msg m JOIN knowra_user.tbl_user u ON u.user_sn = m.user_sn
                         WHERE m.room_sn = (SELECT room_sn FROM knowra_user.tbl_chat_msg WHERE msg_sn = ?) AND m.msg_sn <= ?
                         ORDER BY m.msg_sn DESC LIMIT 4""", r.getTargetSn(), r.getTargetSn());
@@ -144,6 +144,7 @@ public class AdminConsoleService {
                     t.put("msgSn", r.getTargetSn());
                     t.put("preview", snippet(String.valueOf(msg.get("msg_cntnt"))) + (msg.get("img_url") != null ? " [사진]" : ""));
                     t.put("hidden", msg.get("hidden_at") != null);
+                    t.put("senderDeleted", msg.get("deleted_at") != null);   // 보낸 사람이 지운 뒤에도 원문은 보인다
                     userRepository.findById(((Number) msg.get("user_sn")).longValue()).ifPresent(u -> t.put("author", userBrief(u)));
                     List<Map<String, Object>> before = new ArrayList<>();
                     for (int i = ctx.size() - 1; i >= 1; i--) {

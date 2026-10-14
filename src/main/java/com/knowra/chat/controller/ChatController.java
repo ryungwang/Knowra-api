@@ -26,6 +26,10 @@ public class ChatController {
     /** body(선택): box = main | request */
     private final com.knowra.chat.service.ChatGroupService groupService;
 
+    /** 보낸 메시지 지우기 — body: msgSn */
+    @PostMapping("/deleteMsg")
+    public ResultVO deleteMsg(@RequestBody Map<String, Object> b, @CurrentUser Long me) { return chatService.deleteMsg(b, me); }
+
     /** 그룹 만들기 — body: name, nickNames[] (초대받은 사람은 요청함으로) */
     @PostMapping("/createGroup")
     public ResultVO createGroup(@RequestBody Map<String, Object> b, @CurrentUser Long me) {

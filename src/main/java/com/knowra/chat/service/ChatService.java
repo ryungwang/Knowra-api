@@ -125,7 +125,7 @@ public class ChatService {
                 } else {
                     row.put("peer",  peerByRoom.get(room.getRoomSn()));
                 }
-                row.put("lastMsg",   last == null ? null : last.getHiddenAt() != null ? "가려진 메시지" : (last.getMsgCntnt().isEmpty() && last.getImgUrl() != null ? "사진" : last.getMsgCntnt()));
+                row.put("lastMsg",   last == null ? null : last.getDeletedAt() != null ? "삭제된 메시지" : last.getHiddenAt() != null ? "가려진 메시지" : (last.getMsgCntnt().isEmpty() && last.getImgUrl() != null ? "사진" : last.getMsgCntnt()));
                 row.put("stat",      mb.getStat());
                 row.put("lastMsgAt", room.getLastMsgAt() != null ? room.getLastMsgAt().format(ISO) : null);
                 row.put("unread",    unread);
@@ -291,6 +291,40 @@ public class ChatService {
         return resultVO;
     }
 
+    // ── 보낸 메시지 지우기 ────────────────────────────────────────────────
+    /** params: msgSn — 보낸 사람만. 같은 방 사람들에게 바뀐 메시지를 밀어 준다(열린 화면이 바로 바뀐다) */
+    @Transactional
+    public ResultVO deleteMsg(Map<String, Object> params, Long me) {
+        ResultVO resultVO = new ResultVO();
+        try {
+            long msgSn = Long.parseLong(String.valueOf(params.get("msgSn")));
+            TblChatMsg m = msgRepository.findById(msgSn).orElseThrow(() -> new IllegalArgumentException("메시지를 찾을 수 없어요."));
+            if (m.getUserSn() != me) throw new IllegalArgumentException("내가 보낸 메시지만 지울 수 있어요.");
+            requireMember(m.getRoomSn(), me);
+            if (m.getDeletedAt() == null) {
+                m.setDeletedAt(LocalDateTime.now());
+                msgRepository.save(m);
+                Map<String, Object> dto = toDto(m);
+                for (TblChatRoomMbr mb : roomMbrRepository.findAllByRoomSn(m.getRoomSn())) {
+                    if ("DECLINED".equals(mb.getStat()) || "LEFT".equals(mb.getStat())) continue;
+                    Map<String, Object> ev = new HashMap<>(dto);
+                    ev.put("request", "REQUEST".equals(mb.getStat()));
+                    wsHandler.pushEvent(mb.getUserSn(), "CHAT", ev);
+                }
+            }
+            resultVO.putResult("msg", toDto(m));
+            resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
+        } catch (IllegalArgumentException e) {
+            resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
+            resultVO.setResultMessage(e.getMessage());
+        } catch (Exception e) {
+            ErrorLog.report(e);
+            resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
+            resultVO.setResultMessage(ResponseCode.SAVE_ERROR.getMessage());
+        }
+        return resultVO;
+    }
+
     // ── 읽음 ──────────────────────────────────────────────────────────────
     @Transactional
     public ResultVO markRead(Map<String, Object> params, Long me) {
@@ -343,9 +377,11 @@ public class ChatService {
         d.put("roomSn",    m.getRoomSn());
         d.put("userSn",    m.getUserSn());
         boolean hidden = m.getHiddenAt() != null;   // 가려진 메시지는 내용을 아예 안 보낸다(화면이 숨기는 게 아니라)
-        d.put("msgCntnt",  hidden ? "" : m.getMsgCntnt());
-        d.put("imgUrl",    hidden ? null : m.getImgUrl());
+        boolean deleted = m.getDeletedAt() != null;   // 보낸 사람이 지운 것도 마찬가지
+        d.put("msgCntnt",  hidden || deleted ? "" : m.getMsgCntnt());
+        d.put("imgUrl",    hidden || deleted ? null : m.getImgUrl());
         d.put("hidden",    hidden);
+        d.put("deleted",   deleted);
         d.put("createdAt", m.getFrstCrtDt().format(ISO));
         return d;
     }
