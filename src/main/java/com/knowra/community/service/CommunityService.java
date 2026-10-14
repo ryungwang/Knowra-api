@@ -232,7 +232,8 @@ public class CommunityService {
             Map<Long, Long> newCnt = new java.util.HashMap<>();
             new JPAQueryFactory(em).select(qp.commSn, qp.count()).from(qp)
                     .join(qMbr).on(qMbr.commSn.eq(qp.commSn).and(qMbr.userSn.eq(userSn)))
-                    .where(qp.actvtnYn.eq("Y"), qp.userSn.ne(userSn), qp.frstCrtDt.after(qMbr.lastVisitAt), qMbr.stat.eq("ACTIVE"))
+                    .where(qp.actvtnYn.eq("Y"), qp.stat.eq("ACTIVE"), qp.userSn.ne(userSn), qp.frstCrtDt.after(qMbr.lastVisitAt), qMbr.stat.eq("ACTIVE"),
+                            com.knowra.post.service.PostQuery.notMuted(userSn))   // 숨긴 사람·예약·검토 중 글은 「새 글」로 세지 않는다
                     .groupBy(qp.commSn).fetch()
                     .forEach(t -> newCnt.put(t.get(qp.commSn), t.get(qp.count())));
 

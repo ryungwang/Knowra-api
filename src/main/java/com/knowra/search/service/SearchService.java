@@ -109,7 +109,7 @@ public class SearchService {
             BooleanExpression titleAll = null;
             for (String t : tokens) titleAll = titleAll == null ? POST.postTtl.containsIgnoreCase(t) : titleAll.and(POST.postTtl.containsIgnoreCase(t));
             List<Map<String, Object>> posts = new ArrayList<>();
-            for (Tuple t : postQuery.base().where(PostQuery.alive(), PostQuery.visibleTo(me), titleAll)
+            for (Tuple t : postQuery.base().where(PostQuery.alive(), PostQuery.visibleTo(me), PostQuery.notMuted(me), titleAll)
                     .orderBy(POST.likeCnt.desc(), POST.frstCrtDt.desc()).limit(4).fetch()) {
                 PostDTO d = postQuery.toDto(t);
                 Map<String, Object> m = new LinkedHashMap<>();
@@ -149,7 +149,7 @@ public class SearchService {
     private PostPage searchPosts(String q, List<String> tokens, Long me, Options o) {
         QTblPostTag qPostTag = QTblPostTag.tblPostTag;
         QTblTag     qTag     = QTblTag.tblTag;
-        List<BooleanExpression> where = new ArrayList<>(List.of(PostQuery.alive(), PostQuery.visibleTo(me)));
+        List<BooleanExpression> where = new ArrayList<>(java.util.stream.Stream.of(PostQuery.alive(), PostQuery.visibleTo(me), PostQuery.notMuted(me)).filter(java.util.Objects::nonNull).toList());
         for (String t : tokens) {
             BooleanExpression byTag = POST.postSn.in(
                     JPAExpressions.select(qPostTag.postSn).from(qPostTag)

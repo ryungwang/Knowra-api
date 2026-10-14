@@ -24,6 +24,13 @@ public class SafetyController {
     @PostMapping("/block")
     public ResultVO block(@RequestBody Map<String, Object> params, @CurrentUser Long me) { return safetyService.setBlock(params, me); }
 
+    /** body: nickName, mute — 숨기기(한쪽만) */
+    @PostMapping("/mute")
+    public ResultVO mute(@RequestBody Map<String, Object> params, @CurrentUser Long me) { return safetyService.setMute(params, me); }
+
+    @PostMapping("/muteList")
+    public ResultVO muteList(@CurrentUser Long me) { return safetyService.getMuteList(me); }
+
     @PostMapping("/blockList")
     public ResultVO blockList(@CurrentUser Long me) { return safetyService.getBlockList(me); }
 

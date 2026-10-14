@@ -102,6 +102,8 @@ public class UserService {
                 resultVO.putResult("isBlocked", false);
             }else{
                 resultVO.putResult("isBlocked", tblUserBlockRepository.existsByUserSnAndBlockedSn(userSn, tblUser.getUserSn()));
+                resultVO.putResult("isMuted", !em.createNativeQuery("SELECT 1 FROM knowra_user.tbl_user_mute WHERE user_sn = ?1 AND muted_sn = ?2")
+                        .setParameter(1, userSn).setParameter(2, tblUser.getUserSn()).setMaxResults(1).getResultList().isEmpty());
                 TblUserFlwr usrFlwr = q.selectFrom(qFlwr)
                         .where(qFlwr.flwrUserSn.eq(userSn).and(qFlwr.flwngUserSn.eq(tblUser.getUserSn()))
                                 .and(qFlwr.actvtnYn.eq("Y"))).fetchOne();

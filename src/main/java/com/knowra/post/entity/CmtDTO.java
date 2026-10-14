@@ -40,4 +40,6 @@ public class CmtDTO {
     private boolean anonymous;
     /** 내가 쓴 댓글인가 — 익명이면 화면이 닉네임으로 알 수 없어서 서버가 알려 준다 */
     private boolean mine;
+    /** 내가 숨긴 사람의 댓글 — 화면이 접어 둔다(차단과 달리 내용은 온다) */
+    private boolean muted;
 }

@@ -117,6 +117,42 @@ public class SafetyService {
         return resultVO;
     }
 
+    /** 숨기기·풀기 — params: nickName, mute(true|false). 한쪽만이라 상대에게 아무것도 가지 않는다 */
+    @Transactional
+    public ResultVO setMute(Map<String, Object> params, Long me) {
+        ResultVO resultVO = new ResultVO();
+        try {
+            TblUser target = userRepository.findByNickName(String.valueOf(params.get("nickName")))
+                    .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+            if (target.getUserSn() == me) throw new IllegalArgumentException("자기 자신은 숨길 수 없어요.");
+            boolean mute = Boolean.parseBoolean(String.valueOf(params.get("mute")));
+            if (mute) jdbc.update("INSERT INTO knowra_user.tbl_user_mute (user_sn, muted_sn, created_at) VALUES (?, ?, ?) ON CONFLICT DO NOTHING",
+                    me, target.getUserSn(), java.time.LocalDateTime.now());
+            else jdbc.update("DELETE FROM knowra_user.tbl_user_mute WHERE user_sn = ? AND muted_sn = ?", me, target.getUserSn());
+            resultVO.putResult("muted", mute);
+            resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
+        } catch (IllegalArgumentException e) {
+            resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
+            resultVO.setResultMessage(e.getMessage());
+        } catch (Exception e) {
+            ErrorLog.report(e);
+            resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
+            resultVO.setResultMessage(ResponseCode.SAVE_ERROR.getMessage());
+        }
+        return resultVO;
+    }
+
+    /** 내가 숨긴 사람 목록 — 설정 화면용 */
+    public ResultVO getMuteList(Long me) {
+        ResultVO resultVO = new ResultVO();
+        resultVO.putResult("list", jdbc.queryForList("""
+                SELECT u.user_sn AS "userSn", u.nick_name AS "nickName", u.name, m.created_at AS "mutedAt"
+                FROM knowra_user.tbl_user_mute m JOIN knowra_user.tbl_user u ON u.user_sn = m.muted_sn
+                WHERE m.user_sn = ? ORDER BY m.created_at DESC""", me));
+        resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
+        return resultVO;
+    }
+
     /** 내가 차단한 사람 목록 — 설정 화면용. */
     public ResultVO getBlockList(Long me) {
         ResultVO resultVO = new ResultVO();

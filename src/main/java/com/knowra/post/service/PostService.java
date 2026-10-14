@@ -522,7 +522,7 @@ public class PostService {
             Long   cursor  = params.get("cursor")  != null ? Long.parseLong(params.get("cursor").toString()) : null;
             int    page    = params.get("page")    != null ? Integer.parseInt(params.get("page").toString()) : 0;
 
-            BooleanExpression condition = POST.commSn.eq(commSn).and(PostQuery.alive()).and(PostQuery.visibleTo(me));
+            BooleanExpression condition = POST.commSn.eq(commSn).and(PostQuery.alive()).and(PostQuery.visibleTo(me)).and(PostQuery.notMuted(me));
             // 말머리로 걸러 보기 — 고정·공지도 같이 거른다
             if (params.get("flairSn") != null && !String.valueOf(params.get("flairSn")).isBlank())
                 condition = condition.and(POST.flairSn.eq(Long.parseLong(String.valueOf(params.get("flairSn")))));
@@ -601,7 +601,7 @@ public class PostService {
         BooleanExpression condition = POST.postSn.in(
                         JPAExpressions.select(qTag.postSn).from(qTag).where(qTag.tagSn.eq(tagSn)))
                 .and(PostQuery.alive())
-                .and(PostQuery.visibleTo(viewerSn));
+                .and(PostQuery.visibleTo(viewerSn)).and(PostQuery.notMuted(viewerSn));
         if (cursor != null) condition = condition.and(POST.frstCrtDt.lt(cursor));
         List<Tuple> tuples = postQuery.base()
                 .where(condition)
@@ -1132,7 +1132,7 @@ public class PostService {
                         reactionsMap.getOrDefault(sn, new HashMap<>()),
                         myReactMap.get(sn), pfpUrl,
                         review ? "REVIEW" : "ACTIVE".equals(c.getStat()) ? "ACTIVE" : "DELETED", c.getMdfcnDt(),
-                        hideBody ? null : c.getImgUrl(), false, mine);
+                        hideBody ? null : c.getImgUrl(), false, mine, false);
             };
             Map<Long, CmtDTO> rootMap = new LinkedHashMap<>();
             rootTuples.forEach(t -> rootMap.put(t.get(cmt).getPostCmtSn(), toDto.apply(t)));
@@ -1156,6 +1156,15 @@ public class PostService {
                     d.setAnonymous(true); d.setUserSn(0); d.setNickName(null); d.setPfpUrl(null);
                 };
                 for (CmtDTO d : list) { anon.accept(d); d.getReplies().forEach(anon); }
+            }
+
+            // 내가 숨긴 사람의 댓글·답글은 접어 두라고 표시한다(차단처럼 빼지 않는다 — 답글 흐름이 끊긴다)
+            if (userSn != null) {
+                java.util.Set<Long> mutedSet = new java.util.HashSet<>(jdbc.queryForList("SELECT muted_sn FROM knowra_user.tbl_user_mute WHERE user_sn = ?", Long.class, userSn));
+                if (!mutedSet.isEmpty()) for (CmtDTO d : list) {
+                    d.setMuted(mutedSet.contains(d.getUserSn()));
+                    if (d.getReplies() != null) d.getReplies().forEach(rp -> rp.setMuted(mutedSet.contains(rp.getUserSn())));
+                }
             }
 
             // ── 5. nextCursor: 마지막 루트 댓글 SN (size 미달이면 null) ────────

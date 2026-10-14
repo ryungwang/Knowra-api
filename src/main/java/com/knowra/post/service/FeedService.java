@@ -701,7 +701,7 @@ public class FeedService {
     // ─────────────────────────────────────────────────────────────────────
     private List<FeedPost> fetchPostsByUsers(Set<Long> userSns, Long viewerSn) {
         return toFeedPosts(postQuery.base()
-                .where(POST.userSn.in(userSns), PostQuery.alive(), PostQuery.visibleTo(viewerSn),
+                .where(POST.userSn.in(userSns), PostQuery.alive(), PostQuery.visibleTo(viewerSn), PostQuery.notMuted(viewerSn),
                         PostQuery.notAnonymous())   // 팔로우한 사람의 익명 글을 「팔로우」 이유로 모으면 누가 썼는지 드러난다
                 .orderBy(POST.frstCrtDt.desc())
                 .fetch());
@@ -710,7 +710,7 @@ public class FeedService {
     /** 가입한 커뮤니티의 글. 접근은 되지만 차단·숨김은 여기서도 빼야 한다(visibleTo) — 예전엔 빠져 있었다. */
     private List<FeedPost> fetchPostsByComms(Set<Long> commSns, Long viewerSn) {
         return toFeedPosts(postQuery.base()
-                .where(POST.commSn.in(commSns), PostQuery.alive(), PostQuery.visibleTo(viewerSn))
+                .where(POST.commSn.in(commSns), PostQuery.alive(), PostQuery.visibleTo(viewerSn), PostQuery.notMuted(viewerSn))
                 .orderBy(POST.frstCrtDt.desc())
                 .fetch());
     }
@@ -719,7 +719,7 @@ public class FeedService {
         QTblPostTag qTag = QTblPostTag.tblPostTag;
         return toFeedPosts(postQuery.base()
                 .join(qTag).on(qTag.postSn.eq(POST.postSn).and(qTag.tagSn.in(tagSns)))
-                .where(PostQuery.alive(), POST.frstCrtDt.goe(since), PostQuery.visibleTo(viewerSn))
+                .where(PostQuery.alive(), POST.frstCrtDt.goe(since), PostQuery.visibleTo(viewerSn), PostQuery.notMuted(viewerSn))
                 .distinct()
                 .orderBy(POST.frstCrtDt.desc())
                 .fetch());
@@ -729,14 +729,14 @@ public class FeedService {
     private List<FeedPost> fetchPostsByIds(List<Long> postSns, Long viewerSn) {
         if (postSns.isEmpty()) return List.of();
         return toFeedPosts(postQuery.base()
-                .where(POST.postSn.in(postSns), PostQuery.alive(), PostQuery.visibleTo(viewerSn))
+                .where(POST.postSn.in(postSns), PostQuery.alive(), PostQuery.visibleTo(viewerSn), PostQuery.notMuted(viewerSn))
                 .fetch());
     }
 
     // likeCnt*2 + cmtCnt*4 + viewCnt*0.2 순 (DB 정렬은 정수 근사)
     private List<FeedPost> fetchTopPostsByQuality(int limit, Long viewerSn) {
         return toFeedPosts(postQuery.base()
-                .where(PostQuery.alive(), PostQuery.visibleTo(viewerSn))
+                .where(PostQuery.alive(), PostQuery.visibleTo(viewerSn), PostQuery.notMuted(viewerSn))
                 .orderBy(POST.likeCnt.multiply(2).add(POST.cmtCnt.multiply(4)).desc())
                 .limit(limit)
                 .fetch());
@@ -745,7 +745,7 @@ public class FeedService {
     /** since 이후 글 가운데 좋아요나 댓글이 하나라도 있는 글. 조회만 있는 글은 트렌딩 후보가 아니다. */
     private List<FeedPost> fetchEngagedPostsSince(LocalDateTime since, int limit, Long viewerSn) {
         return toFeedPosts(postQuery.base()
-                .where(PostQuery.alive(), PostQuery.visibleTo(viewerSn),
+                .where(PostQuery.alive(), PostQuery.visibleTo(viewerSn), PostQuery.notMuted(viewerSn),
                         POST.frstCrtDt.goe(since),
                         POST.likeCnt.gt(0).or(POST.cmtCnt.gt(0)))
                 .orderBy(POST.frstCrtDt.desc())
@@ -755,7 +755,7 @@ public class FeedService {
 
     private List<FeedPost> fetchLatestPosts(int limit, Long viewerSn) {
         return toFeedPosts(postQuery.base()
-                .where(PostQuery.alive(), PostQuery.visibleTo(viewerSn))
+                .where(PostQuery.alive(), PostQuery.visibleTo(viewerSn), PostQuery.notMuted(viewerSn))
                 .orderBy(POST.frstCrtDt.desc())
                 .limit(limit)
                 .fetch());

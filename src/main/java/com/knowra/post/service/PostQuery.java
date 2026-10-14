@@ -73,6 +73,16 @@ public class PostQuery {
     }
 
     /**
+     * 내가 숨긴 사람의 글을 뺀다 — 피드·목록·검색에만 건다. 상세·반응·그 사람 프로필엔 걸지 않는다(링크로 열면 열린다).
+     * 비로그인이면 null(QueryDSL where 는 null 조건을 건너뛴다).
+     */
+    public static BooleanExpression notMuted(Long viewerSn) {
+        if (viewerSn == null) return null;
+        com.knowra.safety.entity.QTblUserMute m = com.knowra.safety.entity.QTblUserMute.tblUserMute;
+        return POST.userSn.notIn(JPAExpressions.select(m.mutedSn).from(m).where(m.userSn.eq(viewerSn)));
+    }
+
+    /**
      * 살아 있고 그 커뮤니티를 볼 권한이 있는 글인가 — 차단·숨김은 보지 않는다.
      * 숨김 목록처럼 "내가 숨긴 글"을 다뤄야 하는 자리용(visibleTo 는 숨긴 글을 빼 버린다).
      */

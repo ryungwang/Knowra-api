@@ -41,6 +41,9 @@ public class NotificationEventListener {
         if (event.senderSn() != null && event.receiverSn() == event.senderSn()) return;
         // 차단 관계면 양쪽 다 조용히 — 차단한 사람의 반응이 알림으로 새면 차단의 의미가 없다
         if (event.senderSn() != null && safetyService.blockedEitherWay(event.receiverSn(), event.senderSn())) return;
+        // 숨긴 사람이 한 일(좋아요·댓글·멘션·팔로우 등)은 알림으로 오지 않는다 — 숨기기는 한쪽만이라 상대는 모른다
+        if (event.senderSn() != null && !em.createNativeQuery("SELECT 1 FROM knowra_user.tbl_user_mute WHERE user_sn = ?1 AND muted_sn = ?2")
+                .setParameter(1, event.receiverSn()).setParameter(2, event.senderSn()).setMaxResults(1).getResultList().isEmpty()) return;
         // 이 글 알림을 끈 사람 — 댓글·답글·좋아요만 조용히(멘션은 나를 직접 부른 것이라 보낸다)
         if (MUTABLE.contains(event.notifTyp()) && "POST".equals(event.targetKind()) && event.targetSn() != null
                 && !em.createNativeQuery("SELECT 1 FROM knowra_post.tbl_post_mute WHERE user_sn = ?1 AND post_sn = ?2")

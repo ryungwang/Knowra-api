@@ -87,6 +87,7 @@ public class AccountDeletionService {
             jdbc.update("DELETE FROM " + t + " WHERE user_sn = ?", me);
         jdbc.update("DELETE FROM knowra_user.tbl_user_flwr WHERE flwr_user_sn = ? OR flwng_user_sn = ?", me, me);
         jdbc.update("DELETE FROM knowra_user.tbl_user_block WHERE user_sn = ? OR blocked_sn = ?", me, me);
+        jdbc.update("DELETE FROM knowra_user.tbl_user_mute WHERE user_sn = ? OR muted_sn = ?", me, me);
 
         // 3) 커뮤니티 — 혼자인 커뮤니티는 닫고, 나머지는 나간다(멤버 수 반영)
         for (Map<String, Object> c : owned)
