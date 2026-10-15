@@ -29,11 +29,18 @@ public class ContentFilterAdvice extends RequestBodyAdviceAdapter {
     /** 경로 → (종류, 검사할 필드들, 수정인지 가리는 필드). */
     record Target(ContentFilter.Kind kind, String[] fields, String editKey) {}
 
-    private static final Map<String, Target> TARGETS = Map.of(
-            "/api/post/setPost",        new Target(ContentFilter.Kind.POST, new String[]{"postTtl", "postCntnt"}, "postSn"),
-            "/api/post/setPostCmt",     new Target(ContentFilter.Kind.CMT,  new String[]{"cmtCntnt"}, null),
-            "/api/post/setPostCmtEdit", new Target(ContentFilter.Kind.CMT,  new String[]{"cmtCntnt"}, "postCmtSn"),
-            "/api/chat/sendMsg",        new Target(ContentFilter.Kind.MSG,  new String[]{"msgCntnt"}, null)
+    static final Map<String, Target> TARGETS = Map.ofEntries(
+            Map.entry("/api/post/setPost",        new Target(ContentFilter.Kind.POST, new String[]{"postTtl", "postCntnt", "poll"}, "postSn")),
+            Map.entry("/api/post/setPostCmt",     new Target(ContentFilter.Kind.CMT,  new String[]{"cmtCntnt"}, null)),
+            Map.entry("/api/post/setPostCmtEdit", new Target(ContentFilter.Kind.CMT,  new String[]{"cmtCntnt"}, "postCmtSn")),
+            Map.entry("/api/chat/sendMsg",        new Target(ContentFilter.Kind.MSG,  new String[]{"msgCntnt"}, null)),
+            // 글·댓글 말고도 남에게 보이는 글자 — 금칙어만 본다(TEXT). 폼으로 오는 것(프로필·커뮤니티)은 ContentFilterParamInterceptor
+            Map.entry("/api/community/wiki/page/save", new Target(ContentFilter.Kind.TEXT, new String[]{"title", "content"}, null)),
+            Map.entry("/api/community/event/save",     new Target(ContentFilter.Kind.TEXT, new String[]{"title", "descr", "place"}, null)),
+            Map.entry("/api/series/create",       new Target(ContentFilter.Kind.TEXT, new String[]{"title", "desc"}, null)),
+            Map.entry("/api/series/update",       new Target(ContentFilter.Kind.TEXT, new String[]{"title", "desc"}, null)),
+            Map.entry("/api/chat/createGroup",    new Target(ContentFilter.Kind.TEXT, new String[]{"name"}, null)),
+            Map.entry("/api/community/setMember", new Target(ContentFilter.Kind.TEXT, new String[]{"answers"}, null))   // 가입 질문 답 — 운영진이 읽는다
     );
 
     static class Blocked extends RuntimeException {

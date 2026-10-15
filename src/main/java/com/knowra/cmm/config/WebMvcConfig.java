@@ -16,6 +16,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
 
     private final CurrentUserArgumentResolver currentUserArgumentResolver;
     private final com.knowra.cmm.ratelimit.RateLimitInterceptor rateLimitInterceptor;
+    private final com.knowra.safety.filter.ContentFilterParamInterceptor contentFilterParamInterceptor;
 
     @Value("${File.Store.Path}")
     private String uploadPath;
@@ -54,5 +55,6 @@ public class WebMvcConfig implements WebMvcConfigurer {
     @Override
     public void addInterceptors(org.springframework.web.servlet.config.annotation.InterceptorRegistry registry) {
         registry.addInterceptor(rateLimitInterceptor);
+        registry.addInterceptor(contentFilterParamInterceptor);
     }
 }

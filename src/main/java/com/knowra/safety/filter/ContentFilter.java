@@ -31,7 +31,8 @@ import java.util.regex.Pattern;
 @RequiredArgsConstructor
 public class ContentFilter {
 
-    public enum Kind { POST, CMT, MSG }
+    /** TEXT = 이름·소개·제목 같은 짧은 글 — 금칙어만 본다(링크 개수·같은 내용 반복은 글·댓글·DM 의 도배 대책이다) */
+    public enum Kind { POST, CMT, MSG, TEXT }
 
     private static final int REDIS_DB = 15;
     private static final int DUP_MIN_LEN = 20;
@@ -55,7 +56,7 @@ public class ContentFilter {
         for (String w : banned()) {
             if (norm.contains(w)) return "사용할 수 없는 표현이 들어 있어요(「" + w + "」). 고쳐서 다시 올려 주세요.";
         }
-        if (userSn == null || isAdmin) return null;
+        if (userSn == null || isAdmin || kind == Kind.TEXT) return null;
 
         int links = 0;
         Matcher m = LINK.matcher(text);
