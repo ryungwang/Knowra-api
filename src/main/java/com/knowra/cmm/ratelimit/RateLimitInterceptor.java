@@ -43,6 +43,19 @@ public class RateLimitInterceptor implements HandlerInterceptor {
             Map.entry("/api/community/invite/accept", new Rule("invite-use", 30, 3600)),
             Map.entry("/api/community/wiki/page/save", new Rule("wiki", 30, 600)),
             Map.entry("/api/common/uploadImage",      new Rule("upload", 30, 600)),
+            // 쓰기인데 표에서 빠져 있던 창구들 — 하나하나는 가볍지만 알림을 일으키거나(가입 신청·메시지 요청 응답)
+            // 행을 끝없이 만든다(키워드·폴더·연재·임시 저장)
+            Map.entry("/api/post/setPostCmtEdit",     new Rule("cmt-edit", 30, 60)),
+            Map.entry("/api/community/setMember",     new Rule("join-req", 20, 600)),   // 승인제면 운영진에게 알림이 간다
+            Map.entry("/api/community/updateCommunity", new Rule("comm-edit", 20, 600)),
+            Map.entry("/api/chat/respondRequest",     new Rule("dm-resp", 60, 600)),
+            Map.entry("/api/poll/vote",               new Rule("vote", 60, 60)),
+            Map.entry("/api/safety/block",            new Rule("block", 30, 600)),
+            Map.entry("/api/safety/mute",             new Rule("block", 30, 600)),
+            Map.entry("/api/keyword/add",             new Rule("keyword", 20, 600)),
+            Map.entry("/api/saveFolder/create",       new Rule("folder", 20, 600)),
+            Map.entry("/api/series/create",           new Rule("series", 10, 600)),
+            Map.entry("/api/draft/save",              new Rule("draft", 30, 600)),   // 자동 저장은 기기 안(localStorage) — 서버는 「임시 저장」 버튼만
             // 상대에게 알림이 가는 반응 — 눌렀다 뗐다로 알림 폭탄을 만들 수 있다
             Map.entry("/api/post/setPostLike",        new Rule("react", 60, 60)),
             Map.entry("/api/post/setPostCmtReact",    new Rule("react", 60, 60)),
