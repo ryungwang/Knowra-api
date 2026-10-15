@@ -47,6 +47,10 @@ public class TblUserStng {
   @Comment("시스템 알림 여부 (Y / N)")
   private String sysNtfctnYn = "Y";
 
+  @Column(name = "MSG_NTFCTN_YN", length = 1, nullable = false)
+  @Comment("메시지(DM·그룹) 푸시 알림 여부 (Y / N)")
+  private String msgNtfctnYn = "Y";
+
   @Column(name = "DIGEST_YN", length = 1, nullable = false)
   @Comment("주간 소식 메일 수신 동의 (Y / N) — 기본 N")
   private String digestYn = "N";

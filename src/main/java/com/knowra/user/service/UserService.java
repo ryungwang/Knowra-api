@@ -218,6 +218,7 @@ public class UserService {
             if (isYn(b.get("flwrNtfctnYn"))) org.setFlwrNtfctnYn(String.valueOf(b.get("flwrNtfctnYn")));
             if (isYn(b.get("likeNtfctnYn"))) org.setLikeNtfctnYn(String.valueOf(b.get("likeNtfctnYn")));
             if (isYn(b.get("sysNtfctnYn")))  org.setSysNtfctnYn(String.valueOf(b.get("sysNtfctnYn")));
+            if (isYn(b.get("msgNtfctnYn")))  org.setMsgNtfctnYn(String.valueOf(b.get("msgNtfctnYn")));
             if (isYn(b.get("digestYn")))     org.setDigestYn(String.valueOf(b.get("digestYn")));
             org.setMdfrSn(userSn);
             tblUserStngRepository.save(org);

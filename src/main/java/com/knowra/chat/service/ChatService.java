@@ -50,6 +50,7 @@ public class ChatService {
     private final NotificationWebSocketHandler wsHandler;
     private final com.knowra.safety.service.SafetyService safetyService;
     private final ChatGroupService groupService;
+    private final org.springframework.context.ApplicationEventPublisher events;
 
     @PersistenceContext
     private EntityManager em;
@@ -271,13 +272,18 @@ public class ChatService {
             });
 
             Map<String, Object> dto = toDto(saved);
+            Map<Long, Boolean> recipients = new LinkedHashMap<>();
             for (TblChatRoomMbr mb : roomMbrRepository.findAllByRoomSn(roomSn)) {
                 if (mb.getUserSn() == userSn || "DECLINED".equals(mb.getStat()) || "LEFT".equals(mb.getStat())) continue;   // 거절·나간 사람에겐 아무것도 안 간다
                 if (group && safetyService.blockedEitherWay(userSn, mb.getUserSn())) continue;
                 Map<String, Object> ev = new HashMap<>(dto);
                 ev.put("request", "REQUEST".equals(mb.getStat()));   // 요청함 쪽은 배지만, 대화 목록·안 읽은 수엔 안 섞는다
                 wsHandler.pushEvent(mb.getUserSn(), "CHAT", ev);
+                recipients.put(mb.getUserSn(), "REQUEST".equals(mb.getStat()));
             }
+            // 접속하지 않은 사람에겐 웹 푸시 — 커밋 뒤에(ChatPushListener)
+            if (!recipients.isEmpty())
+                events.publishEvent(new ChatMsgSentEvent(roomSn, userSn, text, imgUrl != null, group, room.getName(), recipients));
             resultVO.putResult("msg", dto);
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
         } catch (IllegalArgumentException e) {
