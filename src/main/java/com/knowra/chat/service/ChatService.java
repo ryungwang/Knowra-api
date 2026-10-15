@@ -1,5 +1,6 @@
 package com.knowra.chat.service;
 
+import com.knowra.cmm.i18n.Msg;
 import com.knowra.cmm.errlog.ErrorLog;
 import com.knowra.chat.entity.TblChatMsg;
 import com.knowra.chat.entity.TblChatRoom;
@@ -122,11 +123,11 @@ public class ChatService {
                 if (ChatGroupService.GROUP.equals(room.getRoomTyp())) {
                     // 그룹은 상대 한 명이 아니라 방 이름·인원
                     long cnt = roomMbrRepository.findAllByRoomSn(room.getRoomSn()).stream().filter(x -> "ACTIVE".equals(x.getStat())).count();
-                    row.put("group", Map.of("name", room.getName() == null ? "그룹" : room.getName(), "memberCnt", cnt));
+                    row.put("group", Map.of("name", room.getName() == null ? Msg.t("그룹") : room.getName(), "memberCnt", cnt));
                 } else {
                     row.put("peer",  peerByRoom.get(room.getRoomSn()));
                 }
-                row.put("lastMsg",   last == null ? null : last.getDeletedAt() != null ? "삭제된 메시지" : last.getHiddenAt() != null ? "가려진 메시지" : (last.getMsgCntnt().isEmpty() && last.getImgUrl() != null ? "사진" : last.getMsgCntnt()));
+                row.put("lastMsg",   last == null ? null : last.getDeletedAt() != null ? Msg.t("삭제된 메시지") : last.getHiddenAt() != null ? Msg.t("가려진 메시지") : (last.getMsgCntnt().isEmpty() && last.getImgUrl() != null ? Msg.t("사진") : last.getMsgCntnt()));
                 row.put("stat",      mb.getStat());
                 row.put("lastMsgAt", room.getLastMsgAt() != null ? room.getLastMsgAt().format(ISO) : null);
                 row.put("unread",    unread);

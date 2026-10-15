@@ -42,7 +42,7 @@ public class SeriesService {
 
     public long create(long me, String title, String desc) {
         Long n = jdbc.queryForObject("SELECT COUNT(*) FROM knowra_post.tbl_series WHERE user_sn = ?", Long.class, me);
-        if (n != null && n >= MAX_PER_USER) throw new IllegalArgumentException("연재는 " + MAX_PER_USER + "개까지 만들 수 있어요.");
+        if (n != null && n >= MAX_PER_USER) throw new IllegalArgumentException(com.knowra.cmm.i18n.Msg.t("연재는 {0}개까지 만들 수 있어요.", MAX_PER_USER));
         return jdbc.queryForObject("INSERT INTO knowra_post.tbl_series (user_sn, title, dscrptn) VALUES (?, ?, ?) RETURNING series_sn",
                 Long.class, me, title(title), desc(desc));
     }

@@ -9,6 +9,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
+import com.knowra.cmm.i18n.Lang;
+import com.knowra.cmm.i18n.Msg;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
@@ -107,12 +109,16 @@ public class RateLimitInterceptor implements HandlerInterceptor {
         if (limiter.tryHit(key, rule.limit(), rule.windowSec())) return true;
 
         long min = limiter.minutesLeft(key);
-        String when = rule.windowSec() <= 60 ? "잠시 뒤에" : min + "분 뒤에";
+        // 응답을 직접 써서 TranslateResultAdvice 를 거치지 않는다 — 여기서 요청 언어로
+        String lang = Lang.of(req);
+        String msg = rule.windowSec() <= 60
+                ? Msg.tl(lang, "너무 빠르게 요청하고 있어요. 잠시 뒤에 다시 시도해 주세요.")
+                : Msg.tl(lang, "너무 빠르게 요청하고 있어요. {0}분 뒤에 다시 시도해 주세요.", min);
         res.setStatus(429);
         res.setHeader("Retry-After", String.valueOf(min * 60));
         res.setContentType("application/json;charset=UTF-8");
-        res.getOutputStream().write(("{\"resultCode\":429,\"resultMessage\":\"너무 빠르게 요청하고 있어요. "
-                + when + " 다시 시도해 주세요.\"}").getBytes(StandardCharsets.UTF_8));
+        res.getOutputStream().write(("{\"resultCode\":429,\"resultMessage\":\""
+                + msg.replace("\\", "\\\\").replace("\"", "\\\"") + "\"}").getBytes(StandardCharsets.UTF_8));
         return false;
     }
 }

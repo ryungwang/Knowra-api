@@ -1,5 +1,6 @@
 package com.knowra.admin.service;
 
+import com.knowra.cmm.i18n.Msg;
 import com.knowra.cmm.errlog.ErrorLog;
 import com.knowra.cmm.model.ResponseCode;
 import com.knowra.cmm.model.ResultVO;
@@ -143,14 +144,14 @@ public class AdminConsoleService {
                     gone = false;
                     Map<String, Object> msg = ctx.get(0);
                     t.put("msgSn", r.getTargetSn());
-                    t.put("preview", snippet(String.valueOf(msg.get("msg_cntnt"))) + (msg.get("img_url") != null ? " [사진]" : ""));
+                    t.put("preview", snippet(String.valueOf(msg.get("msg_cntnt"))) + (msg.get("img_url") != null ? " [" + Msg.t("사진") + "]" : ""));
                     t.put("hidden", msg.get("hidden_at") != null);
                     t.put("senderDeleted", msg.get("deleted_at") != null);   // 보낸 사람이 지운 뒤에도 원문은 보인다
                     userRepository.findById(((Number) msg.get("user_sn")).longValue()).ifPresent(u -> t.put("author", userBrief(u)));
                     List<Map<String, Object>> before = new ArrayList<>();
                     for (int i = ctx.size() - 1; i >= 1; i--) {
                         Map<String, Object> c = ctx.get(i);
-                        before.add(Map.of("nickName", c.get("nick_name"), "text", snippet(String.valueOf(c.get("msg_cntnt"))) + (c.get("img_url") != null ? " [사진]" : "")));
+                        before.add(Map.of("nickName", c.get("nick_name"), "text", snippet(String.valueOf(c.get("msg_cntnt"))) + (c.get("img_url") != null ? " [" + Msg.t("사진") + "]" : "")));
                     }
                     t.put("context", before);
                 }

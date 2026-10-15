@@ -111,7 +111,7 @@ public class AuthService {
                 if (over != null) {
                     // 잠긴 동안은 비밀번호가 맞아도 들이지 않는다 — 맞는지 여부를 알려 주면 잠금이 무의미하다
                     resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
-                    resultVO.setResultMessage("로그인 시도가 너무 많아요. " + rateLimiter.minutesLeft(over) + "분 뒤에 다시 시도해 주세요.");
+                    resultVO.setResultMessage(com.knowra.cmm.i18n.Msg.t("로그인 시도가 너무 많아요. {0}분 뒤에 다시 시도해 주세요.", rateLimiter.minutesLeft(over)));
                     return resultVO;
                 }
                 try {
@@ -130,7 +130,7 @@ public class AuthService {
             long userSn = userService.getUserSn(loginId);
             // 정지(status='S')된 계정은 비밀번호가 맞아도 들여보내지 않는다 — 관리자 콘솔이 정지한다
             tblUserRepository.findById(userSn).ifPresent(u -> {
-                if (suspensionService.isSuspended(u)) throw new IllegalStateException("SUSPENDED|" + com.knowra.user.suspension.SuspensionService.message(u));
+                if (suspensionService.isSuspended(u)) throw new IllegalStateException("SUSPENDED|" + suspendedMessage(u));
                 if (!"Y".equals(u.getActvtnYn())) throw new IllegalStateException("DELETED");   // 탈퇴한 계정 — 예전엔 비밀번호로 다시 들어왔다
             });
             // 2단계 인증이 켜져 있으면 토큰 대신 확인표 — 인증 앱 코드까지 맞아야 /login/2fa 가 토큰을 준다
@@ -178,6 +178,12 @@ public class AuthService {
         return resultVO;
     }
 
+    /** 정지 안내 — 날짜는 그 사람의 시간대로 */
+    private String suspendedMessage(TblUser u) {
+        TblUserStng st = tblUserStngRepository.findByUserSn(u.getUserSn());
+        return com.knowra.user.suspension.SuspensionService.message(u, st == null ? null : st.getTimeZone());
+    }
+
     /** 2단계: params ticket, code(인증 앱 6자리 또는 복구 코드) */
     public ResultVO loginTwoFactor(Map<String, String> params, String clientIp, HttpServletResponse response) {
         ResultVO resultVO = new ResultVO();
@@ -185,12 +191,15 @@ public class AuthService {
             long userSn = twoFactorService.completeLogin(params.get("ticket"), params.get("code"));
             TblUser u = tblUserRepository.findById(userSn).orElseThrow(() -> new IllegalArgumentException("계정을 찾을 수 없어요."));
             // 확인표를 받은 뒤 5분 사이에 정지·탈퇴됐을 수 있다
-            if (suspensionService.isSuspended(u)) throw new IllegalArgumentException(com.knowra.user.suspension.SuspensionService.message(u));
+            if (suspensionService.isSuspended(u)) throw new IllegalArgumentException(suspendedMessage(u));
             if (!"Y".equals(u.getActvtnYn())) throw new IllegalArgumentException("탈퇴한 계정입니다.");
             finishLogin(userSn, u.getLoginId(), clientIp, response, resultVO);
         } catch (IllegalArgumentException e) {
             resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
             resultVO.setResultMessage(e.getMessage());
+            // 확인표가 끝났다(시간 초과·너무 많이 틀림) — 코드를 다시 묻지 말고 로그인부터. 화면은 문구가 아니라 이 표시를 본다
+            // (문구는 언어마다 달라진다). 원문은 응답이 나가기 직전에야 번역되므로 여기서는 한국어로 가린다.
+            if (e.getMessage() != null && e.getMessage().contains("처음부터")) resultVO.putResult("restart", true);
         } catch (Exception e) {
             ErrorLog.report(e);
             resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
@@ -235,7 +244,7 @@ public class AuthService {
                 TblUser u = tblUser.get();
                 if (suspensionService.isSuspended(u)) {
                     resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
-                    resultVO.setResultMessage(com.knowra.user.suspension.SuspensionService.message(u));
+                    resultVO.setResultMessage(suspendedMessage(u));
                     return resultVO;
                 }
                 if (!"Y".equals(u.getActvtnYn())) {
@@ -483,6 +492,10 @@ public class AuthService {
             TblUserStng tblUserStng = new TblUserStng();
             tblUserStng.setUserSn(tblUser.getUserSn());
             tblUserStng.setCreatrSn(tblUser.getUserSn());
+            // 가입한 브라우저의 언어·시간대로 시작한다 — 알림·메일이 처음부터 그 언어로 간다
+            tblUserStng.setLang(com.knowra.cmm.i18n.Lang.current());
+            String tz = ComUtil.getStrValue(params.get("timeZone"));
+            if (UserService.validZone(tz)) tblUserStng.setTimeZone(tz);
             tblUserStngRepository.save(tblUserStng);
 
             if (!email.isEmpty()) verificationService.consume(VerificationService.EMAIL, email);
@@ -531,11 +544,12 @@ public class AuthService {
                 resultVO.setResultMessage("잠시 후 다시 시도해주세요. (재발송은 1분에 한 번)");
                 return resultVO;
             }
+            String lang = com.knowra.cmm.i18n.Lang.current();   // 가입 전이라 설정이 없다 — 지금 화면의 언어로
             if (isEmail) {
-                mailService.send(target, "[Knowra] 인증 코드 " + code,
-                        "Knowra 가입 인증 코드는 " + code + " 입니다.\n10분 안에 입력해주세요. 본인이 요청하지 않았다면 이 메일은 무시하셔도 됩니다.");
+                mailService.send(target, com.knowra.cmm.i18n.Msg.tl(lang, "[Knowra] 인증 코드 {0}", code),
+                        com.knowra.cmm.i18n.Msg.tl(lang, "Knowra 가입 인증 코드는 {0} 입니다.\n10분 안에 입력해주세요. 본인이 요청하지 않았다면 이 메일은 무시하셔도 됩니다.", code));
             } else {
-                smsService.send(target, "[Knowra] 인증 코드 " + code + " (10분 내 입력)");
+                smsService.send(target, com.knowra.cmm.i18n.Msg.tl(lang, "[Knowra] 인증 코드 {0} (10분 내 입력)", code));
             }
             if (verificationService.exposeCode()) resultVO.putResult("devCode", code);
             resultVO.putResult("expiresIn", 600);
@@ -587,9 +601,10 @@ public class AuthService {
                 redisApiService.setRedis(REDIS_DB, "pwreset:" + token, String.valueOf(sn), PW_RESET_TTL);
                 redisApiService.setRedis(REDIS_DB, "pwreset:user:" + sn, token, PW_RESET_TTL);
                 String link = frontBaseUrl + "/reset-password?token=" + token;
-                mailService.send(email, "[Knowra] 비밀번호 재설정",
-                        "아래 링크에서 새 비밀번호를 설정할 수 있습니다. 링크는 30분 동안만 유효합니다.\n\n" + link
-                        + "\n\n본인이 요청하지 않았다면 이 메일은 무시하셔도 됩니다.");
+                TblUserStng st = tblUserStngRepository.findByUserSn(sn);   // 받는 사람의 언어 — 설정이 없으면 지금 화면의 언어
+                String lang = st != null && st.getLang() != null ? st.getLang() : com.knowra.cmm.i18n.Lang.current();
+                mailService.send(email, com.knowra.cmm.i18n.Msg.tl(lang, "[Knowra] 비밀번호 재설정"),
+                        com.knowra.cmm.i18n.Msg.tl(lang, "아래 링크에서 새 비밀번호를 설정할 수 있습니다. 링크는 30분 동안만 유효합니다.\n\n{0}\n\n본인이 요청하지 않았다면 이 메일은 무시하셔도 됩니다.", link));
                 if (verificationService.exposeCode()) resultVO.putResult("devToken", token);
             }
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());

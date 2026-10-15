@@ -1,5 +1,6 @@
 package com.knowra.savefolder;
 
+import com.knowra.cmm.i18n.Msg;
 import com.knowra.cmm.model.ResponseCode;
 import com.knowra.cmm.model.ResultVO;
 import com.knowra.cmm.security.CurrentUser;
@@ -46,8 +47,8 @@ public class SaveFolderController {
     @PostMapping("/create")
     public ResultVO create(@RequestBody Map<String, Object> b, @CurrentUser Long me) {
         String name = clean(b.get("name"));
-        if (name == null) return fail("폴더 이름을 1~" + MAX_NAME + "자로 지어 주세요.");
-        if (repo.countByUserSn(me) >= MAX_FOLDERS) return fail("폴더는 " + MAX_FOLDERS + "개까지 만들 수 있어요.");
+        if (name == null) return fail(Msg.t("폴더 이름을 1~{0}자로 지어 주세요.", MAX_NAME));
+        if (repo.countByUserSn(me) >= MAX_FOLDERS) return fail(Msg.t("폴더는 {0}개까지 만들 수 있어요.", MAX_FOLDERS));
         if (repo.existsByUserSnAndName(me, name)) return fail("같은 이름의 폴더가 있어요.");
         TblPostSaveFolder f = repo.save(TblPostSaveFolder.builder().userSn(me).name(name).build());
         return ok("folderSn", f.getFolderSn());
@@ -57,7 +58,7 @@ public class SaveFolderController {
     @PostMapping("/rename")
     public ResultVO rename(@RequestBody Map<String, Object> b, @CurrentUser Long me) {
         String name = clean(b.get("name"));
-        if (name == null) return fail("폴더 이름을 1~" + MAX_NAME + "자로 지어 주세요.");
+        if (name == null) return fail(Msg.t("폴더 이름을 1~{0}자로 지어 주세요.", MAX_NAME));
         TblPostSaveFolder f = mine(b, me);
         if (f == null) return fail("폴더를 찾을 수 없어요.");
         if (!f.getName().equals(name) && repo.existsByUserSnAndName(me, name)) return fail("같은 이름의 폴더가 있어요.");

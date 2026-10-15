@@ -127,7 +127,7 @@ public class TwoFactorService {
         if (!checkCode(userSn, code)) {
             long left = MAX_TRIES - tries;
             if (left <= 0) redis.delRedis(DB, key);
-            throw new IllegalArgumentException(left > 0 ? "코드가 맞지 않아요. (" + left + "번 남음)" : "코드를 너무 많이 틀렸어요. 처음부터 다시 로그인해 주세요.");
+            throw new IllegalArgumentException(left > 0 ? com.knowra.cmm.i18n.Msg.t("코드가 맞지 않아요. ({0}번 남음)", left) : "코드를 너무 많이 틀렸어요. 처음부터 다시 로그인해 주세요.");
         }
         redis.delRedis(DB, key);
         return userSn;

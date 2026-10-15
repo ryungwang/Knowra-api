@@ -11,7 +11,8 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
+import com.knowra.cmm.i18n.Fmt;
+import com.knowra.cmm.i18n.Msg;
 import java.util.List;
 
 /**
@@ -25,8 +26,6 @@ import java.util.List;
 @Slf4j
 @Service
 public class NewDeviceService {
-
-    private static final DateTimeFormatter AT = DateTimeFormatter.ofPattern("yyyy년 M월 d일 HH:mm");
 
     private final JdbcTemplate jdbc;
     private final MailService mail;
@@ -74,22 +73,19 @@ public class NewDeviceService {
     }
 
     private void alert(long userSn, String device, String maskedIp, LocalDateTime now) {
-        String where = maskedIp == null ? device : device + " (" + maskedIp + ")";
+        // 받는 사람의 언어·시간대 — 설정 줄이 없으면 한국어·서울
+        var pref = jdbc.queryForList("SELECT lang, time_zone FROM knowra_user.tbl_user_stng WHERE user_sn = ?", userSn);
+        String lang = pref.isEmpty() || pref.get(0).get("lang") == null ? "ko" : String.valueOf(pref.get(0).get("lang"));
+        String tz = pref.isEmpty() || pref.get(0).get("time_zone") == null ? null : String.valueOf(pref.get(0).get("time_zone"));
+        String shown = SessionService.label(device, lang);
+        String where = maskedIp == null ? shown : shown + " (" + maskedIp + ")";
         events.publishEvent(new NotifTriggerEvent(userSn, null, "NEW_LOGIN", null, null, where));
         var row = jdbc.queryForList("SELECT email, name FROM knowra_user.tbl_user WHERE user_sn = ? AND COALESCE(email, '') LIKE '%_@_%.__%'", userSn);
         if (row.isEmpty()) return;
         try {
-            mail.send(String.valueOf(row.get(0).get("email")), "[knowra] 새 기기에서 로그인했어요", """
-                    %s님, 방금 처음 보는 기기에서 knowra 에 로그인했어요.
-
-                    기기: %s
-                    위치(IP 대역): %s
-                    시각: %s
-
-                    본인이라면 이 메일은 넘겨도 돼요.
-                    본인이 아니라면 비밀번호를 바꾸고, 설정 > 보안 > 로그인한 기기에서 그 기기를 로그아웃해 주세요.
-                    %s/user/settings
-                    """.formatted(String.valueOf(row.get(0).get("name")), device, maskedIp == null ? "알 수 없음" : maskedIp, now.format(AT), front));
+            mail.send(String.valueOf(row.get(0).get("email")), Msg.tl(lang, "[knowra] 새 기기에서 로그인했어요"),
+                    Msg.tl(lang, "{0}님, 방금 처음 보는 기기에서 knowra 에 로그인했어요.\n\n기기: {1}\n위치(IP 대역): {2}\n시각: {3}\n\n본인이라면 이 메일은 넘겨도 돼요.\n본인이 아니라면 비밀번호를 바꾸고, 설정 > 보안 > 로그인한 기기에서 그 기기를 로그아웃해 주세요.\n{4}/user/settings\n",
+                            String.valueOf(row.get(0).get("name")), shown, maskedIp == null ? Msg.tl(lang, "알 수 없음") : maskedIp, Fmt.dateTime(now, lang, tz), front));
         } catch (RuntimeException e) {
             log.warn("[NEW_LOGIN] userSn={} 메일 실패: {}", userSn, e.getMessage());
         }

@@ -178,7 +178,7 @@ public class PostQuery {
         dto.setSeriesTitle(null);
         dto.setUserSn(0);
         dto.setNickName(null);
-        dto.setAuthorNm(ANONYMOUS_NAME);
+        dto.setAuthorNm(com.knowra.cmm.i18n.Msg.t(ANONYMOUS_NAME));
         dto.setPfpUrl(null);
     }
 

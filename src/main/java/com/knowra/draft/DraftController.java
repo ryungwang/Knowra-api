@@ -1,5 +1,6 @@
 package com.knowra.draft;
 
+import com.knowra.cmm.i18n.Msg;
 import com.knowra.cmm.model.ResponseCode;
 import com.knowra.cmm.model.ResultVO;
 import com.knowra.cmm.security.CurrentUser;
@@ -41,7 +42,7 @@ public class DraftController {
     public ResultVO save(@RequestBody Map<String, Object> b, @CurrentUser Long me) {
         String title = String.valueOf(b.getOrDefault("title", "")).trim();
         String content = String.valueOf(b.getOrDefault("content", ""));
-        if (title.length() > MAX_TITLE) return fail("제목은 " + MAX_TITLE + "자까지예요.");
+        if (title.length() > MAX_TITLE) return fail(Msg.t("제목은 {0}자까지예요.", MAX_TITLE));
         if (content.length() > MAX_CONTENT) return fail("본문이 너무 길어 임시 저장할 수 없어요.");
         if (title.isEmpty() && content.replaceAll("<[^>]+>", "").isBlank()) return fail("비어 있는 글은 저장하지 않아요.");
         List<String> tags = b.get("tags") instanceof List<?> l ? l.stream().map(String::valueOf).map(String::trim)
@@ -53,7 +54,7 @@ public class DraftController {
             d = repo.findById(Long.valueOf(String.valueOf(b.get("draftSn")))).filter(x -> x.getUserSn() == me).orElse(null);
             if (d == null) return fail("임시 저장한 글을 찾을 수 없어요.");
         } else {
-            if (repo.countByUserSn(me) >= MAX_DRAFTS) return fail("임시 저장함이 가득 찼어요(" + MAX_DRAFTS + "개). 안 쓰는 글을 지워 주세요.");
+            if (repo.countByUserSn(me) >= MAX_DRAFTS) return fail(Msg.t("임시 저장함이 가득 찼어요({0}개). 안 쓰는 글을 지워 주세요.", MAX_DRAFTS));
             d = TblPostDraft.builder().userSn(me).build();
         }
         d.setTitle(title); d.setContent(com.knowra.cmm.util.HtmlSanitizer.clean(content)); d.setTags(String.join(",", tags)); d.setCommSn(commSn);

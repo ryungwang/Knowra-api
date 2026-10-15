@@ -1,5 +1,7 @@
 package com.knowra.cmm.security;
 
+import com.knowra.cmm.i18n.Lang;
+import com.knowra.cmm.i18n.Msg;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.MediaType;
@@ -25,13 +27,13 @@ public class JsonAuthErrorHandler implements AuthenticationEntryPoint, AccessDen
     @Override
     public void commence(HttpServletRequest request, HttpServletResponse response,
                          AuthenticationException authException) throws IOException {
-        write(response, HttpServletResponse.SC_UNAUTHORIZED, "로그인이 필요합니다.");
+        write(response, HttpServletResponse.SC_UNAUTHORIZED, Msg.tl(Lang.of(request), "로그인이 필요합니다."));
     }
 
     @Override
     public void handle(HttpServletRequest request, HttpServletResponse response,
                        AccessDeniedException accessDeniedException) throws IOException {
-        write(response, HttpServletResponse.SC_FORBIDDEN, "권한이 없습니다.");
+        write(response, HttpServletResponse.SC_FORBIDDEN, Msg.tl(Lang.of(request), "권한이 없습니다."));
     }
 
     private static void write(HttpServletResponse response, int status, String message) throws IOException {
@@ -39,6 +41,6 @@ public class JsonAuthErrorHandler implements AuthenticationEntryPoint, AccessDen
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.setCharacterEncoding(StandardCharsets.UTF_8.name());
         response.getWriter().write(
-                "{\"resultCode\":" + status + ",\"resultMessage\":\"" + message + "\",\"result\":{}}");
+                "{\"resultCode\":" + status + ",\"resultMessage\":\"" + message.replace("\\", "\\\\").replace("\"", "\\\"") + "\",\"result\":{}}");
     }
 }

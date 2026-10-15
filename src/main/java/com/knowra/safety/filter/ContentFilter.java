@@ -1,5 +1,6 @@
 package com.knowra.safety.filter;
 
+import com.knowra.cmm.i18n.Msg;
 import com.knowra.cmm.service.RedisApiService;
 import com.knowra.user.repository.TblUserRepository;
 import lombok.RequiredArgsConstructor;
@@ -54,7 +55,7 @@ public class ContentFilter {
         String norm = normalize(text);
 
         for (String w : banned()) {
-            if (norm.contains(w)) return "사용할 수 없는 표현이 들어 있어요(「" + w + "」). 고쳐서 다시 올려 주세요.";
+            if (norm.contains(w)) return Msg.t("사용할 수 없는 표현이 들어 있어요(「{0}」). 고쳐서 다시 올려 주세요.", w);
         }
         if (userSn == null || isAdmin || kind == Kind.TEXT) return null;
 
@@ -63,7 +64,7 @@ public class ContentFilter {
         while (m.find()) links++;
         int maxLinks = kind == Kind.POST ? 5 : 2;
         if (links > maxLinks && isNewAccount(userSn))
-            return "가입 첫날에는 링크를 " + maxLinks + "개까지만 넣을 수 있어요. 내일부터는 제한이 풀려요.";
+            return Msg.t("가입 첫날에는 링크를 {0}개까지만 넣을 수 있어요. 내일부터는 제한이 풀려요.", maxLinks);
 
         if (!isEdit && norm.length() >= DUP_MIN_LEN) {
             String key = "dup:" + kind + ":" + userSn + ":" + sha1(norm);

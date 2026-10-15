@@ -1,5 +1,6 @@
 package com.knowra.keyword;
 
+import com.knowra.cmm.i18n.Msg;
 import com.knowra.cmm.event.NotifTriggerEvent;
 import com.knowra.post.entity.QTblPost;
 import com.knowra.post.entity.TblPost;
@@ -35,7 +36,7 @@ public class KeywordService {
         String k = raw == null ? "" : raw.strip().replaceAll("\\s+", " ");
         if (k.length() < 2 || k.length() > 30) throw new IllegalArgumentException("키워드는 2~30자로 넣어 주세요.");
         Long n = jdbc.queryForObject("SELECT COUNT(*) FROM knowra_user.tbl_keyword_watch WHERE user_sn = ?", Long.class, me);
-        if (n != null && n >= MAX) throw new IllegalArgumentException("키워드는 " + MAX + "개까지예요.");
+        if (n != null && n >= MAX) throw new IllegalArgumentException(Msg.t("키워드는 {0}개까지예요.", MAX));
         int added = jdbc.update("INSERT INTO knowra_user.tbl_keyword_watch (user_sn, keyword, created_at) VALUES (?, ?, ?) ON CONFLICT DO NOTHING", me, k, LocalDateTime.now());
         if (added == 0) throw new IllegalArgumentException("이미 있는 키워드예요.");
     }

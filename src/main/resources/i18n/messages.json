@@ -1,0 +1,2606 @@
+{
+ "(좋아요 {0} · 댓글 {1})": {
+  "en": "({0} likes · {1} comments)",
+  "ja": "（いいね {0} · コメント {1}）",
+  "zh-Hans": "（赞 {0} · 评论 {1}）",
+  "zh-Hant": "（讚 {0} · 留言 {1}）"
+ },
+ "2단계 인증이 꺼져 있어요.": {
+  "en": "Two-step verification is off.",
+  "ja": "2段階認証はオフになっています。",
+  "zh-Hans": "两步验证未开启。",
+  "zh-Hant": "兩步驟驗證未開啟。"
+ },
+ "Knowra 가입 인증 코드는 {0} 입니다.\n10분 안에 입력해주세요. 본인이 요청하지 않았다면 이 메일은 무시하셔도 됩니다.": {
+  "en": "Your Knowra sign-up verification code is {0}.\nPlease enter it within 10 minutes. If you didn't request this, you can ignore this email.",
+  "ja": "Knowraの登録認証コードは {0} です。\n10分以内に入力してください。お心当たりがない場合は、このメールを無視してください。",
+  "zh-Hans": "你的 Knowra 注册验证码是 {0}。\n请在 10 分钟内输入。如果不是你本人申请，请忽略这封邮件。",
+  "zh-Hant": "你的 Knowra 註冊驗證碼是 {0}。\n請在 10 分鐘內輸入。如果不是你本人申請，請忽略這封郵件。"
+ },
+ "OWNER 권한이 위임되었습니다.": {
+  "en": "Ownership transferred.",
+  "ja": "オーナー権限を譲渡しました。",
+  "zh-Hans": "已转让主人权限。",
+  "zh-Hant": "已轉讓擁有者權限。"
+ },
+ "[Knowra] 비밀번호 재설정": {
+  "en": "[Knowra] Reset your password",
+  "ja": "[Knowra] パスワードの再設定",
+  "zh-Hans": "[Knowra] 重置密码",
+  "zh-Hant": "[Knowra] 重設密碼"
+ },
+ "[Knowra] 인증 코드 {0}": {
+  "en": "[Knowra] Verification code {0}",
+  "ja": "[Knowra] 認証コード {0}",
+  "zh-Hans": "[Knowra] 验证码 {0}",
+  "zh-Hant": "[Knowra] 驗證碼 {0}"
+ },
+ "[Knowra] 인증 코드 {0} (10분 내 입력)": {
+  "en": "[Knowra] Verification code {0} (enter within 10 min)",
+  "ja": "[Knowra] 認証コード {0}（10分以内に入力）",
+  "zh-Hans": "[Knowra] 验证码 {0}（10 分钟内输入）",
+  "zh-Hant": "[Knowra] 驗證碼 {0}（10 分鐘內輸入）"
+ },
+ "[knowra] 계정 이메일이 바뀌었어요": {
+  "en": "[knowra] Your account email was changed",
+  "ja": "[knowra] アカウントのメールアドレスが変更されました",
+  "zh-Hans": "[knowra] 你的账号邮箱已更改",
+  "zh-Hant": "[knowra] 你的帳號電子郵件已變更"
+ },
+ "[knowra] 곧 휴면 계정으로 바뀌어요": {
+  "en": "[knowra] Your account will soon become inactive",
+  "ja": "[knowra] まもなく休眠アカウントになります",
+  "zh-Hans": "[knowra] 你的账号即将转为休眠状态",
+  "zh-Hant": "[knowra] 你的帳號即將轉為休眠狀態"
+ },
+ "[knowra] 새 기기에서 로그인했어요": {
+  "en": "[knowra] New sign-in from a new device",
+  "ja": "[knowra] 新しい端末からログインがありました",
+  "zh-Hans": "[knowra] 新设备登录提醒",
+  "zh-Hant": "[knowra] 新裝置登入通知"
+ },
+ "[knowra] 이번 주 내 동네에서 — {0}": {
+  "en": "[knowra] This week in your neighborhood — {0}",
+  "ja": "[knowra] 今週のご近所 — {0}",
+  "zh-Hans": "[knowra] 本周你的社区 — {0}",
+  "zh-Hant": "[knowra] 本週你的社群 — {0}"
+ },
+ "[knowra] 이번 주 내 동네에서 — 다가오는 모임 {0}개": {
+  "en": "[knowra] This week in your neighborhood — {0} upcoming events",
+  "ja": "[knowra] 今週のご近所 — 近日のイベント{0}件",
+  "zh-Hans": "[knowra] 本周你的社区 — {0} 个即将举行的活动",
+  "zh-Hant": "[knowra] 本週你的社群 — {0} 個即將舉行的活動"
+ },
+ "[knowra] 탈퇴 신청을 받았어요": {
+  "en": "[knowra] We received your account deletion request",
+  "ja": "[knowra] 退会申請を受け付けました",
+  "zh-Hans": "[knowra] 我们已收到你的注销申请",
+  "zh-Hant": "[knowra] 我們已收到你的刪除帳號申請"
+ },
+ "knowra 계정의 이메일이 {0} 로 바뀌었어요.\n본인이 바꾼 게 아니라면 바로 비밀번호를 재설정하고 문의해 주세요.": {
+  "en": "The email on your knowra account was changed to {0}.\nIf you didn't do this, reset your password right away and contact us.",
+  "ja": "knowraアカウントのメールアドレスが {0} に変更されました。\nお心当たりがない場合は、すぐにパスワードを再設定してお問い合わせください。",
+  "zh-Hans": "你的 knowra 账号邮箱已更改为 {0}。\n如果不是你本人操作，请立即重置密码并联系我们。",
+  "zh-Hant": "你的 knowra 帳號電子郵件已變更為 {0}。\n如果不是你本人操作，請立即重設密碼並聯絡我們。"
+ },
+ "knowra 초대": {
+  "en": "knowra invite",
+  "ja": "knowraへの招待",
+  "zh-Hans": "knowra 邀请",
+  "zh-Hant": "knowra 邀請"
+ },
+ "knowra 커뮤니티 · 멤버 {0}명": {
+  "en": "knowra community · {0} members",
+  "ja": "knowraコミュニティ · メンバー{0}人",
+  "zh-Hans": "knowra 社区 · {0} 位成员",
+  "zh-Hant": "knowra 社群 · {0} 位成員"
+ },
+ "knowra 커뮤니티 초대": {
+  "en": "knowra community invite",
+  "ja": "knowraコミュニティへの招待",
+  "zh-Hans": "knowra 社区邀请",
+  "zh-Hant": "knowra 社群邀請"
+ },
+ "{0} (운영진)": {
+  "en": "{0} (Moderator)",
+  "ja": "{0}(運営メンバー)",
+  "zh-Hans": "{0}（管理员）",
+  "zh-Hant": "{0}（管理員）"
+ },
+ "{0} {1}개": {
+  "en": "{0}: {1}",
+  "ja": "{0} {1}件",
+  "zh-Hans": "{0} {1} 篇",
+  "zh-Hant": "{0} {1} 篇"
+ },
+ "{0} 가입 신청이 받아들여지지 않았습니다.": {
+  "en": "Your request to join {0} was not accepted.",
+  "ja": "{0}への参加申請は承認されませんでした。",
+  "zh-Hans": "你加入 {0} 的申请未通过。",
+  "zh-Hant": "你加入 {0} 的申請未通過。"
+ },
+ "{0} 가입이 승인됐습니다. 환영해요!": {
+  "en": "Your request to join {0} was approved. Welcome!",
+  "ja": "{0}への参加が承認されました。ようこそ！",
+  "zh-Hans": "你加入 {0} 的申请已通过。欢迎！",
+  "zh-Hant": "你加入 {0} 的申請已通過。歡迎！"
+ },
+ "{0} 강퇴가 풀렸어요. 원하면 다시 참여할 수 있어요.": {
+  "en": "Your ban from {0} has been lifted. You can rejoin anytime.",
+  "ja": "{0}の追放が解除されました。いつでも再参加できます。",
+  "zh-Hans": "你在 {0} 的禁止已解除，可以重新加入。",
+  "zh-Hant": "你在 {0} 的禁止已解除，可以重新加入。"
+ },
+ "{0} 운영진이 확인한 뒤 글을 올리지 않았어요: {1}": {
+  "en": "The {0} moderators reviewed your post and didn't publish it: {1}",
+  "ja": "{0}の運営メンバーが確認した結果、投稿は公開されませんでした：{1}",
+  "zh-Hans": "{0} 的管理员审核后未发布你的帖子：{1}",
+  "zh-Hant": "{0} 的管理員審核後未發佈你的貼文：{1}"
+ },
+ "{0} 운영진이 확인해 글이 올라갔어요: {1}": {
+  "en": "The {0} moderators approved your post: {1}",
+  "ja": "{0}の運営メンバーが確認し、投稿が公開されました：{1}",
+  "zh-Hans": "{0} 的管理员已审核，你的帖子已发布：{1}",
+  "zh-Hant": "{0} 的管理員已審核，你的貼文已發佈：{1}"
+ },
+ "{0}까지 다시 참여할 수 없어요.": {
+  "en": "You can't rejoin until {0}.",
+  "ja": "{0}まで再参加できません。",
+  "zh-Hans": "在{0}之前无法重新加入。",
+  "zh-Hant": "在{0}之前無法重新加入。"
+ },
+ "{0}까지 이용이 정지된 계정입니다.": {
+  "en": "This account is suspended until {0}.",
+  "ja": "このアカウントは{0}まで利用停止中です。",
+  "zh-Hans": "该账号已被停用至 {0}。",
+  "zh-Hant": "此帳號已被停權至 {0}。"
+ },
+ "{0}까지 이용이 정지된 계정입니다. 사유: {1}": {
+  "en": "This account is suspended until {0}. Reason: {1}",
+  "ja": "このアカウントは{0}まで利用停止中です。理由：{1}",
+  "zh-Hans": "该账号已被停用至 {0}。原因：{1}",
+  "zh-Hant": "此帳號已被停權至 {0}。原因：{1}"
+ },
+ "{0}님, knowra 입니다.\n\n탈퇴 신청을 받았어요. {1}에 글·댓글·커뮤니티 활동과 개인정보가 모두 지워져요.\n마음이 바뀌면 그 전에 다시 로그인만 하세요. 탈퇴가 취소돼요.\n\n직접 신청하지 않았다면 바로 로그인해서 비밀번호를 바꿔 주세요.\n": {
+  "en": "Hi {0}, this is knowra.\n\nWe received your account deletion request. On {1}, your posts, comments, community activity, and personal info will all be deleted.\nIf you change your mind, just log in before then and the deletion will be canceled.\n\nIf you didn't request this, log in right away and change your password.\n",
+  "ja": "{0}さん、knowraです。\n\n退会申請を受け付けました。{1}に投稿・コメント・コミュニティ活動と個人情報がすべて削除されます。\n気が変わったら、それまでにログインするだけで退会が取り消されます。\n\nご自身で申請していない場合は、すぐにログインしてパスワードを変更してください。\n",
+  "zh-Hans": "{0}，这里是 knowra。\n\n我们已收到你的注销申请。{1}，你的帖子、评论、社区活动和个人信息将全部删除。\n如果改变主意，只需在此之前重新登录，注销即会取消。\n\n如果不是你本人申请，请立即登录并修改密码。\n",
+  "zh-Hant": "{0}，這裡是 knowra。\n\n我們已收到你的刪除帳號申請。{1}，你的貼文、留言、社群活動和個人資料將全部刪除。\n如果改變主意，只需在此之前重新登入，刪除即會取消。\n\n如果不是你本人申請，請立即登入並變更密碼。\n"
+ },
+ "{0}님, 방금 처음 보는 기기에서 knowra 에 로그인했어요.\n\n기기: {1}\n위치(IP 대역): {2}\n시각: {3}\n\n본인이라면 이 메일은 넘겨도 돼요.\n본인이 아니라면 비밀번호를 바꾸고, 설정 > 보안 > 로그인한 기기에서 그 기기를 로그아웃해 주세요.\n{4}/user/settings\n": {
+  "en": "Hi {0}, someone just signed in to knowra from a device we haven't seen before.\n\nDevice: {1}\nLocation (IP range): {2}\nTime: {3}\n\nIf this was you, you can ignore this email.\nIf it wasn't, change your password and sign out that device in Settings > Security > Signed-in devices.\n{4}/user/settings\n",
+  "ja": "{0}さん、初めての端末からknowraにログインがありました。\n\n端末：{1}\n場所（IP帯域）：{2}\n日時：{3}\n\nご本人であれば、このメールは無視してかまいません。\n心当たりがない場合は、パスワードを変更し、設定 > セキュリティ > ログイン中の端末からその端末をログアウトしてください。\n{4}/user/settings\n",
+  "zh-Hans": "{0}，刚刚有一台新设备登录了你的 knowra 账号。\n\n设备：{1}\n位置（IP 段）：{2}\n时间：{3}\n\n如果是你本人，可以忽略这封邮件。\n如果不是，请修改密码，并在 设置 > 安全 > 已登录设备 中退出该设备。\n{4}/user/settings\n",
+  "zh-Hant": "{0}，剛剛有一台新裝置登入了你的 knowra 帳號。\n\n裝置：{1}\n位置（IP 範圍）：{2}\n時間：{3}\n\n如果是你本人，可以忽略這封郵件。\n如果不是，請變更密碼，並在 設定 > 安全性 > 已登入的裝置 中登出該裝置。\n{4}/user/settings\n"
+ },
+ "{0}님, 안녕하세요. knowra 입니다.\n\n마지막으로 들어오신 지 1년이 다 되어 가요. {1}에 휴면 계정으로 바뀝니다.\n\n휴면이 되면\n- 모든 기기에서 로그인이 풀리고\n- 알림·소식 메일과 푸시가 멈추고\n- 사람 찾기와 멘션 추천에서 빠져요.\n쓰신 글과 댓글은 그대로 남아요.\n\n계속 쓰시려면 그 전에 한 번 들어와 주세요. 휴면이 된 뒤에도 로그인하면 바로 풀려요.\n{2}\n": {
+  "en": "Hi {0}, this is knowra.\n\nIt's been almost a year since you last visited. Your account will become inactive on {1}.\n\nWhen it's inactive:\n- You'll be logged out on all devices\n- Notification and digest emails and push notifications will stop\n- You won't appear in people search or mention suggestions.\nYour posts and comments will stay as they are.\n\nTo keep using knowra, just visit once before then. Even after it becomes inactive, logging in will reactivate it right away.\n{2}\n",
+  "ja": "{0}さん、こんにちは。knowraです。\n\n最後のご利用からまもなく1年になります。{1}に休眠アカウントへ切り替わります。\n\n休眠になると\n- すべての端末でログインが解除され\n- 通知・お知らせメールとプッシュ通知が停止し\n- ユーザー検索とメンション候補に表示されなくなります。\n投稿とコメントはそのまま残ります。\n\n引き続きご利用の場合は、それまでに一度アクセスしてください。休眠後もログインすればすぐに解除されます。\n{2}\n",
+  "zh-Hans": "{0}，你好，这里是 knowra。\n\n距离你上次访问已将近一年。你的账号将于 {1} 转为休眠状态。\n\n休眠后：\n- 所有设备都会退出登录\n- 通知、动态邮件和推送将停止\n- 你不会出现在找人和提及推荐中。\n你发布的帖子和评论会保留。\n\n如果想继续使用，请在此之前访问一次。即使转为休眠，登录后也会立即恢复。\n{2}\n",
+  "zh-Hant": "{0}，你好，這裡是 knowra。\n\n距離你上次造訪已將近一年。你的帳號將於 {1} 轉為休眠狀態。\n\n休眠後：\n- 所有裝置都會登出\n- 通知、動態郵件和推播將停止\n- 你不會出現在找人和提及推薦中。\n你發佈的貼文和留言會保留。\n\n如果想繼續使用，請在此之前造訪一次。即使轉為休眠，登入後也會立即恢復。\n{2}\n"
+ },
+ "{0}님, 이번 주 내 동네 소식이에요.": {
+  "en": "Hi {0}, here's what's happening in your neighborhood this week.",
+  "ja": "{0}さん、今週のご近所のお知らせです。",
+  "zh-Hans": "{0}，这是你本周的社区动态。",
+  "zh-Hant": "{0}，這是你本週的社群動態。"
+ },
+ "{0}님이 메시지를 보냈어요.": {
+  "en": "{0} sent you a message.",
+  "ja": "{0}さんからメッセージが届きました。",
+  "zh-Hans": "{0} 给你发了消息。",
+  "zh-Hant": "{0} 傳了訊息給你。"
+ },
+ "{0}님이 초대했어요": {
+  "en": "{0} invited you",
+  "ja": "{0}さんから招待されました",
+  "zh-Hans": "{0} 邀请了你",
+  "zh-Hant": "{0} 邀請了你"
+ },
+ "{0}에 검토할 새 멤버 글이 있어요.": {
+  "en": "There are new member posts to review in {0}.",
+  "ja": "{0}に確認待ちのメンバー投稿があります。",
+  "zh-Hans": "{0} 有待审核的新成员帖子。",
+  "zh-Hant": "{0} 有待審核的新成員貼文。"
+ },
+ "{0}에 새 공지가 올라왔습니다.": {
+  "en": "There's a new announcement in {0}.",
+  "ja": "{0}に新しいお知らせがあります。",
+  "zh-Hans": "{0} 有新公告。",
+  "zh-Hant": "{0} 有新公告。"
+ },
+ "{0}에 초대받았어요": {
+  "en": "You're invited to {0}",
+  "ja": "{0}に招待されました",
+  "zh-Hans": "你受邀加入 {0}",
+  "zh-Hant": "你受邀加入 {0}"
+ },
+ "{0}에서 내보내졌습니다.": {
+  "en": "You were removed from {0}.",
+  "ja": "{0}から退出させられました。",
+  "zh-Hans": "你已被移出 {0}。",
+  "zh-Hant": "你已被移出 {0}。"
+ },
+ "{0}에서 내보내졌어요. {1}까지 다시 참여할 수 없어요.": {
+  "en": "You were banned from {0} and can't rejoin until {1}.",
+  "ja": "{0}から追放されました。{1}まで再参加できません。",
+  "zh-Hans": "你已被移出 {0}，在 {1} 之前无法再次加入。",
+  "zh-Hant": "你已被移出 {0}，在 {1} 之前無法再次加入。"
+ },
+ "{0}에서 내보내졌어요. 다시 참여할 수 없어요.": {
+  "en": "You were banned from {0} and can't rejoin.",
+  "ja": "{0}から追放されました。再参加はできません。",
+  "zh-Hans": "你已被移出 {0}，无法再次加入。",
+  "zh-Hant": "你已被移出 {0}，無法再次加入。"
+ },
+ "{0}의 운영진에서 해제됐습니다.": {
+  "en": "You're no longer a moderator of {0}.",
+  "ja": "{0}の運営メンバーから外れました。",
+  "zh-Hans": "你已不再是 {0} 的管理员。",
+  "zh-Hant": "你已不再是 {0} 的管理員。"
+ },
+ "{0}의 운영진이 됐습니다.": {
+  "en": "You're now a moderator of {0}.",
+  "ja": "{0}の運営メンバーになりました。",
+  "zh-Hans": "你已成为 {0} 的管理员。",
+  "zh-Hant": "你已成為 {0} 的管理員。"
+ },
+ "{0}이(가) {1}에 모임 「{2}」을(를) 열었습니다.": {
+  "en": "{0} created the event \"{2}\" in {1}.",
+  "ja": "{0}さんが{1}でイベント「{2}」を作成しました。",
+  "zh-Hans": "{0} 在 {1} 发起了活动「{2}」。",
+  "zh-Hant": "{0} 在 {1} 發起了活動「{2}」。"
+ },
+ "{0}이(가) {1}에 새 글을 올렸습니다.": {
+  "en": "{0} posted in {1}.",
+  "ja": "{0}さんが{1}に新しい投稿をしました。",
+  "zh-Hans": "{0} 在 {1} 发布了新帖子。",
+  "zh-Hant": "{0} 在 {1} 發佈了新貼文。"
+ },
+ "{0}이(가) {1}의 주인 자리를 넘겼습니다.": {
+  "en": "{0} handed ownership of {1} to you.",
+  "ja": "{0}さんが{1}のオーナーをあなたに譲りました。",
+  "zh-Hans": "{0} 将 {1} 的所有者身份转交给了你。",
+  "zh-Hant": "{0} 將 {1} 的擁有者身分轉交給你。"
+ },
+ "{0}이(가) 「{1}」에서 회원님의 댓글을 맨 위에 고정했어요.": {
+  "en": "{0} pinned your comment on \"{1}\".",
+  "ja": "{0}さんが「{1}」であなたのコメントを固定しました。",
+  "zh-Hans": "{0} 在「{1}」中置顶了你的评论。",
+  "zh-Hant": "{0} 在「{1}」中置頂了你的留言。"
+ },
+ "{0}이(가) 내 게시글에 댓글을 달았습니다.": {
+  "en": "{0} commented on your post.",
+  "ja": "{0}さんがあなたの投稿にコメントしました。",
+  "zh-Hans": "{0} 评论了你的帖子。",
+  "zh-Hant": "{0} 在你的貼文留言。"
+ },
+ "{0}이(가) 내 게시글을 좋아합니다.": {
+  "en": "{0} liked your post.",
+  "ja": "{0}さんがあなたの投稿にいいねしました。",
+  "zh-Hans": "{0} 赞了你的帖子。",
+  "zh-Hant": "{0} 對你的貼文按讚。"
+ },
+ "{0}이(가) 내 댓글에 답글을 달았습니다.": {
+  "en": "{0} replied to your comment.",
+  "ja": "{0}さんがあなたのコメントに返信しました。",
+  "zh-Hans": "{0} 回复了你的评论。",
+  "zh-Hant": "{0} 回覆了你的留言。"
+ },
+ "{0}이(가) 팔로우를 시작했습니다.": {
+  "en": "{0} started following you.",
+  "ja": "{0}さんがあなたをフォローしました。",
+  "zh-Hans": "{0} 关注了你。",
+  "zh-Hant": "{0} 開始追蹤你。"
+ },
+ "{0}이(가) 회원님을 언급했습니다.": {
+  "en": "{0} mentioned you.",
+  "ja": "{0}さんがあなたをメンションしました。",
+  "zh-Hans": "{0} 提到了你。",
+  "zh-Hant": "{0} 提到了你。"
+ },
+ "■ 다가오는 모임": {
+  "en": "■ Upcoming events",
+  "ja": "■ 近日のイベント",
+  "zh-Hans": "■ 即将举行的活动",
+  "zh-Hant": "■ 即將舉行的活動"
+ },
+ "■ 이번 주 눈에 띈 글": {
+  "en": "■ Top posts this week",
+  "ja": "■ 今週の注目投稿",
+  "zh-Hans": "■ 本周热门帖子",
+  "zh-Hant": "■ 本週熱門貼文"
+ },
+ "■ 이번 주 새 글": {
+  "en": "■ New posts this week",
+  "ja": "■ 今週の新着投稿",
+  "zh-Hans": "■ 本周新帖子",
+  "zh-Hant": "■ 本週新貼文"
+ },
+ "「{0}」": {
+  "en": "“{0}”",
+  "ja": "「{0}」",
+  "zh-Hans": "“{0}”",
+  "zh-Hant": "「{0}」"
+ },
+ "「{0}」 외 {1}개": {
+  "en": "“{0}” and {1} more",
+  "ja": "「{0}」ほか{1}個",
+  "zh-Hans": "“{0}”等{1}个",
+  "zh-Hant": "「{0}」等{1}個"
+ },
+ "「{0}」의 주인이에요. 커뮤니티 멤버 목록에서 다른 멤버에게 주인을 넘긴 뒤 탈퇴해 주세요.": {
+  "en": "You own \"{0}\". Transfer ownership to another member from the member list before deleting your account.",
+  "ja": "あなたは「{0}」のオーナーです。メンバー一覧から他のメンバーにオーナーを譲ってから退会してください。",
+  "zh-Hans": "你是「{0}」的所有者。请先在成员列表中将所有者身份转交给其他成员，再注销账号。",
+  "zh-Hant": "你是「{0}」的擁有者。請先在成員列表中將擁有者身分轉交給其他成員，再刪除帳號。"
+ },
+ "가려진 메시지": {
+  "en": "Hidden message",
+  "ja": "非表示のメッセージ",
+  "zh-Hans": "已隐藏的消息",
+  "zh-Hant": "已隱藏的訊息"
+ },
+ "가입 신청이 완료되었습니다. 관리자 승인 후 이용할 수 있습니다.": {
+  "en": "Request sent. You can join once an admin approves it.",
+  "ja": "参加申請が完了しました。管理者の承認後にご利用いただけます。",
+  "zh-Hans": "加入申请已提交，管理员审核通过后即可使用。",
+  "zh-Hant": "加入申請已送出，管理員審核通過後即可使用。"
+ },
+ "가입 정보를 보관하지 못했어요.": {
+  "en": "Couldn't save your sign-up info.",
+  "ja": "登録情報を保存できませんでした。",
+  "zh-Hans": "无法保存注册信息。",
+  "zh-Hant": "無法儲存註冊資訊。"
+ },
+ "가입 질문에 모두 답해 주세요.": {
+  "en": "Please answer all the join questions.",
+  "ja": "参加質問にすべて答えてください。",
+  "zh-Hans": "请回答所有加入问题。",
+  "zh-Hant": "請回答所有加入問題。"
+ },
+ "가입 첫날에는 링크를 {0}개까지만 넣을 수 있어요. 내일부터는 제한이 풀려요.": {
+  "en": "On your first day, you can add up to {0} links. The limit lifts tomorrow.",
+  "ja": "登録初日はリンクを{0}個までしか入れられません。明日から制限が解除されます。",
+  "zh-Hans": "注册第一天最多只能添加 {0} 个链接，明天起将解除限制。",
+  "zh-Hant": "註冊第一天最多只能加入 {0} 個連結，明天起將解除限制。"
+ },
+ "가입/탈퇴 처리 중 오류가 발생했습니다.": {
+  "en": "Something went wrong while joining or leaving.",
+  "ja": "参加・退会の処理中にエラーが発生しました。",
+  "zh-Hans": "加入或退出时出错。",
+  "zh-Hant": "加入或退出時發生錯誤。"
+ },
+ "가입된 커뮤니티가 아닙니다.": {
+  "en": "You're not a member of this community.",
+  "ja": "参加していないコミュニティです。",
+  "zh-Hans": "你不是该社区的成员。",
+  "zh-Hant": "你不是此社群的成員。"
+ },
+ "가입이 거절되었습니다.": {
+  "en": "Membership declined.",
+  "ja": "参加を拒否しました。",
+  "zh-Hans": "已拒绝加入。",
+  "zh-Hant": "已拒絕加入。"
+ },
+ "가입이 승인되었습니다.": {
+  "en": "Membership approved.",
+  "ja": "参加を承認しました。",
+  "zh-Hans": "已批准加入。",
+  "zh-Hant": "已核准加入。"
+ },
+ "강퇴 기간은 1·3·7·30일 또는 영구만 고를 수 있어요.": {
+  "en": "Ban duration can only be 1, 3, 7, or 30 days, or permanent.",
+  "ja": "追放期間は1・3・7・30日または永久から選べます。",
+  "zh-Hans": "封禁时长只能选择1、3、7、30天或永久。",
+  "zh-Hant": "停權期間只能選擇1、3、7、30天或永久。"
+ },
+ "강퇴 기간이 올바르지 않아요.": {
+  "en": "Invalid ban duration.",
+  "ja": "追放期間が正しくありません。",
+  "zh-Hans": "封禁时长无效。",
+  "zh-Hant": "停權期間無效。"
+ },
+ "같은 이름의 말머리가 있어요: {0}": {
+  "en": "A flair with this name already exists: {0}",
+  "ja": "同じ名前のフレアがあります: {0}",
+  "zh-Hans": "已存在同名标签：{0}",
+  "zh-Hant": "已存在同名標籤：{0}"
+ },
+ "같은 이름의 폴더가 있어요.": {
+  "en": "A folder with that name already exists.",
+  "ja": "同じ名前のフォルダがあります。",
+  "zh-Hans": "已有同名文件夹。",
+  "zh-Hant": "已有同名資料夾。"
+ },
+ "게시글을 찾을 수 없습니다.": {
+  "en": "Post not found.",
+  "ja": "投稿が見つかりません。",
+  "zh-Hans": "找不到该帖子。",
+  "zh-Hant": "找不到此貼文。"
+ },
+ "계정을 찾을 수 없어요.": {
+  "en": "We couldn't find your account.",
+  "ja": "アカウントが見つかりません。",
+  "zh-Hans": "找不到账号。",
+  "zh-Hant": "找不到帳號。"
+ },
+ "고를 수 있는 날수가 아니에요.": {
+  "en": "That number of days isn't an option.",
+  "ja": "選択できる日数ではありません。",
+  "zh-Hans": "不是可选的天数。",
+  "zh-Hant": "不是可選的天數。"
+ },
+ "고정은 {0}개까지예요. 다른 글을 먼저 풀어 주세요.": {
+  "en": "You can pin up to {0} posts. Unpin another one first.",
+  "ja": "固定は{0}件までです。先に他の投稿の固定を解除してください。",
+  "zh-Hans": "最多置顶{0}篇。请先取消其他帖子的置顶。",
+  "zh-Hant": "最多置頂{0}篇。請先取消其他貼文的置頂。"
+ },
+ "공개 범위는 커뮤니티 주인만 바꿀 수 있어요.": {
+  "en": "Only the community owner can change visibility.",
+  "ja": "公開範囲はコミュニティのオーナーのみ変更できます。",
+  "zh-Hans": "仅社区所有者可以更改公开范围。",
+  "zh-Hant": "僅社群擁有者可以變更公開範圍。"
+ },
+ "공지 문구를 1~300자로 써 주세요.": {
+  "en": "Notice text must be 1–300 characters.",
+  "ja": "お知らせの文言は1〜300文字で入力してください。",
+  "zh-Hans": "公告内容请输入1~300个字。",
+  "zh-Hant": "公告內容請輸入1~300個字。"
+ },
+ "관심 키워드 「{0}」 새 글: {1}": {
+  "en": "New post for your keyword \"{0}\": {1}",
+  "ja": "キーワード「{0}」の新着投稿：{1}",
+  "zh-Hans": "关注关键词「{0}」的新帖子：{1}",
+  "zh-Hant": "關注關鍵字「{0}」的新貼文：{1}"
+ },
+ "구글": {
+  "en": "Google",
+  "ja": "Google",
+  "zh-Hans": "Google",
+  "zh-Hant": "Google"
+ },
+ "구글 로그인이 아직 준비되지 않았어요.": {
+  "en": "Google sign-in isn't available yet.",
+  "ja": "Googleログインはまだ準備中です。",
+  "zh-Hans": "Google 登录尚未开放。",
+  "zh-Hant": "Google 登入尚未開放。"
+ },
+ "구글 사용자 정보를 가져오지 못했어요.": {
+  "en": "Couldn't get your Google account info.",
+  "ja": "Googleのユーザー情報を取得できませんでした。",
+  "zh-Hans": "无法获取 Google 用户信息。",
+  "zh-Hant": "無法取得 Google 使用者資訊。"
+ },
+ "구글 인증 정보를 받지 못했어요.": {
+  "en": "We didn't receive Google authentication info.",
+  "ja": "Googleの認証情報を受け取れませんでした。",
+  "zh-Hans": "未收到 Google 验证信息。",
+  "zh-Hant": "未收到 Google 驗證資訊。"
+ },
+ "구글 인증 정보를 확인하지 못했어요. 다시 시도해 주세요.": {
+  "en": "Couldn't verify your Google sign-in. Please try again.",
+  "ja": "Googleの認証情報を確認できませんでした。もう一度お試しください。",
+  "zh-Hans": "无法验证 Google 登录信息。请重试。",
+  "zh-Hant": "無法驗證 Google 登入資訊。請再試一次。"
+ },
+ "구독 정보가 올바르지 않아요.": {
+  "en": "Invalid subscription info.",
+  "ja": "購読情報が正しくありません。",
+  "zh-Hans": "订阅信息无效。",
+  "zh-Hant": "訂閱資訊無效。"
+ },
+ "구독 정보가 올바르지 않아요. 알림을 껐다가 다시 켜 주세요.": {
+  "en": "Invalid subscription info. Please turn notifications off and on again.",
+  "ja": "購読情報が正しくありません。通知をオフにしてから、もう一度オンにしてください。",
+  "zh-Hans": "订阅信息无效，请关闭通知后重新开启。",
+  "zh-Hant": "訂閱資訊無效，請關閉通知後重新開啟。"
+ },
+ "구독 중인 연재 「{0}」 새 편: {1}": {
+  "en": "New episode in \"{0}\": {1}",
+  "ja": "購読中の連載「{0}」の新しい回：{1}",
+  "zh-Hans": "你订阅的连载「{0}」更新了：{1}",
+  "zh-Hant": "你訂閱的連載「{0}」更新了：{1}"
+ },
+ "권한이 없습니다.": {
+  "en": "You don't have permission.",
+  "ja": "権限がありません。",
+  "zh-Hans": "没有权限。",
+  "zh-Hant": "沒有權限。"
+ },
+ "규칙 제목은 60자, 설명은 300자까지예요.": {
+  "en": "Rule titles can be up to 60 characters and descriptions up to 300.",
+  "ja": "ルールのタイトルは60文字、説明は300文字までです。",
+  "zh-Hans": "规则标题最多60个字，说明最多300个字。",
+  "zh-Hant": "規則標題最多60個字，說明最多300個字。"
+ },
+ "규칙은 {0}개까지예요.": {
+  "en": "You can add up to {0} rules.",
+  "ja": "ルールは{0}個までです。",
+  "zh-Hans": "最多{0}条规则。",
+  "zh-Hant": "最多{0}條規則。"
+ },
+ "그룹": {
+  "en": "Group",
+  "ja": "グループ",
+  "zh-Hans": "群组",
+  "zh-Hant": "群組"
+ },
+ "그룹 대화": {
+  "en": "Group chat",
+  "ja": "グループチャット",
+  "zh-Hans": "群聊",
+  "zh-Hant": "群組聊天"
+ },
+ "그룹 대화방이 아니에요.": {
+  "en": "This isn't a group chat.",
+  "ja": "グループチャットではありません。",
+  "zh-Hans": "这不是群聊。",
+  "zh-Hant": "這不是群組聊天室。"
+ },
+ "그룹은 {0}명까지예요.": {
+  "en": "Groups can have up to {0} people.",
+  "ja": "グループは最大{0}人までです。",
+  "zh-Hans": "群组最多 {0} 人。",
+  "zh-Hant": "群組最多 {0} 人。"
+ },
+ "그만 받기: {0}": {
+  "en": "Unsubscribe: {0}",
+  "ja": "配信停止：{0}",
+  "zh-Hans": "退订：{0}",
+  "zh-Hant": "取消訂閱：{0}"
+ },
+ "글": {
+  "en": "post",
+  "ja": "投稿",
+  "zh-Hans": "帖子",
+  "zh-Hant": "貼文"
+ },
+ "글 10개를 썼어요": {
+  "en": "Wrote 10 posts",
+  "ja": "10件投稿しました",
+  "zh-Hans": "发布了10篇帖子",
+  "zh-Hant": "發布了10篇貼文"
+ },
+ "글 50개를 썼어요": {
+  "en": "Wrote 50 posts",
+  "ja": "50件投稿しました",
+  "zh-Hans": "发布了50篇帖子",
+  "zh-Hant": "發布了50篇貼文"
+ },
+ "글쓴이": {
+  "en": "Author",
+  "ja": "投稿者",
+  "zh-Hans": "楼主",
+  "zh-Hant": "原PO"
+ },
+ "글쓴이나 운영진만 고정할 수 있어요.": {
+  "en": "Only the author or moderators can pin this.",
+  "ja": "投稿者または運営メンバーのみ固定できます。",
+  "zh-Hans": "仅作者或管理员可以置顶。",
+  "zh-Hant": "僅作者或管理員可以置頂。"
+ },
+ "글을 찾을 수 없어요.": {
+  "en": "Post not found.",
+  "ja": "投稿が見つかりません。",
+  "zh-Hans": "找不到该帖子。",
+  "zh-Hant": "找不到此貼文。"
+ },
+ "글이 좋아요 100개를 받았어요": {
+  "en": "Your posts got 100 likes",
+  "ja": "投稿が「いいね」を100件もらいました",
+  "zh-Hans": "帖子获得了100个赞",
+  "zh-Hant": "貼文獲得了100個讚"
+ },
+ "글이 좋아요 10개를 받았어요": {
+  "en": "Your posts got 10 likes",
+  "ja": "投稿が「いいね」を10件もらいました",
+  "zh-Hans": "帖子获得了10个赞",
+  "zh-Hant": "貼文獲得了10個讚"
+ },
+ "기간이 지난 초대 링크예요. 새 링크를 받아 주세요.": {
+  "en": "This invite link has expired. Please get a new one.",
+  "ja": "期限切れの招待リンクです。新しいリンクをもらってください。",
+  "zh-Hans": "该邀请链接已过期。请获取新的链接。",
+  "zh-Hant": "此邀請連結已過期。請取得新的連結。"
+ },
+ "꾸준한 글쓴이": {
+  "en": "Steady Writer",
+  "ja": "コツコツ投稿者",
+  "zh-Hans": "勤奋作者",
+  "zh-Hant": "勤奮作者"
+ },
+ "끝나는 날은 오늘이나 그 뒤여야 해요.": {
+  "en": "The end date must be today or later.",
+  "ja": "終了日は今日以降にしてください。",
+  "zh-Hans": "结束日期必须是今天或之后。",
+  "zh-Hant": "結束日期必須是今天或之後。"
+ },
+ "끝나는 날을 확인해 주세요.": {
+  "en": "Please check the end date.",
+  "ja": "終了日を確認してください。",
+  "zh-Hans": "请检查结束日期。",
+  "zh-Hant": "請確認結束日期。"
+ },
+ "끝나는 시간은 시작보다 뒤여야 해요.": {
+  "en": "End time must be after the start time.",
+  "ja": "終了時間は開始時間より後にしてください。",
+  "zh-Hans": "结束时间必须晚于开始时间。",
+  "zh-Hant": "結束時間必須晚於開始時間。"
+ },
+ "내 메시지는 신고할 수 없습니다.": {
+  "en": "You can't report your own message.",
+  "ja": "自分のメッセージは通報できません。",
+  "zh-Hans": "不能举报自己的消息。",
+  "zh-Hant": "無法檢舉自己的訊息。"
+ },
+ "내 연재는 구독하지 않아도 돼요.": {
+  "en": "No need to subscribe to your own series.",
+  "ja": "自分の連載は購読しなくても大丈夫です。",
+  "zh-Hans": "无需订阅自己的连载。",
+  "zh-Hant": "無需訂閱自己的連載。"
+ },
+ "내 연재만 고칠 수 있어요.": {
+  "en": "You can only edit your own series.",
+  "ja": "自分の連載のみ編集できます。",
+  "zh-Hans": "只能编辑自己的连载。",
+  "zh-Hant": "只能編輯自己的連載。"
+ },
+ "내 연재에만 넣을 수 있어요.": {
+  "en": "You can only add to your own series.",
+  "ja": "自分の連載にのみ追加できます。",
+  "zh-Hans": "只能添加到自己的连载中。",
+  "zh-Hant": "只能加入自己的連載。"
+ },
+ "내가 보낸 메시지만 지울 수 있어요.": {
+  "en": "You can only delete messages you sent.",
+  "ja": "削除できるのは自分が送ったメッセージだけです。",
+  "zh-Hans": "只能删除自己发送的消息。",
+  "zh-Hant": "只能刪除自己傳送的訊息。"
+ },
+ "내용이 비어 있습니다.": {
+  "en": "The content is empty.",
+  "ja": "内容が空です。",
+  "zh-Hans": "内容为空。",
+  "zh-Hant": "內容為空。"
+ },
+ "내용이나 사진을 넣어 주세요.": {
+  "en": "Please add text or a photo.",
+  "ja": "内容か写真を入れてください。",
+  "zh-Hans": "请输入内容或添加照片。",
+  "zh-Hant": "請輸入內容或加入照片。"
+ },
+ "너무 빠르게 요청하고 있어요. {0}분 뒤에 다시 시도해 주세요.": {
+  "en": "You're going too fast. Please try again in {0} min.",
+  "ja": "リクエストが多すぎます。{0}分後にもう一度お試しください。",
+  "zh-Hans": "请求过于频繁，请 {0} 分钟后再试。",
+  "zh-Hant": "請求過於頻繁，請 {0} 分鐘後再試。"
+ },
+ "너무 빠르게 요청하고 있어요. 잠시 뒤에 다시 시도해 주세요.": {
+  "en": "You're going too fast. Please try again in a moment.",
+  "ja": "リクエストが多すぎます。しばらくしてからもう一度お試しください。",
+  "zh-Hans": "请求过于频繁，请稍后再试。",
+  "zh-Hant": "請求過於頻繁，請稍後再試。"
+ },
+ "네이버": {
+  "en": "Naver",
+  "ja": "NAVER",
+  "zh-Hans": "Naver",
+  "zh-Hant": "Naver"
+ },
+ "네이버 로그인이 아직 준비되지 않았어요.": {
+  "en": "Naver sign-in isn't available yet.",
+  "ja": "NAVERログインはまだ準備中です。",
+  "zh-Hans": "Naver 登录尚未开放。",
+  "zh-Hant": "Naver 登入尚未開放。"
+ },
+ "네이버 사용자 정보를 가져오지 못했어요.": {
+  "en": "Couldn't get your Naver account info.",
+  "ja": "NAVERのユーザー情報を取得できませんでした。",
+  "zh-Hans": "无法获取 Naver 用户信息。",
+  "zh-Hant": "無法取得 Naver 使用者資訊。"
+ },
+ "네이버 인증 정보를 받지 못했어요.": {
+  "en": "We didn't receive Naver authentication info.",
+  "ja": "NAVERの認証情報を受け取れませんでした。",
+  "zh-Hans": "未收到 Naver 验证信息。",
+  "zh-Hant": "未收到 Naver 驗證資訊。"
+ },
+ "네이버 인증에 실패했어요. 다시 시도해 주세요.": {
+  "en": "Naver sign-in failed. Please try again.",
+  "ja": "NAVERの認証に失敗しました。もう一度お試しください。",
+  "zh-Hans": "Naver 验证失败。请重试。",
+  "zh-Hant": "Naver 驗證失敗。請再試一次。"
+ },
+ "누군가": {
+  "en": "Someone",
+  "ja": "誰か",
+  "zh-Hans": "有人",
+  "zh-Hant": "有人"
+ },
+ "닉네임은 한글·영문·숫자와 . _ - 로 2~30자예요.": {
+  "en": "Nicknames must be 2–30 characters: Korean, English letters, numbers, and . _ -",
+  "ja": "ニックネームはハングル・英字・数字と . _ - で2〜30文字です。",
+  "zh-Hans": "昵称须为 2–30 个字符，可使用韩文、英文、数字及 . _ -",
+  "zh-Hant": "暱稱須為 2–30 個字元，可使用韓文、英文、數字及 . _ -"
+ },
+ "다른 기기에서 로그인하여, 로그아웃되었습니다.": {
+  "en": "You were logged out because you logged in on another device.",
+  "ja": "別の端末でログインしたため、ログアウトしました。",
+  "zh-Hans": "你已在其他设备登录，当前设备已退出。",
+  "zh-Hant": "你已在其他裝置登入，因此已登出。"
+ },
+ "다운로드 처리 중 오류가 발생했습니다.": {
+  "en": "Something went wrong while downloading.",
+  "ja": "ダウンロード中にエラーが発生しました。",
+  "zh-Hans": "下载时出错。",
+  "zh-Hant": "下載時發生錯誤。"
+ },
+ "답글을 달 수 없는 댓글이에요.": {
+  "en": "You can't reply to this comment.",
+  "ja": "返信できないコメントです。",
+  "zh-Hans": "无法回复该评论。",
+  "zh-Hant": "無法回覆此留言。"
+ },
+ "답은 {0}자까지예요.": {
+  "en": "Answers can be up to {0} characters.",
+  "ja": "回答は{0}文字までです。",
+  "zh-Hans": "回答最多{0}个字。",
+  "zh-Hant": "回答最多{0}個字。"
+ },
+ "대화방을 찾을 수 없어요.": {
+  "en": "Chat not found.",
+  "ja": "チャットが見つかりません。",
+  "zh-Hans": "找不到该聊天。",
+  "zh-Hant": "找不到此聊天室。"
+ },
+ "대화할 수 없는 상대예요.": {
+  "en": "You can't chat with this person.",
+  "ja": "この相手とはチャットできません。",
+  "zh-Hans": "无法与此人聊天。",
+  "zh-Hant": "無法與此人聊天。"
+ },
+ "댓글": {
+  "en": "comment",
+  "ja": "コメント",
+  "zh-Hans": "评论",
+  "zh-Hant": "留言"
+ },
+ "댓글·답글 100개를 남겼어요": {
+  "en": "Left 100 comments and replies",
+  "ja": "コメント・返信を100件しました",
+  "zh-Hans": "发表了100条评论和回复",
+  "zh-Hant": "留下了100則留言和回覆"
+ },
+ "댓글을 달 수 없는 글이에요.": {
+  "en": "Comments are closed on this post.",
+  "ja": "コメントできない投稿です。",
+  "zh-Hans": "该帖子无法评论。",
+  "zh-Hant": "此貼文無法留言。"
+ },
+ "댓글을 찾을 수 없습니다.": {
+  "en": "Comment not found.",
+  "ja": "コメントが見つかりません。",
+  "zh-Hans": "找不到该评论。",
+  "zh-Hant": "找不到此留言。"
+ },
+ "댓글을 찾을 수 없어요.": {
+  "en": "Comment not found.",
+  "ja": "コメントが見つかりません。",
+  "zh-Hans": "找不到该评论。",
+  "zh-Hant": "找不到此留言。"
+ },
+ "동네 기록가": {
+  "en": "Community Chronicler",
+  "ja": "コミュニティの記録係",
+  "zh-Hans": "社区记录者",
+  "zh-Hant": "社群記錄者"
+ },
+ "동네 마실": {
+  "en": "Neighborhood Stroller",
+  "ja": "ご近所めぐり",
+  "zh-Hans": "串门达人",
+  "zh-Hant": "串門達人"
+ },
+ "동네 만든 이": {
+  "en": "Community Founder",
+  "ja": "コミュニティの創設者",
+  "zh-Hans": "社区创建者",
+  "zh-Hant": "社群創建者"
+ },
+ "두 글자 이상(공백·기호 빼고), 50자 이하로 넣어 주세요. 한 글자는 엉뚱한 단어 속에서도 걸려요.": {
+  "en": "Enter 2–50 characters (not counting spaces or symbols). A single character would match inside unrelated words.",
+  "ja": "2文字以上（空白・記号を除く）、50文字以下で入力してください。1文字だと関係ない単語の中でも引っかかります。",
+  "zh-Hans": "请输入 2–50 个字（不含空格和符号）。单个字会误伤其他无关词语。",
+  "zh-Hant": "請輸入 2–50 個字（不含空格和符號）。單一個字會誤擋其他無關的詞。"
+ },
+ "로그아웃 처리 중 오류가 발생했습니다.": {
+  "en": "Something went wrong while logging out.",
+  "ja": "ログアウト中にエラーが発生しました。",
+  "zh-Hans": "退出登录时出错。",
+  "zh-Hant": "登出時發生錯誤。"
+ },
+ "로그인 시도가 너무 많아요. {0}분 뒤에 다시 시도해 주세요.": {
+  "en": "Too many login attempts. Try again in {0} min.",
+  "ja": "ログイン試行が多すぎます。{0}分後にもう一度お試しください。",
+  "zh-Hans": "登录尝试次数过多。请 {0} 分钟后再试。",
+  "zh-Hant": "登入嘗試次數過多。請 {0} 分鐘後再試。"
+ },
+ "로그인 처리 중 오류가 발생했습니다.": {
+  "en": "Something went wrong while logging in.",
+  "ja": "ログイン中にエラーが発生しました。",
+  "zh-Hans": "登录时出错。",
+  "zh-Hant": "登入時發生錯誤。"
+ },
+ "로그인이 필요합니다.": {
+  "en": "Please log in.",
+  "ja": "ログインが必要です。",
+  "zh-Hans": "请先登录。",
+  "zh-Hant": "請先登入。"
+ },
+ "로그인이 필요해요.": {
+  "en": "Please log in.",
+  "ja": "ログインが必要です。",
+  "zh-Hans": "请先登录。",
+  "zh-Hant": "請先登入。"
+ },
+ "로그인하면 볼 수 있는 글이거나 삭제된 글이에요.": {
+  "en": "This post is only visible after you log in, or it was deleted.",
+  "ja": "ログインすると見られる投稿か、削除された投稿です。",
+  "zh-Hans": "该帖子需要登录才能查看，或已被删除。",
+  "zh-Hant": "此貼文需要登入才能查看，或已被刪除。"
+ },
+ "링크가 만료됐거나 올바르지 않습니다. 다시 요청해주세요.": {
+  "en": "This link has expired or is invalid. Please request a new one.",
+  "ja": "リンクの有効期限が切れているか、正しくありません。もう一度リクエストしてください。",
+  "zh-Hans": "链接已过期或无效。请重新申请。",
+  "zh-Hant": "連結已過期或無效。請重新申請。"
+ },
+ "링크가 올바르지 않아요. 설정 화면에서 꺼 주세요.": {
+  "en": "This link isn't valid. Please turn it off in Settings.",
+  "ja": "リンクが正しくありません。設定画面からオフにしてください。",
+  "zh-Hans": "链接无效。请在设置中关闭。",
+  "zh-Hant": "連結無效。請在設定中關閉。"
+ },
+ "링크는 사이트 안 경로(/로 시작)나 https:// 주소만 넣을 수 있어요.": {
+  "en": "Links must be a site path (starting with /) or an https:// address.",
+  "ja": "リンクはサイト内のパス(/で始まる)かhttps://のアドレスのみ入力できます。",
+  "zh-Hans": "链接只能填写站内路径(以/开头)或https://地址。",
+  "zh-Hant": "連結只能填寫站內路徑(以/開頭)或https://網址。"
+ },
+ "링크를 취소하지 못했어요.": {
+  "en": "Couldn't revoke the link.",
+  "ja": "リンクを取り消せませんでした。",
+  "zh-Hans": "无法撤销链接。",
+  "zh-Hant": "無法撤銷連結。"
+ },
+ "마감된 투표예요.": {
+  "en": "This poll has closed.",
+  "ja": "締め切られた投票です。",
+  "zh-Hans": "该投票已截止。",
+  "zh-Hant": "此投票已截止。"
+ },
+ "마지막 로그인 수단이라 끊을 수 없어요. 비밀번호를 먼저 만들거나 다른 소셜 계정을 연결해 주세요.": {
+  "en": "This is your only way to log in, so it can't be unlinked. Set a password or link another social account first.",
+  "ja": "最後のログイン手段のため解除できません。先にパスワードを設定するか、別のソーシャルアカウントを連携してください。",
+  "zh-Hans": "这是你唯一的登录方式，无法解除关联。请先设置密码或关联其他社交账号。",
+  "zh-Hant": "這是你唯一的登入方式，無法解除連結。請先設定密碼或連結其他社群帳號。"
+ },
+ "만든 사람이나 운영진만 고칠 수 있어요.": {
+  "en": "Only the creator or moderators can edit this.",
+  "ja": "作成者または運営メンバーのみ編集できます。",
+  "zh-Hans": "仅创建者或管理员可以编辑。",
+  "zh-Hant": "僅建立者或管理員可以編輯。"
+ },
+ "만든 사람이나 운영진만 취소할 수 있어요.": {
+  "en": "Only the creator or moderators can cancel this.",
+  "ja": "作成者または運営メンバーのみキャンセルできます。",
+  "zh-Hans": "仅创建者或管理员可以取消。",
+  "zh-Hant": "僅建立者或管理員可以取消。"
+ },
+ "말머리는 20자까지예요.": {
+  "en": "Flairs can be up to 20 characters.",
+  "ja": "フレアは20文字までです。",
+  "zh-Hans": "标签最多20个字。",
+  "zh-Hant": "標籤最多20個字。"
+ },
+ "말머리는 {0}개까지예요.": {
+  "en": "You can add up to {0} flairs.",
+  "ja": "フレアは{0}個までです。",
+  "zh-Hans": "最多{0}个标签。",
+  "zh-Hant": "最多{0}個標籤。"
+ },
+ "메시지 요청": {
+  "en": "Message request",
+  "ja": "メッセージリクエスト",
+  "zh-Hans": "消息请求",
+  "zh-Hant": "訊息請求"
+ },
+ "메시지가 비어 있습니다.": {
+  "en": "Your message is empty.",
+  "ja": "メッセージが空です。",
+  "zh-Hans": "消息为空。",
+  "zh-Hant": "訊息是空的。"
+ },
+ "메시지를 찾을 수 없습니다.": {
+  "en": "Message not found.",
+  "ja": "メッセージが見つかりません。",
+  "zh-Hans": "找不到该消息。",
+  "zh-Hant": "找不到此訊息。"
+ },
+ "메시지를 찾을 수 없어요.": {
+  "en": "Message not found.",
+  "ja": "メッセージが見つかりません。",
+  "zh-Hans": "找不到该消息。",
+  "zh-Hant": "找不到此訊息。"
+ },
+ "메일을 보내지 못했습니다. 잠시 후 다시 시도해주세요.": {
+  "en": "Couldn't send the email. Please try again shortly.",
+  "ja": "メールを送信できませんでした。しばらくしてからもう一度お試しください。",
+  "zh-Hans": "邮件发送失败。请稍后再试。",
+  "zh-Hant": "郵件傳送失敗。請稍後再試。"
+ },
+ "멤버 {0}명": {
+  "en": "{0} members",
+  "ja": "メンバー{0}人",
+  "zh-Hans": "{0} 位成员",
+  "zh-Hant": "{0} 位成員"
+ },
+ "멤버 관리 중 오류가 발생했습니다.": {
+  "en": "Something went wrong while managing members.",
+  "ja": "メンバー管理中にエラーが発生しました。",
+  "zh-Hans": "管理成员时出错。",
+  "zh-Hant": "管理成員時發生錯誤。"
+ },
+ "멤버 권한이 변경되었습니다.": {
+  "en": "Member role updated.",
+  "ja": "メンバーの権限を変更しました。",
+  "zh-Hans": "成员权限已更改。",
+  "zh-Hant": "成員權限已變更。"
+ },
+ "멤버가 아닙니다.": {
+  "en": "Not a member.",
+  "ja": "メンバーではありません。",
+  "zh-Hans": "不是成员。",
+  "zh-Hant": "不是成員。"
+ },
+ "멤버가 추방되었습니다.": {
+  "en": "Member removed.",
+  "ja": "メンバーを追放しました。",
+  "zh-Hans": "成员已被移除。",
+  "zh-Hant": "成員已被移除。"
+ },
+ "멤버만 모임을 만들 수 있어요.": {
+  "en": "Only members can create events.",
+  "ja": "メンバーのみイベントを作成できます。",
+  "zh-Hans": "仅成员可以创建活动。",
+  "zh-Hant": "僅成員可以建立活動。"
+ },
+ "멤버만 볼 수 있습니다.": {
+  "en": "Only members can view this.",
+  "ja": "メンバーのみ閲覧できます。",
+  "zh-Hans": "仅成员可以查看。",
+  "zh-Hant": "僅成員可以查看。"
+ },
+ "멤버만 볼 수 있어요.": {
+  "en": "Only members can view this.",
+  "ja": "メンバーのみ閲覧できます。",
+  "zh-Hans": "仅成员可以查看。",
+  "zh-Hant": "僅成員可以查看。"
+ },
+ "멤버만 참석할 수 있어요.": {
+  "en": "Only members can attend.",
+  "ja": "メンバーのみ参加できます。",
+  "zh-Hans": "仅成员可以参加。",
+  "zh-Hant": "僅成員可以參加。"
+ },
+ "멤버만 초대할 수 있어요.": {
+  "en": "Only members can invite.",
+  "ja": "メンバーのみ招待できます。",
+  "zh-Hans": "仅成员可以邀请。",
+  "zh-Hant": "僅成員可以邀請。"
+ },
+ "모임 「{0}」이(가) 곧 시작해요.": {
+  "en": "The event \"{0}\" is starting soon.",
+  "ja": "イベント「{0}」がまもなく始まります。",
+  "zh-Hans": "活动「{0}」即将开始。",
+  "zh-Hant": "活動「{0}」即將開始。"
+ },
+ "모임 「{0}」이(가) 하루 앞으로 다가왔어요.": {
+  "en": "The event \"{0}\" is one day away.",
+  "ja": "イベント「{0}」まであと1日です。",
+  "zh-Hans": "活动「{0}」还有一天就开始了。",
+  "zh-Hant": "活動「{0}」再過一天就開始了。"
+ },
+ "모임 이름을 1~80자로 써 주세요.": {
+  "en": "Event name must be 1–80 characters.",
+  "ja": "イベント名は1〜80文字で入力してください。",
+  "zh-Hans": "活动名称请输入1~80个字。",
+  "zh-Hant": "活動名稱請輸入1~80個字。"
+ },
+ "모임을 만든 사람이나 운영진만 대화방을 열 수 있어요.": {
+  "en": "Only the event creator or community staff can open a chat room.",
+  "ja": "チャットを開けるのはイベントの作成者か運営メンバーだけです。",
+  "zh-Hans": "只有活动创建者或管理团队可以开聊天室。",
+  "zh-Hant": "只有活動建立者或管理團隊可以開聊天室。"
+ },
+ "모임을 찾을 수 없어요.": {
+  "en": "Event not found.",
+  "ja": "イベントが見つかりません。",
+  "zh-Hans": "找不到该活动。",
+  "zh-Hant": "找不到此活動。"
+ },
+ "반응할 수 없는 댓글이에요.": {
+  "en": "You can't react to this comment.",
+  "ja": "リアクションできないコメントです。",
+  "zh-Hans": "无法回应该评论。",
+  "zh-Hant": "無法回應此留言。"
+ },
+ "받을 수 있는 기기가 없어요. 이 기기에서 알림을 다시 켜 주세요.": {
+  "en": "No devices can receive notifications. Turn notifications back on for this device.",
+  "ja": "通知を受け取れる端末がありません。この端末で通知をもう一度オンにしてください。",
+  "zh-Hans": "没有可接收通知的设备，请在此设备上重新开启通知。",
+  "zh-Hant": "沒有可接收通知的裝置，請在此裝置上重新開啟通知。"
+ },
+ "방 이름을 1~50자로 써 주세요.": {
+  "en": "Room names must be 1–50 characters.",
+  "ja": "ルーム名は1〜50文字で入力してください。",
+  "zh-Hans": "房间名称须为 1–50 个字。",
+  "zh-Hant": "聊天室名稱須為 1–50 個字。"
+ },
+ "방금 올린 것과 같은 내용이에요. 같은 글을 여러 번 올리지 말아 주세요.": {
+  "en": "This is the same as what you just posted. Please don't post the same thing multiple times.",
+  "ja": "先ほど投稿したものと同じ内容です。同じ内容を何度も投稿しないでください。",
+  "zh-Hans": "与刚才发布的内容相同，请不要重复发布。",
+  "zh-Hant": "與剛才發布的內容相同，請不要重複發布。"
+ },
+ "방을 만든 사람만 초대할 수 있어요.": {
+  "en": "Only the room creator can invite people.",
+  "ja": "ルームを作成した人だけが招待できます。",
+  "zh-Hans": "只有房间创建者可以邀请。",
+  "zh-Hant": "只有聊天室建立者可以邀請。"
+ },
+ "변경할 비밀번호가 현재 비밀번호와 일치합니다.": {
+  "en": "Your new password is the same as your current one.",
+  "ja": "新しいパスワードが現在のパスワードと同じです。",
+  "zh-Hans": "新密码与当前密码相同。",
+  "zh-Hant": "新密碼與目前的密碼相同。"
+ },
+ "보안을 위해 이 기기에서 로그아웃했어요. 다시 로그인해 주세요.": {
+  "en": "For your security, we logged you out on this device. Please log in again.",
+  "ja": "セキュリティのため、この端末からログアウトしました。もう一度ログインしてください。",
+  "zh-Hans": "为了安全，已在此设备上退出登录。请重新登录。",
+  "zh-Hant": "為了安全，已在此裝置上登出。請重新登入。"
+ },
+ "본문이 너무 길어 임시 저장할 수 없어요.": {
+  "en": "The post is too long to save as a draft.",
+  "ja": "本文が長すぎて下書き保存できません。",
+  "zh-Hans": "正文太长，无法保存草稿。",
+  "zh-Hant": "內文太長，無法儲存草稿。"
+ },
+ "본문이 너무 길어요.": {
+  "en": "The content is too long.",
+  "ja": "本文が長すぎます。",
+  "zh-Hans": "正文太长。",
+  "zh-Hant": "內文太長。"
+ },
+ "본인 확인이 끝나지 않았습니다. 인증 코드를 먼저 확인해주세요.": {
+  "en": "Verification isn't complete. Please confirm your verification code first.",
+  "ja": "本人確認が完了していません。先に認証コードを確認してください。",
+  "zh-Hans": "身份验证未完成。请先确认验证码。",
+  "zh-Hant": "身分驗證未完成。請先確認驗證碼。"
+ },
+ "볼 수 없는 글이에요.": {
+  "en": "You can't view this post.",
+  "ja": "閲覧できない投稿です。",
+  "zh-Hans": "无法查看该帖子。",
+  "zh-Hant": "無法查看此貼文。"
+ },
+ "브라우저": {
+  "en": "Browser",
+  "ja": "ブラウザ",
+  "zh-Hans": "浏览器",
+  "zh-Hant": "瀏覽器"
+ },
+ "비공개 커뮤니티": {
+  "en": "Private community",
+  "ja": "非公開コミュニティ",
+  "zh-Hans": "私密社区",
+  "zh-Hant": "私密社群"
+ },
+ "비공개 커뮤니티예요. 가입하면 볼 수 있어요.": {
+  "en": "This is a private community. Join to see it.",
+  "ja": "非公開コミュニティです。参加すると見られます。",
+  "zh-Hans": "这是私密社区，加入后即可查看。",
+  "zh-Hant": "這是私密社群，加入後即可查看。"
+ },
+ "비밀번호가 맞지 않아요.": {
+  "en": "Incorrect password.",
+  "ja": "パスワードが正しくありません。",
+  "zh-Hans": "密码不正确。",
+  "zh-Hant": "密碼不正確。"
+ },
+ "비밀번호가 바뀌었습니다. 새 비밀번호로 로그인해주세요.": {
+  "en": "Your password has been changed. Please log in with your new password.",
+  "ja": "パスワードが変更されました。新しいパスワードでログインしてください。",
+  "zh-Hans": "密码已更改。请使用新密码登录。",
+  "zh-Hant": "密碼已變更。請使用新密碼登入。"
+ },
+ "비밀번호가 변경되었습니다.\n다시 로그인 해주세요.": {
+  "en": "Your password has been changed.\nPlease log in again.",
+  "ja": "パスワードを変更しました。\nもう一度ログインしてください。",
+  "zh-Hans": "密码已更改。\n请重新登录。",
+  "zh-Hant": "密碼已變更。\n請重新登入。"
+ },
+ "비밀번호가 일치하지 않습니다.": {
+  "en": "Incorrect password.",
+  "ja": "パスワードが一致しません。",
+  "zh-Hans": "密码不正确。",
+  "zh-Hant": "密碼不正確。"
+ },
+ "비밀번호는 8자 이상이어야 합니다.": {
+  "en": "Password must be at least 8 characters.",
+  "ja": "パスワードは8文字以上にしてください。",
+  "zh-Hans": "密码至少需要 8 个字符。",
+  "zh-Hant": "密碼至少需要 8 個字元。"
+ },
+ "비어 있는 글은 저장하지 않아요.": {
+  "en": "Empty posts aren't saved.",
+  "ja": "空の投稿は保存しません。",
+  "zh-Hans": "空白内容不会被保存。",
+  "zh-Hant": "空白內容不會被儲存。"
+ },
+ "사용자를 찾을 수 없습니다.": {
+  "en": "User not found.",
+  "ja": "ユーザーが見つかりません。",
+  "zh-Hans": "找不到该用户。",
+  "zh-Hant": "找不到此使用者。"
+ },
+ "사용자를 찾을 수 없어요.": {
+  "en": "User not found.",
+  "ja": "ユーザーが見つかりません。",
+  "zh-Hans": "找不到该用户。",
+  "zh-Hant": "找不到此使用者。"
+ },
+ "사용할 수 없는 표현이 들어 있어요(「{0}」). 고쳐서 다시 올려 주세요.": {
+  "en": "This contains a word that isn't allowed (\"{0}\"). Please edit it and try again.",
+  "ja": "使用できない表現が含まれています（「{0}」）。修正してもう一度投稿してください。",
+  "zh-Hans": "包含不允许使用的内容（「{0}」），请修改后重新发布。",
+  "zh-Hant": "包含不允許使用的內容（「{0}」），請修改後重新發布。"
+ },
+ "사유: {0}": {
+  "en": "Reason: {0}",
+  "ja": "理由：{0}",
+  "zh-Hans": "原因：{0}",
+  "zh-Hant": "原因：{0}"
+ },
+ "사유는 200자까지예요.": {
+  "en": "Reasons can be up to 200 characters.",
+  "ja": "理由は200文字までです。",
+  "zh-Hans": "原因最多 200 个字。",
+  "zh-Hant": "原因最多 200 個字。"
+ },
+ "사유는 300자까지 쓸 수 있어요.": {
+  "en": "The reason can be up to 300 characters.",
+  "ja": "理由は300文字まで入力できます。",
+  "zh-Hans": "原因最多300个字。",
+  "zh-Hant": "原因最多300個字。"
+ },
+ "사진": {
+  "en": "Photo",
+  "ja": "写真",
+  "zh-Hans": "图片",
+  "zh-Hant": "照片"
+ },
+ "사진 경로가 올바르지 않아요.": {
+  "en": "Invalid photo path.",
+  "ja": "写真のパスが正しくありません。",
+  "zh-Hans": "照片路径无效。",
+  "zh-Hant": "照片路徑無效。"
+ },
+ "사진을 보냈어요.": {
+  "en": "Sent a photo.",
+  "ja": "写真を送りました。",
+  "zh-Hans": "发送了一张图片。",
+  "zh-Hant": "傳送了一張照片。"
+ },
+ "삭제 권한이 없습니다.": {
+  "en": "You don't have permission to delete this.",
+  "ja": "削除する権限がありません。",
+  "zh-Hans": "没有删除权限。",
+  "zh-Hant": "沒有刪除權限。"
+ },
+ "삭제 중 내부 오류가 발생했습니다.": {
+  "en": "Something went wrong while deleting.",
+  "ja": "削除中に内部エラーが発生しました。",
+  "zh-Hans": "删除时发生内部错误。",
+  "zh-Hant": "刪除時發生內部錯誤。"
+ },
+ "삭제된 메시지": {
+  "en": "Deleted message",
+  "ja": "削除されたメッセージ",
+  "zh-Hans": "已删除的消息",
+  "zh-Hant": "已刪除的訊息"
+ },
+ "삼성 인터넷": {
+  "en": "Samsung Internet",
+  "ja": "Samsung Internet",
+  "zh-Hans": "三星浏览器",
+  "zh-Hant": "三星瀏覽器"
+ },
+ "새 기기에서 로그인했어요: {0}. 본인이 아니면 비밀번호를 바꾸고 그 기기를 로그아웃하세요.": {
+  "en": "New sign-in from {0}. If this wasn't you, change your password and sign out that device.",
+  "ja": "新しい端末からログインがありました：{0}。心当たりがない場合はパスワードを変更し、その端末からログアウトしてください。",
+  "zh-Hans": "新设备登录：{0}。如果不是你本人，请修改密码并退出该设备。",
+  "zh-Hant": "新裝置登入：{0}。如果不是你本人，請變更密碼並登出該裝置。"
+ },
+ "새 뱃지 {0}을(를) 얻었어요!": {
+  "en": "You earned a new badge: {0}!",
+  "ja": "新しいバッジ「{0}」を獲得しました！",
+  "zh-Hans": "你获得了新徽章 {0}！",
+  "zh-Hant": "你獲得了新徽章 {0}！"
+ },
+ "새 알림이 있습니다. ({0})": {
+  "en": "You have a new notification. ({0})",
+  "ja": "新しい通知があります。（{0}）",
+  "zh-Hans": "你有新通知。（{0}）",
+  "zh-Hant": "你有新通知。（{0}）"
+ },
+ "새 이메일 인증을 먼저 마쳐 주세요.": {
+  "en": "Please verify your new email first.",
+  "ja": "先に新しいメールアドレスの認証を完了してください。",
+  "zh-Hans": "请先完成新邮箱的验证。",
+  "zh-Hant": "請先完成新電子郵件的驗證。"
+ },
+ "서로 다른 선택지를 2개 이상 넣어 주세요.": {
+  "en": "Please add at least 2 different options.",
+  "ja": "異なる選択肢を2つ以上入れてください。",
+  "zh-Hans": "请添加至少2个不同的选项。",
+  "zh-Hant": "請加入至少2個不同的選項。"
+ },
+ "서명 오류": {
+  "en": "Signature error",
+  "ja": "署名エラー",
+  "zh-Hans": "签名错误",
+  "zh-Hant": "簽章錯誤"
+ },
+ "선택지가 올바르지 않아요.": {
+  "en": "Invalid option.",
+  "ja": "選択肢が正しくありません。",
+  "zh-Hans": "选项无效。",
+  "zh-Hant": "選項無效。"
+ },
+ "선택지는 {0}개까지예요.": {
+  "en": "You can add up to {0} options.",
+  "ja": "選択肢は{0}個までです。",
+  "zh-Hans": "最多{0}个选项。",
+  "zh-Hant": "最多{0}個選項。"
+ },
+ "선택지는 {0}자까지 쓸 수 있어요.": {
+  "en": "Options can be up to {0} characters.",
+  "ja": "選択肢は{0}文字まで入力できます。",
+  "zh-Hans": "选项最多{0}个字。",
+  "zh-Hant": "選項最多{0}個字。"
+ },
+ "설명은 2000자까지예요.": {
+  "en": "Description can be up to 2000 characters.",
+  "ja": "説明は2000文字までです。",
+  "zh-Hans": "描述最多2000个字。",
+  "zh-Hant": "描述最多2000個字。"
+ },
+ "설정 시간이 지났어요. 처음부터 다시 해 주세요.": {
+  "en": "Setup timed out. Please start over.",
+  "ja": "設定の有効期限が切れました。最初からやり直してください。",
+  "zh-Hans": "设置已超时。请重新开始。",
+  "zh-Hant": "設定已逾時。請重新開始。"
+ },
+ "설정에서 「주간 소식 메일」을 켠 분께 매주 월요일 아침에 보내요.": {
+  "en": "We send this every Monday morning to people who turned on \"Weekly digest email\" in Settings.",
+  "ja": "設定で「週刊ニュースメール」をオンにした方に、毎週月曜日の朝にお送りしています。",
+  "zh-Hans": "我们会在每周一早上发送给在设置中开启「每周动态邮件」的用户。",
+  "zh-Hant": "我們會在每週一早上寄給在設定中開啟「每週動態郵件」的使用者。"
+ },
+ "성공했습니다.": {
+  "en": "Done.",
+  "ja": "完了しました。",
+  "zh-Hans": "操作成功。",
+  "zh-Hant": "操作成功。"
+ },
+ "세션 만료됨": {
+  "en": "Session expired",
+  "ja": "セッションの有効期限が切れました",
+  "zh-Hans": "会话已过期",
+  "zh-Hant": "工作階段已過期"
+ },
+ "소개는 200자까지예요.": {
+  "en": "Description can be up to 200 characters.",
+  "ja": "紹介は200文字までです。",
+  "zh-Hans": "简介最多200个字。",
+  "zh-Hant": "簡介最多200個字。"
+ },
+ "소셜 인증이 만료됐어요. 처음부터 다시 시도해 주세요.": {
+  "en": "Social sign-in expired. Please start over.",
+  "ja": "ソーシャル認証の有効期限が切れました。最初からやり直してください。",
+  "zh-Hans": "社交账号验证已过期。请重新开始。",
+  "zh-Hant": "社群帳號驗證已過期。請重新開始。"
+ },
+ "수다쟁이": {
+  "en": "Chatterbox",
+  "ja": "おしゃべりさん",
+  "zh-Hans": "话痨",
+  "zh-Hant": "話匣子"
+ },
+ "수신 주소가 설정되지 않았습니다.\n관리자에게 문의해주세요.": {
+  "en": "No receiving address is set.\nPlease contact an admin.",
+  "ja": "受信アドレスが設定されていません。\n管理者にお問い合わせください。",
+  "zh-Hans": "尚未设置接收地址。\n请联系管理员。",
+  "zh-Hant": "尚未設定接收地址。\n請聯絡管理員。"
+ },
+ "수정 권한이 없습니다.": {
+  "en": "You don't have permission to edit this.",
+  "ja": "編集する権限がありません。",
+  "zh-Hans": "没有编辑权限。",
+  "zh-Hant": "沒有編輯權限。"
+ },
+ "숨길 수 없는 글이에요.": {
+  "en": "This post can't be hidden.",
+  "ja": "この投稿は非表示にできません。",
+  "zh-Hans": "该帖子无法隐藏。",
+  "zh-Hant": "此貼文無法隱藏。"
+ },
+ "스스로 나갔거나 거절된 사람은 다시 넣을 수 없어요. 초대 링크를 보내 주세요.": {
+  "en": "People who left or were declined can't be added back. Send them an invite link instead.",
+  "ja": "自分で退出した人や拒否された人は再追加できません。招待リンクを送ってください。",
+  "zh-Hans": "无法重新加入已退出或被拒绝的用户。请发送邀请链接。",
+  "zh-Hant": "無法重新加入已退出或被拒絕的使用者。請傳送邀請連結。"
+ },
+ "승인제 커뮤니티는 운영진만 초대 링크를 만들 수 있어요.": {
+  "en": "In approval-only communities, only moderators can create invite links.",
+  "ja": "承認制コミュニティでは運営メンバーのみ招待リンクを作成できます。",
+  "zh-Hans": "需审核的社区仅管理员可以创建邀请链接。",
+  "zh-Hant": "需審核的社群僅管理員可以建立邀請連結。"
+ },
+ "시간 형식이 올바르지 않아요.": {
+  "en": "Invalid time format.",
+  "ja": "時間の形式が正しくありません。",
+  "zh-Hans": "时间格式无效。",
+  "zh-Hant": "時間格式無效。"
+ },
+ "시작 시간을 골라 주세요.": {
+  "en": "Please pick a start time.",
+  "ja": "開始時間を選んでください。",
+  "zh-Hans": "请选择开始时间。",
+  "zh-Hant": "請選擇開始時間。"
+ },
+ "신고 종류나 사유가 올바르지 않습니다.": {
+  "en": "Invalid report type or reason.",
+  "ja": "通報の種類または理由が正しくありません。",
+  "zh-Hans": "举报类型或原因无效。",
+  "zh-Hant": "檢舉類型或原因無效。"
+ },
+ "신고가 여러 건 들어와 회원님의 {0}이(가) 검토 중이에요. 문제가 없으면 다시 보여요.": {
+  "en": "Your {0} is under review after several reports. It'll be visible again if nothing's wrong.",
+  "ja": "複数の報告があったため、あなたの{0}は確認中です。問題がなければ再び表示されます。",
+  "zh-Hans": "由于收到多次举报，你的{0}正在审核中。如无问题将重新显示。",
+  "zh-Hant": "由於收到多次檢舉，你的{0}正在審核中。如無問題將重新顯示。"
+ },
+ "신고가 접수됐어요. 확인 후 조치할게요.": {
+  "en": "Report received. We'll review it and take action.",
+  "ja": "通報を受け付けました。確認後に対応します。",
+  "zh-Hans": "举报已收到，我们会核实后处理。",
+  "zh-Hant": "已收到檢舉，我們會確認後處理。"
+ },
+ "신고를 찾을 수 없습니다.": {
+  "en": "Report not found.",
+  "ja": "通報が見つかりません。",
+  "zh-Hans": "找不到该举报。",
+  "zh-Hant": "找不到此檢舉。"
+ },
+ "쓸 수 없는 닉네임이에요.": {
+  "en": "That nickname isn't available.",
+  "ja": "このニックネームは使用できません。",
+  "zh-Hans": "该昵称不可用。",
+  "zh-Hant": "此暱稱無法使用。"
+ },
+ "쓸 수 없는 아이디예요.": {
+  "en": "That ID isn't available.",
+  "ja": "このIDは使用できません。",
+  "zh-Hans": "该 ID 不可用。",
+  "zh-Hant": "此 ID 無法使用。"
+ },
+ "아래 링크에서 새 비밀번호를 설정할 수 있습니다. 링크는 30분 동안만 유효합니다.\n\n{0}\n\n본인이 요청하지 않았다면 이 메일은 무시하셔도 됩니다.": {
+  "en": "You can set a new password using the link below. The link is valid for 30 minutes.\n\n{0}\n\nIf you didn't request this, you can ignore this email.",
+  "ja": "以下のリンクから新しいパスワードを設定できます。リンクの有効期限は30分です。\n\n{0}\n\nお心当たりがない場合は、このメールを無視してください。",
+  "zh-Hans": "你可以通过下方链接设置新密码。链接 30 分钟内有效。\n\n{0}\n\n如果不是你本人申请，请忽略这封邮件。",
+  "zh-Hant": "你可以透過下方連結設定新密碼。連結 30 分鐘內有效。\n\n{0}\n\n如果不是你本人申請，請忽略這封郵件。"
+ },
+ "아이디는 영문 소문자·숫자·밑줄 3~20자로 만들어 주세요.": {
+  "en": "Your ID must be 3–20 characters: lowercase letters, numbers, or underscores.",
+  "ja": "IDは英小文字・数字・アンダースコアで3〜20文字にしてください。",
+  "zh-Hans": "ID 须为 3–20 个字符，只能使用小写英文字母、数字和下划线。",
+  "zh-Hant": "ID 須為 3–20 個字元，只能使用小寫英文字母、數字和底線。"
+ },
+ "알 수 없는 기기": {
+  "en": "Unknown device",
+  "ja": "不明な端末",
+  "zh-Hans": "未知设备",
+  "zh-Hant": "未知裝置"
+ },
+ "알 수 없는 처리입니다.": {
+  "en": "Unknown action.",
+  "ja": "不明な処理です。",
+  "zh-Hans": "未知的操作。",
+  "zh-Hant": "未知的操作。"
+ },
+ "알 수 없음": {
+  "en": "Unknown",
+  "ja": "不明",
+  "zh-Hans": "未知",
+  "zh-Hant": "未知"
+ },
+ "알림이 잘 와요. 이제 새 소식을 놓치지 않아요.": {
+  "en": "Notifications are working. You won't miss a thing.",
+  "ja": "通知は正常に届いています。これで新着情報を見逃しません。",
+  "zh-Hans": "通知正常，以后不会错过新消息啦。",
+  "zh-Hant": "通知正常，以後不會錯過新消息囉。"
+ },
+ "애플": {
+  "en": "Apple",
+  "ja": "Apple",
+  "zh-Hans": "Apple",
+  "zh-Hant": "Apple"
+ },
+ "애플 로그인이 아직 준비되지 않았어요.": {
+  "en": "Apple sign-in isn't available yet.",
+  "ja": "Appleログインはまだ準備中です。",
+  "zh-Hans": "Apple 登录尚未开放。",
+  "zh-Hant": "Apple 登入尚未開放。"
+ },
+ "애플 서명 키를 찾지 못했어요.": {
+  "en": "Couldn't find Apple's signing key.",
+  "ja": "Appleの署名キーが見つかりませんでした。",
+  "zh-Hans": "找不到 Apple 签名密钥。",
+  "zh-Hant": "找不到 Apple 簽章金鑰。"
+ },
+ "애플 인증 정보를 받지 못했어요.": {
+  "en": "We didn't receive Apple authentication info.",
+  "ja": "Appleの認証情報を受け取れませんでした。",
+  "zh-Hans": "未收到 Apple 验证信息。",
+  "zh-Hant": "未收到 Apple 驗證資訊。"
+ },
+ "애플 인증에 실패했어요. 다시 시도해 주세요.": {
+  "en": "Apple sign-in failed. Please try again.",
+  "ja": "Appleの認証に失敗しました。もう一度お試しください。",
+  "zh-Hans": "Apple 验证失败。请重试。",
+  "zh-Hant": "Apple 驗證失敗。請再試一次。"
+ },
+ "업데이트 중 오류가 발생했습니다.": {
+  "en": "Something went wrong while updating.",
+  "ja": "更新中にエラーが発生しました。",
+  "zh-Hans": "更新时出错。",
+  "zh-Hant": "更新時發生錯誤。"
+ },
+ "없는 연재예요.": {
+  "en": "This series doesn't exist.",
+  "ja": "存在しない連載です。",
+  "zh-Hans": "该连载不存在。",
+  "zh-Hant": "此連載不存在。"
+ },
+ "없는 오류예요.": {
+  "en": "That error doesn't exist.",
+  "ja": "存在しないエラーです。",
+  "zh-Hans": "该错误不存在。",
+  "zh-Hant": "此錯誤不存在。"
+ },
+ "없는 초대 링크예요.": {
+  "en": "This invite link doesn't exist.",
+  "ja": "存在しない招待リンクです。",
+  "zh-Hans": "该邀请链接不存在。",
+  "zh-Hant": "此邀請連結不存在。"
+ },
+ "없는 초대 링크예요. 주소를 다시 확인해 주세요.": {
+  "en": "This invite link doesn't exist. Please check the address.",
+  "ja": "存在しない招待リンクです。アドレスをもう一度確認してください。",
+  "zh-Hans": "该邀请链接不存在。请检查地址。",
+  "zh-Hant": "此邀請連結不存在。請確認網址。"
+ },
+ "없는 커뮤니티예요.": {
+  "en": "This community doesn't exist.",
+  "ja": "存在しないコミュニティです。",
+  "zh-Hans": "该社区不存在。",
+  "zh-Hant": "此社群不存在。"
+ },
+ "없어진 커뮤니티예요.": {
+  "en": "This community no longer exists.",
+  "ja": "このコミュニティはなくなりました。",
+  "zh-Hans": "该社区已不存在。",
+  "zh-Hant": "此社群已不存在。"
+ },
+ "연결돼 있지 않아요.": {
+  "en": "It's not linked.",
+  "ja": "連携されていません。",
+  "zh-Hans": "尚未关联。",
+  "zh-Hant": "尚未連結。"
+ },
+ "연재 제목은 60자까지예요.": {
+  "en": "Series titles can be up to 60 characters.",
+  "ja": "連載のタイトルは60文字までです。",
+  "zh-Hans": "连载标题最多60个字。",
+  "zh-Hant": "連載標題最多60個字。"
+ },
+ "연재 제목을 적어 주세요.": {
+  "en": "Please enter a series title.",
+  "ja": "連載のタイトルを入力してください。",
+  "zh-Hans": "请输入连载标题。",
+  "zh-Hant": "請輸入連載標題。"
+ },
+ "연재는 {0}개까지 만들 수 있어요.": {
+  "en": "You can create up to {0} series.",
+  "ja": "連載は{0}個まで作成できます。",
+  "zh-Hans": "最多可以创建{0}个连载。",
+  "zh-Hant": "最多可以建立{0}個連載。"
+ },
+ "예약 시각을 읽지 못했어요.": {
+  "en": "Couldn't read the scheduled time.",
+  "ja": "予約時刻を読み取れませんでした。",
+  "zh-Hans": "无法读取预约时间。",
+  "zh-Hant": "無法讀取預約時間。"
+ },
+ "예약된 내 글이 아니에요. 이미 올라갔을 수 있어요.": {
+  "en": "This isn't your scheduled post. It may have already been published.",
+  "ja": "予約された自分の投稿ではありません。すでに公開された可能性があります。",
+  "zh-Hans": "这不是你的预约帖子。可能已经发布了。",
+  "zh-Hant": "這不是你的預約貼文。可能已經發布了。"
+ },
+ "예약은 {0}분 뒤부터 걸 수 있어요.": {
+  "en": "You can schedule posts at least {0} minutes ahead.",
+  "ja": "予約は{0}分後から設定できます。",
+  "zh-Hans": "预约时间需至少在{0}分钟后。",
+  "zh-Hant": "預約時間需至少在{0}分鐘後。"
+ },
+ "예약은 {0}일 안으로만 걸 수 있어요.": {
+  "en": "You can only schedule up to {0} days ahead.",
+  "ja": "予約は{0}日以内のみ設定できます。",
+  "zh-Hans": "只能预约{0}天以内的时间。",
+  "zh-Hant": "只能預約{0}天以內的時間。"
+ },
+ "온라인 링크는 http(s) 주소만 넣을 수 있어요.": {
+  "en": "Online links must be http(s) addresses.",
+  "ja": "オンラインリンクはhttp(s)のアドレスのみ入力できます。",
+  "zh-Hans": "在线链接只能填写http(s)地址。",
+  "zh-Hant": "線上連結只能填寫http(s)網址。"
+ },
+ "올바른 이메일 주소가 아닙니다.": {
+  "en": "That's not a valid email address.",
+  "ja": "正しいメールアドレスではありません。",
+  "zh-Hans": "邮箱地址无效。",
+  "zh-Hant": "電子郵件地址無效。"
+ },
+ "올바른 휴대폰 번호가 아닙니다.": {
+  "en": "That's not a valid phone number.",
+  "ja": "正しい携帯電話番号ではありません。",
+  "zh-Hans": "手机号码无效。",
+  "zh-Hant": "手機號碼無效。"
+ },
+ "운영진": {
+  "en": "Moderator",
+  "ja": "運営メンバー",
+  "zh-Hans": "管理员",
+  "zh-Hant": "管理員"
+ },
+ "운영진만 고칠 수 있습니다.": {
+  "en": "Only moderators can edit this.",
+  "ja": "運営メンバーのみ編集できます。",
+  "zh-Hans": "仅管理员可以编辑。",
+  "zh-Hant": "僅管理員可以編輯。"
+ },
+ "운영진만 고칠 수 있어요.": {
+  "en": "Only moderators can edit this.",
+  "ja": "運営メンバーのみ編集できます。",
+  "zh-Hans": "仅管理员可以编辑。",
+  "zh-Hant": "僅管理員可以編輯。"
+ },
+ "운영진만 볼 수 있습니다.": {
+  "en": "Only moderators can view this.",
+  "ja": "運営メンバーのみ閲覧できます。",
+  "zh-Hans": "仅管理员可以查看。",
+  "zh-Hant": "僅管理員可以查看。"
+ },
+ "운영진만 볼 수 있어요.": {
+  "en": "Only moderators can view this.",
+  "ja": "運営メンバーのみ閲覧できます。",
+  "zh-Hans": "仅管理员可以查看。",
+  "zh-Hant": "僅管理員可以查看。"
+ },
+ "운영진만 할 수 있습니다.": {
+  "en": "Only moderators can do this.",
+  "ja": "運営メンバーのみ実行できます。",
+  "zh-Hans": "仅管理员可以执行此操作。",
+  "zh-Hant": "僅管理員可以執行此操作。"
+ },
+ "운영진만 할 수 있어요.": {
+  "en": "Only moderators can do this.",
+  "ja": "運営メンバーのみ実行できます。",
+  "zh-Hans": "仅管理员可以执行此操作。",
+  "zh-Hant": "僅管理員可以執行此操作。"
+ },
+ "운영진은 주인만 바꿀 수 있습니다.": {
+  "en": "Only the owner can change moderators.",
+  "ja": "運営メンバーを変更できるのはオーナーのみです。",
+  "zh-Hans": "仅所有者可以更改管理员。",
+  "zh-Hant": "僅擁有者可以變更管理員。"
+ },
+ "웨일": {
+  "en": "Whale",
+  "ja": "Whale",
+  "zh-Hans": "Whale",
+  "zh-Hant": "Whale"
+ },
+ "위키 페이지는 {0}개까지예요.": {
+  "en": "You can have up to {0} wiki pages.",
+  "ja": "Wikiページは{0}個までです。",
+  "zh-Hans": "最多{0}个百科页面。",
+  "zh-Hant": "最多{0}個百科頁面。"
+ },
+ "유효하지 않은 토큰입니다.": {
+  "en": "Invalid token.",
+  "ja": "無効なトークンです。",
+  "zh-Hans": "无效的令牌。",
+  "zh-Hant": "無效的權杖。"
+ },
+ "이 {0} 계정은 이미 다른 knowra 계정에 연결돼 있어요.": {
+  "en": "This {0} account is already linked to another knowra account.",
+  "ja": "この{0}アカウントは既に別のknowraアカウントに連携されています。",
+  "zh-Hans": "此 {0} 账号已关联到其他 knowra 账号。",
+  "zh-Hant": "此 {0} 帳號已連結到其他 knowra 帳號。"
+ },
+ "이 글의 댓글만, 답글이 아닌 댓글만 고정할 수 있어요.": {
+  "en": "You can only pin top-level comments on this post, not replies.",
+  "ja": "この投稿のコメントのみ、返信ではないコメントのみ固定できます。",
+  "zh-Hans": "只能置顶该帖子的评论，回复不能置顶。",
+  "zh-Hant": "只能置頂此貼文的留言，回覆不能置頂。"
+ },
+ "이 기기를 알아볼 수 없어요. 다시 로그인한 뒤 해 주세요.": {
+  "en": "We couldn't identify this device. Please log in again and try again.",
+  "ja": "この端末を確認できません。再度ログインしてからお試しください。",
+  "zh-Hans": "无法识别此设备。请重新登录后再试。",
+  "zh-Hant": "無法識別此裝置。請重新登入後再試。"
+ },
+ "이 기기에서 로그아웃됐어요. 다시 로그인해 주세요.": {
+  "en": "You've been logged out on this device. Please log in again.",
+  "ja": "この端末からログアウトされました。もう一度ログインしてください。",
+  "zh-Hans": "你已在此设备上退出登录。请重新登录。",
+  "zh-Hant": "你已在此裝置上登出。請重新登入。"
+ },
+ "이 커뮤니티의 멤버에게만 넘길 수 있어요.": {
+  "en": "You can only transfer to a member of this community.",
+  "ja": "このコミュニティのメンバーにのみ譲渡できます。",
+  "zh-Hans": "只能转让给该社区的成员。",
+  "zh-Hant": "只能轉移給此社群的成員。"
+ },
+ "이메일 또는 비밀번호가 올바르지 않습니다.": {
+  "en": "Incorrect email or password.",
+  "ja": "メールアドレスまたはパスワードが正しくありません。",
+  "zh-Hans": "邮箱或密码不正确。",
+  "zh-Hant": "電子郵件或密碼不正確。"
+ },
+ "이메일 주소를 확인해 주세요.": {
+  "en": "Please check your email address.",
+  "ja": "メールアドレスを確認してください。",
+  "zh-Hans": "请检查邮箱地址。",
+  "zh-Hant": "請檢查電子郵件地址。"
+ },
+ "이미 {0} 계정이 연결돼 있어요. 먼저 끊고 다시 연결해 주세요.": {
+  "en": "A {0} account is already linked. Unlink it first, then link again.",
+  "ja": "既に{0}アカウントが連携されています。連携を解除してから再度連携してください。",
+  "zh-Hans": "已关联 {0} 账号。请先解除关联后再重新关联。",
+  "zh-Hant": "已連結 {0} 帳號。請先解除連結後再重新連結。"
+ },
+ "이미 가려졌거나 없는 메시지예요.": {
+  "en": "This message is already hidden or doesn't exist.",
+  "ja": "すでに非表示になっているか、存在しないメッセージです。",
+  "zh-Hans": "该消息已被隐藏或不存在。",
+  "zh-Hant": "此訊息已被隱藏或不存在。"
+ },
+ "이미 가입된 소셜 계정이에요. 로그인해 주세요.": {
+  "en": "This social account is already registered. Please log in.",
+  "ja": "このソーシャルアカウントは既に登録されています。ログインしてください。",
+  "zh-Hans": "该社交账号已注册。请直接登录。",
+  "zh-Hant": "此社群帳號已註冊。請直接登入。"
+ },
+ "이미 가입된 이메일이에요. 로그인해 주세요.": {
+  "en": "This email is already registered. Please log in.",
+  "ja": "このメールアドレスは既に登録されています。ログインしてください。",
+  "zh-Hans": "该邮箱已注册。请直接登录。",
+  "zh-Hant": "此電子郵件已註冊。請直接登入。"
+ },
+ "이미 가입된 이메일입니다.": {
+  "en": "This email is already registered.",
+  "ja": "このメールアドレスは既に登録されています。",
+  "zh-Hans": "该邮箱已注册。",
+  "zh-Hant": "此電子郵件已註冊。"
+ },
+ "이미 가입된 이메일입니다. 로그인해주세요.": {
+  "en": "This email is already registered. Please log in.",
+  "ja": "このメールアドレスは既に登録されています。ログインしてください。",
+  "zh-Hans": "该邮箱已注册。请直接登录。",
+  "zh-Hant": "此電子郵件已註冊。請直接登入。"
+ },
+ "이미 가입된 지갑 주소입니다.": {
+  "en": "This wallet address is already registered.",
+  "ja": "このウォレットアドレスはすでに登録されています。",
+  "zh-Hans": "该钱包地址已注册。",
+  "zh-Hant": "此錢包地址已註冊。"
+ },
+ "이미 가입된 커뮤니티입니다.": {
+  "en": "You're already a member of this community.",
+  "ja": "すでに参加しているコミュニティです。",
+  "zh-Hans": "你已加入该社区。",
+  "zh-Hant": "你已加入此社群。"
+ },
+ "이미 가입된 휴대폰 번호입니다.": {
+  "en": "This phone number is already registered.",
+  "ja": "この携帯電話番号は既に登録されています。",
+  "zh-Hans": "该手机号码已注册。",
+  "zh-Hant": "此手機號碼已註冊。"
+ },
+ "이미 갱신됐어요.": {
+  "en": "Already refreshed.",
+  "ja": "既に更新されています。",
+  "zh-Hans": "已刷新。",
+  "zh-Hant": "已更新。"
+ },
+ "이미 다른 계정이 쓰는 이메일이에요.": {
+  "en": "This email is already used by another account.",
+  "ja": "このメールアドレスは別のアカウントで使用されています。",
+  "zh-Hans": "该邮箱已被其他账号使用。",
+  "zh-Hant": "此電子郵件已被其他帳號使用。"
+ },
+ "이미 사용 중인 닉네임입니다.": {
+  "en": "That nickname is already taken.",
+  "ja": "このニックネームは既に使われています。",
+  "zh-Hans": "该昵称已被使用。",
+  "zh-Hant": "此暱稱已被使用。"
+ },
+ "이미 사용 중인 아이디입니다.": {
+  "en": "That ID is already taken.",
+  "ja": "このIDは既に使われています。",
+  "zh-Hans": "该 ID 已被使用。",
+  "zh-Hant": "此 ID 已被使用。"
+ },
+ "이미 사용 중인 커뮤니티 슬러그입니다.": {
+  "en": "This community URL is already taken.",
+  "ja": "このコミュニティURLはすでに使われています。",
+  "zh-Hans": "该社区网址已被使用。",
+  "zh-Hant": "此社群網址已被使用。"
+ },
+ "이미 삭제된 글이에요.": {
+  "en": "This post was already deleted.",
+  "ja": "すでに削除された投稿です。",
+  "zh-Hans": "该帖子已被删除。",
+  "zh-Hant": "此貼文已被刪除。"
+ },
+ "이미 삭제된 댓글이에요.": {
+  "en": "This comment was already deleted.",
+  "ja": "すでに削除されたコメントです。",
+  "zh-Hans": "该评论已被删除。",
+  "zh-Hant": "此留言已被刪除。"
+ },
+ "이미 삭제된 댓글입니다.": {
+  "en": "This comment has already been deleted.",
+  "ja": "すでに削除されたコメントです。",
+  "zh-Hans": "该评论已被删除。",
+  "zh-Hant": "此留言已被刪除。"
+ },
+ "이미 시작한 모임이에요.": {
+  "en": "This event has already started.",
+  "ja": "すでに始まったイベントです。",
+  "zh-Hans": "该活动已开始。",
+  "zh-Hant": "此活動已開始。"
+ },
+ "이미 신고한 대상이에요. 검토 중입니다.": {
+  "en": "You've already reported this. We're reviewing it.",
+  "ja": "すでに通報済みです。現在確認中です。",
+  "zh-Hans": "你已举报过，正在审核中。",
+  "zh-Hant": "你已檢舉過，正在審核中。"
+ },
+ "이미 있는 낱말이에요.": {
+  "en": "That word is already on the list.",
+  "ja": "すでに登録されている単語です。",
+  "zh-Hans": "该词已存在。",
+  "zh-Hant": "此詞已存在。"
+ },
+ "이미 있는 키워드예요.": {
+  "en": "You already have that keyword.",
+  "ja": "すでに登録されているキーワードです。",
+  "zh-Hans": "该关键词已存在。",
+  "zh-Hant": "此關鍵字已存在。"
+ },
+ "이미 주인이에요.": {
+  "en": "You're already the owner.",
+  "ja": "すでにオーナーです。",
+  "zh-Hans": "你已经是所有者了。",
+  "zh-Hant": "你已經是擁有者了。"
+ },
+ "이미 처리된 글이에요.": {
+  "en": "This post has already been handled.",
+  "ja": "すでに処理された投稿です。",
+  "zh-Hans": "该帖子已处理。",
+  "zh-Hant": "此貼文已處理。"
+ },
+ "이미 켜져 있어요.": {
+  "en": "It's already on.",
+  "ja": "既にオンになっています。",
+  "zh-Hans": "已开启。",
+  "zh-Hant": "已開啟。"
+ },
+ "이미 탈퇴한 계정이에요.": {
+  "en": "This account has already been deleted.",
+  "ja": "このアカウントは既に退会済みです。",
+  "zh-Hans": "该账号已注销。",
+  "zh-Hant": "此帳號已刪除。"
+ },
+ "이미지가 너무 큽니다.": {
+  "en": "The image is too large.",
+  "ja": "画像が大きすぎます。",
+  "zh-Hans": "图片太大。",
+  "zh-Hant": "圖片太大。"
+ },
+ "이미지를 읽을 수 없습니다.": {
+  "en": "Couldn't read the image.",
+  "ja": "画像を読み込めません。",
+  "zh-Hans": "无法读取图片。",
+  "zh-Hant": "無法讀取圖片。"
+ },
+ "이용이 정지된 계정입니다.": {
+  "en": "This account has been suspended.",
+  "ja": "利用停止中のアカウントです。",
+  "zh-Hans": "该账号已被停用。",
+  "zh-Hant": "此帳號已被停權。"
+ },
+ "이용이 정지된 계정입니다. 문의해 주세요.": {
+  "en": "This account has been suspended. Please contact us.",
+  "ja": "利用停止中のアカウントです。お問い合わせください。",
+  "zh-Hans": "该账号已被停用。请联系我们。",
+  "zh-Hant": "此帳號已被停權。請聯絡我們。"
+ },
+ "이용이 정지된 계정입니다. 사유: {0} 문의해 주세요.": {
+  "en": "This account has been suspended. Reason: {0} Please contact us.",
+  "ja": "利用停止中のアカウントです。理由：{0} お問い合わせください。",
+  "zh-Hans": "该账号已被停用。原因：{0} 请联系我们。",
+  "zh-Hant": "此帳號已被停權。原因：{0} 請聯絡我們。"
+ },
+ "이웃 열 명": {
+  "en": "Ten Neighbors",
+  "ja": "ご近所さん10人",
+  "zh-Hans": "十位邻居",
+  "zh-Hant": "十位鄰居"
+ },
+ "익명": {
+  "en": "Anonymous",
+  "ja": "匿名",
+  "zh-Hans": "匿名",
+  "zh-Hant": "匿名"
+ },
+ "익명 커뮤니티 글은 연재에 넣을 수 없어요.": {
+  "en": "Posts from anonymous communities can't be added to a series.",
+  "ja": "匿名コミュニティの投稿は連載に追加できません。",
+  "zh-Hans": "匿名社区的帖子无法添加到连载中。",
+  "zh-Hant": "匿名社群的貼文無法加入連載。"
+ },
+ "익명 커뮤니티 모임은 대화방을 열 수 없어요 — 참석자가 드러나요.": {
+  "en": "Events in anonymous communities can't have chat rooms — it would reveal who's attending.",
+  "ja": "匿名コミュニティのイベントではチャットを開けません — 参加者が分かってしまいます。",
+  "zh-Hans": "匿名社区的活动不能开聊天室——会暴露参加者。",
+  "zh-Hant": "匿名社群的活動無法開聊天室——會暴露參加者。"
+ },
+ "익명{0}": {
+  "en": "Anonymous {0}",
+  "ja": "匿名{0}",
+  "zh-Hans": "匿名{0}",
+  "zh-Hant": "匿名{0}"
+ },
+ "인증 코드가 올바르지 않거나 만료됐습니다.": {
+  "en": "The verification code is wrong or has expired.",
+  "ja": "認証コードが正しくないか、有効期限が切れています。",
+  "zh-Hans": "验证码不正确或已过期。",
+  "zh-Hant": "驗證碼不正確或已過期。"
+ },
+ "인증 코드를 보내지 못했습니다. 잠시 후 다시 시도해주세요.": {
+  "en": "Couldn't send the verification code. Please try again shortly.",
+  "ja": "認証コードを送信できませんでした。しばらくしてからもう一度お試しください。",
+  "zh-Hans": "验证码发送失败。请稍后再试。",
+  "zh-Hant": "驗證碼傳送失敗。請稍後再試。"
+ },
+ "일치하는 사용자가 없습니다.": {
+  "en": "No matching user found.",
+  "ja": "一致するユーザーがいません。",
+  "zh-Hans": "没有匹配的用户。",
+  "zh-Hant": "沒有符合的使用者。"
+ },
+ "임시 저장한 글을 찾을 수 없어요.": {
+  "en": "Draft not found.",
+  "ja": "下書きが見つかりません。",
+  "zh-Hans": "找不到该草稿。",
+  "zh-Hant": "找不到此草稿。"
+ },
+ "임시 저장함이 가득 찼어요({0}개). 안 쓰는 글을 지워 주세요.": {
+  "en": "Your drafts are full ({0}). Please delete ones you don't need.",
+  "ja": "下書きがいっぱいです（{0}件）。使わない下書きを削除してください。",
+  "zh-Hans": "草稿箱已满（{0} 篇），请删除不需要的草稿。",
+  "zh-Hant": "草稿匣已滿（{0} 篇），請刪除不需要的草稿。"
+ },
+ "자기 자신과는 대화할 수 없습니다.": {
+  "en": "You can't chat with yourself.",
+  "ja": "自分自身とはチャットできません。",
+  "zh-Hans": "不能和自己聊天。",
+  "zh-Hant": "無法和自己聊天。"
+ },
+ "자기 자신은 숨길 수 없어요.": {
+  "en": "You can't hide yourself.",
+  "ja": "自分自身を非表示にすることはできません。",
+  "zh-Hans": "不能隐藏自己。",
+  "zh-Hant": "無法隱藏自己。"
+ },
+ "자기 자신은 신고할 수 없습니다.": {
+  "en": "You can't report yourself.",
+  "ja": "自分自身を通報することはできません。",
+  "zh-Hans": "不能举报自己。",
+  "zh-Hant": "無法檢舉自己。"
+ },
+ "자기 자신은 정지할 수 없습니다.": {
+  "en": "You can't suspend yourself.",
+  "ja": "自分自身を利用停止にすることはできません。",
+  "zh-Hans": "不能停用自己的账号。",
+  "zh-Hant": "無法將自己停權。"
+ },
+ "자기 자신은 차단할 수 없습니다.": {
+  "en": "You can't block yourself.",
+  "ja": "自分自身をブロックすることはできません。",
+  "zh-Hans": "不能屏蔽自己。",
+  "zh-Hant": "無法封鎖自己。"
+ },
+ "자기 자신을 팔로우할 수 없습니다.": {
+  "en": "You can't follow yourself.",
+  "ja": "自分自身をフォローすることはできません。",
+  "zh-Hans": "不能关注自己。",
+  "zh-Hant": "無法追蹤自己。"
+ },
+ "작성자": {
+  "en": "Author",
+  "ja": "投稿者",
+  "zh-Hans": "作者",
+  "zh-Hant": "作者"
+ },
+ "작은 박수": {
+  "en": "A Little Applause",
+  "ja": "小さな拍手",
+  "zh-Hans": "小小掌声",
+  "zh-Hant": "小小掌聲"
+ },
+ "잠시 후 다시 시도해주세요. (재발송은 1분에 한 번)": {
+  "en": "Please try again shortly. (You can resend once a minute.)",
+  "ja": "しばらくしてからもう一度お試しください。（再送信は1分に1回まで）",
+  "zh-Hans": "请稍后再试。（每分钟只能重发一次）",
+  "zh-Hant": "請稍後再試。（每分鐘只能重新傳送一次）"
+ },
+ "장소는 120자까지예요.": {
+  "en": "Location can be up to 120 characters.",
+  "ja": "場所は120文字までです。",
+  "zh-Hans": "地点最多120个字。",
+  "zh-Hant": "地點最多120個字。"
+ },
+ "저장시 내부 오류가 발생했습니다.": {
+  "en": "Something went wrong while saving.",
+  "ja": "保存中に内部エラーが発生しました。",
+  "zh-Hans": "保存时发生内部错误。",
+  "zh-Hant": "儲存時發生內部錯誤。"
+ },
+ "정원은 1~10000명이에요.": {
+  "en": "Capacity must be 1–10000 people.",
+  "ja": "定員は1〜10000人です。",
+  "zh-Hans": "人数上限为1~10000人。",
+  "zh-Hant": "人數上限為1~10000人。"
+ },
+ "정원이 찼어요.": {
+  "en": "This event is full.",
+  "ja": "定員に達しました。",
+  "zh-Hans": "名额已满。",
+  "zh-Hant": "名額已滿。"
+ },
+ "정지 기간은 1~365일이에요.": {
+  "en": "Suspensions can be 1–365 days.",
+  "ja": "停止期間は1〜365日です。",
+  "zh-Hans": "停用期限为 1–365 天。",
+  "zh-Hant": "停權期間為 1–365 天。"
+ },
+ "제목은 {0}자까지예요.": {
+  "en": "Titles can be up to {0} characters.",
+  "ja": "タイトルは{0}文字までです。",
+  "zh-Hans": "标题最多 {0} 个字。",
+  "zh-Hant": "標題最多 {0} 個字。"
+ },
+ "조회 중 오류가 발생했습니다.": {
+  "en": "Something went wrong while loading.",
+  "ja": "読み込み中にエラーが発生しました。",
+  "zh-Hans": "加载时出错。",
+  "zh-Hant": "載入時發生錯誤。"
+ },
+ "조회 필수 조건이 누락되었습니다.": {
+  "en": "A required search condition is missing.",
+  "ja": "必須の検索条件がありません。",
+  "zh-Hans": "缺少必需的查询条件。",
+  "zh-Hant": "缺少必要的查詢條件。"
+ },
+ "존재하지 않는 커뮤니티입니다.": {
+  "en": "This community doesn't exist.",
+  "ja": "存在しないコミュニティです。",
+  "zh-Hans": "该社区不存在。",
+  "zh-Hant": "此社群不存在。"
+ },
+ "주인만 넘길 수 있어요.": {
+  "en": "Only the owner can transfer ownership.",
+  "ja": "譲渡できるのはオーナーのみです。",
+  "zh-Hans": "仅所有者可以转让。",
+  "zh-Hant": "僅擁有者可以轉移。"
+ },
+ "주인만 운영진을 정할 수 있습니다.": {
+  "en": "Only the owner can assign moderators.",
+  "ja": "運営メンバーを指名できるのはオーナーのみです。",
+  "zh-Hans": "仅所有者可以指定管理员。",
+  "zh-Hant": "僅擁有者可以指定管理員。"
+ },
+ "주인은 내보낼 수 없습니다.": {
+  "en": "The owner can't be removed.",
+  "ja": "オーナーは追放できません。",
+  "zh-Hans": "无法移除所有者。",
+  "zh-Hant": "無法移除擁有者。"
+ },
+ "주인은 바로 나갈 수 없어요. 멤버 목록에서 다른 멤버에게 주인을 넘긴 뒤 나가 주세요.": {
+  "en": "Owners can't leave right away. Transfer ownership to another member from the member list first.",
+  "ja": "オーナーはすぐには退会できません。メンバー一覧で他のメンバーにオーナーを譲ってから退会してください。",
+  "zh-Hans": "社区主人不能直接退出。请先在成员列表中将主人身份转让给其他成员。",
+  "zh-Hant": "社群擁有者無法直接退出。請先在成員列表中將擁有者身分轉讓給其他成員。"
+ },
+ "주인의 역할은 바꿀 수 없습니다. 주인 넘기기를 써 주세요.": {
+  "en": "The owner's role can't be changed. Use Transfer ownership instead.",
+  "ja": "オーナーの役割は変更できません。オーナー譲渡を使ってください。",
+  "zh-Hans": "无法更改所有者的角色。请使用转让所有权。",
+  "zh-Hant": "無法變更擁有者的角色。請使用轉移擁有權。"
+ },
+ "지금 쓰는 이메일과 같아요.": {
+  "en": "That's the same as your current email.",
+  "ja": "現在のメールアドレスと同じです。",
+  "zh-Hans": "与当前邮箱相同。",
+  "zh-Hant": "與目前的電子郵件相同。"
+ },
+ "지난 시간으로는 모임을 만들 수 없어요.": {
+  "en": "You can't create an event in the past.",
+  "ja": "過去の時間でイベントは作成できません。",
+  "zh-Hans": "无法在过去的时间创建活动。",
+  "zh-Hant": "無法在過去的時間建立活動。"
+ },
+ "지워졌거나 가려진 댓글은 고정할 수 없어요.": {
+  "en": "Deleted or hidden comments can't be pinned.",
+  "ja": "削除または非表示のコメントは固定できません。",
+  "zh-Hans": "已删除或已隐藏的评论无法置顶。",
+  "zh-Hant": "已刪除或已隱藏的留言無法置頂。"
+ },
+ "지원하지 않는 로그인 방식이에요.": {
+  "en": "This sign-in method isn't supported.",
+  "ja": "サポートされていないログイン方法です。",
+  "zh-Hans": "不支持此登录方式。",
+  "zh-Hant": "不支援此登入方式。"
+ },
+ "지원하지 않는 반응입니다.": {
+  "en": "Unsupported reaction.",
+  "ja": "対応していないリアクションです。",
+  "zh-Hans": "不支持的回应。",
+  "zh-Hant": "不支援的回應。"
+ },
+ "지원하지 않는 상태입니다.": {
+  "en": "Unsupported status.",
+  "ja": "対応していない状態です。",
+  "zh-Hans": "不支持的状态。",
+  "zh-Hant": "不支援的狀態。"
+ },
+ "지원하지 않는 신고예요.": {
+  "en": "Unsupported report type.",
+  "ja": "対応していない通報です。",
+  "zh-Hans": "不支持的举报类型。",
+  "zh-Hant": "不支援的檢舉類型。"
+ },
+ "지원하지 않는 역할입니다.": {
+  "en": "Unsupported role.",
+  "ja": "対応していない役割です。",
+  "zh-Hans": "不支持的角色。",
+  "zh-Hant": "不支援的角色。"
+ },
+ "지원하지 않는 처리예요.": {
+  "en": "Unsupported action.",
+  "ja": "対応していない処理です。",
+  "zh-Hans": "不支持的处理方式。",
+  "zh-Hant": "不支援的處理方式。"
+ },
+ "지원하지 않는 푸시 주소예요.": {
+  "en": "This push address isn't supported.",
+  "ja": "サポートされていないプッシュアドレスです。",
+  "zh-Hans": "不支持该推送地址。",
+  "zh-Hant": "不支援此推播位址。"
+ },
+ "질문은 {0}개까지예요.": {
+  "en": "You can add up to {0} questions.",
+  "ja": "質問は{0}個までです。",
+  "zh-Hans": "最多{0}个问题。",
+  "zh-Hant": "最多{0}個問題。"
+ },
+ "질문은 {0}자까지예요.": {
+  "en": "Questions can be up to {0} characters.",
+  "ja": "質問は{0}文字までです。",
+  "zh-Hans": "问题最多{0}个字。",
+  "zh-Hant": "問題最多{0}個字。"
+ },
+ "참석하려던 모임 「{0}」이(가) 취소됐어요.": {
+  "en": "The event \"{0}\" you planned to attend was canceled.",
+  "ja": "参加予定のイベント「{0}」が中止になりました。",
+  "zh-Hans": "你要参加的活动「{0}」已取消。",
+  "zh-Hant": "你要參加的活動「{0}」已取消。"
+ },
+ "참여하지 못했어요.": {
+  "en": "Couldn't join.",
+  "ja": "参加できませんでした。",
+  "zh-Hans": "加入失败。",
+  "zh-Hant": "加入失敗。"
+ },
+ "참여하지 않은 대화방입니다.": {
+  "en": "You're not in this chat.",
+  "ja": "参加していないチャットです。",
+  "zh-Hans": "你不在该聊天中。",
+  "zh-Hant": "你不在此聊天室中。"
+ },
+ "처음으로 글을 썼어요": {
+  "en": "Wrote your first post",
+  "ja": "はじめて投稿しました",
+  "zh-Hans": "发布了第一篇帖子",
+  "zh-Hant": "發布了第一篇貼文"
+ },
+ "처음으로 댓글을 남겼어요": {
+  "en": "Left your first comment",
+  "ja": "はじめてコメントしました",
+  "zh-Hans": "发表了第一条评论",
+  "zh-Hant": "留下了第一則留言"
+ },
+ "첨부파일 다운로드 기간이 만료되었습니다.": {
+  "en": "The download period for this attachment has ended.",
+  "ja": "添付ファイルのダウンロード期間が終了しました。",
+  "zh-Hans": "附件下载期限已过。",
+  "zh-Hant": "附件下載期限已過。"
+ },
+ "첨부파일 다운로드 횟수 초과로 파일이 만료됐습니다.": {
+  "en": "This file expired because it reached its download limit.",
+  "ja": "ダウンロード回数の上限に達したため、ファイルの有効期限が切れました。",
+  "zh-Hans": "下载次数已达上限，文件已失效。",
+  "zh-Hant": "下載次數已達上限，檔案已失效。"
+ },
+ "첨부파일 정보가 존재하지 않습니다.": {
+  "en": "Attachment info not found.",
+  "ja": "添付ファイルの情報がありません。",
+  "zh-Hans": "附件信息不存在。",
+  "zh-Hant": "附件資訊不存在。"
+ },
+ "첨부파일을 찾을 수 없습니다.": {
+  "en": "Attachment not found.",
+  "ja": "添付ファイルが見つかりません。",
+  "zh-Hans": "找不到附件。",
+  "zh-Hant": "找不到附件。"
+ },
+ "첫 글": {
+  "en": "First Post",
+  "ja": "はじめての投稿",
+  "zh-Hans": "第一篇帖子",
+  "zh-Hant": "第一篇貼文"
+ },
+ "첫 댓글": {
+  "en": "First Comment",
+  "ja": "はじめてのコメント",
+  "zh-Hans": "第一条评论",
+  "zh-Hant": "第一則留言"
+ },
+ "첫 투표": {
+  "en": "First Poll",
+  "ja": "はじめての投票",
+  "zh-Hans": "第一次投票",
+  "zh-Hant": "第一次投票"
+ },
+ "초대 링크를 만들지 못했어요.": {
+  "en": "Couldn't create the invite link.",
+  "ja": "招待リンクを作成できませんでした。",
+  "zh-Hans": "无法创建邀请链接。",
+  "zh-Hant": "無法建立邀請連結。"
+ },
+ "초대 정보를 불러오지 못했어요.": {
+  "en": "Couldn't load the invite.",
+  "ja": "招待情報を読み込めませんでした。",
+  "zh-Hans": "无法加载邀请信息。",
+  "zh-Hant": "無法載入邀請資訊。"
+ },
+ "초대한 사람이 더 이상 이 커뮤니티 멤버가 아니라 링크를 쓸 수 없어요.": {
+  "en": "This link can't be used because the inviter is no longer a member of this community.",
+  "ja": "招待した人がこのコミュニティのメンバーではなくなったため、リンクを使用できません。",
+  "zh-Hans": "邀请人已不是该社区成员，此链接无法使用。",
+  "zh-Hant": "邀請人已不是此社群成員，此連結無法使用。"
+ },
+ "초대한 사람이 취소한 링크예요.": {
+  "en": "The inviter revoked this link.",
+  "ja": "招待した人が取り消したリンクです。",
+  "zh-Hans": "邀请人已撤销此链接。",
+  "zh-Hant": "邀請人已撤銷此連結。"
+ },
+ "초대할 사람을 한 명 이상 골라 주세요.": {
+  "en": "Pick at least one person to invite.",
+  "ja": "招待する人を1人以上選んでください。",
+  "zh-Hans": "请至少选择一位要邀请的人。",
+  "zh-Hant": "請至少選擇一位要邀請的人。"
+ },
+ "추방된 커뮤니티에는 재가입할 수 없습니다.": {
+  "en": "You can't rejoin a community you were removed from.",
+  "ja": "追放されたコミュニティには再参加できません。",
+  "zh-Hans": "你已被该社区移除，无法再次加入。",
+  "zh-Hant": "你已被此社群移除，無法再次加入。"
+ },
+ "추방이 해제되었습니다.": {
+  "en": "Ban lifted.",
+  "ja": "追放を解除しました。",
+  "zh-Hans": "已解除移除。",
+  "zh-Hant": "已解除移除。"
+ },
+ "취소된 모임이에요.": {
+  "en": "This event was canceled.",
+  "ja": "キャンセルされたイベントです。",
+  "zh-Hans": "该活动已取消。",
+  "zh-Hant": "此活動已取消。"
+ },
+ "카카오": {
+  "en": "Kakao",
+  "ja": "Kakao",
+  "zh-Hans": "Kakao",
+  "zh-Hant": "Kakao"
+ },
+ "카카오 로그인이 아직 준비되지 않았어요.": {
+  "en": "Kakao sign-in isn't available yet.",
+  "ja": "Kakaoログインはまだ準備中です。",
+  "zh-Hans": "Kakao 登录尚未开放。",
+  "zh-Hant": "Kakao 登入尚未開放。"
+ },
+ "카카오 사용자 정보를 가져오지 못했어요.": {
+  "en": "Couldn't get your Kakao account info.",
+  "ja": "Kakaoのユーザー情報を取得できませんでした。",
+  "zh-Hans": "无法获取 Kakao 用户信息。",
+  "zh-Hant": "無法取得 Kakao 使用者資訊。"
+ },
+ "카카오 인증 정보를 받지 못했어요.": {
+  "en": "We didn't receive Kakao authentication info.",
+  "ja": "Kakaoの認証情報を受け取れませんでした。",
+  "zh-Hans": "未收到 Kakao 验证信息。",
+  "zh-Hant": "未收到 Kakao 驗證資訊。"
+ },
+ "카카오 인증에 실패했어요. 다시 시도해 주세요.": {
+  "en": "Kakao sign-in failed. Please try again.",
+  "ja": "Kakaoの認証に失敗しました。もう一度お試しください。",
+  "zh-Hans": "Kakao 验证失败。请重试。",
+  "zh-Hant": "Kakao 驗證失敗。請再試一次。"
+ },
+ "커뮤니티": {
+  "en": "a community",
+  "ja": "コミュニティ",
+  "zh-Hans": "社区",
+  "zh-Hant": "社群"
+ },
+ "커뮤니티 5곳에 참여했어요": {
+  "en": "Joined 5 communities",
+  "ja": "コミュニティに5つ参加しました",
+  "zh-Hans": "加入了5个社区",
+  "zh-Hant": "加入了5個社群"
+ },
+ "커뮤니티 규칙에 동의해야 참여할 수 있어요.": {
+  "en": "You need to agree to the community rules to join.",
+  "ja": "コミュニティのルールに同意すると参加できます。",
+  "zh-Hans": "同意社区规则后才能加入。",
+  "zh-Hant": "同意社群規則後才能加入。"
+ },
+ "커뮤니티 글만 고정할 수 있어요.": {
+  "en": "Only community posts can be pinned.",
+  "ja": "コミュニティの投稿のみ固定できます。",
+  "zh-Hans": "只能置顶社区帖子。",
+  "zh-Hant": "只能置頂社群貼文。"
+ },
+ "커뮤니티 삭제 중 오류가 발생했습니다.": {
+  "en": "Something went wrong while deleting the community.",
+  "ja": "コミュニティの削除中にエラーが発生しました。",
+  "zh-Hans": "删除社区时出错。",
+  "zh-Hant": "刪除社群時發生錯誤。"
+ },
+ "커뮤니티 생성 중 오류가 발생했습니다.": {
+  "en": "Something went wrong while creating the community.",
+  "ja": "コミュニティの作成中にエラーが発生しました。",
+  "zh-Hans": "创建社区时出错。",
+  "zh-Hant": "建立社群時發生錯誤。"
+ },
+ "커뮤니티 수정 중 오류가 발생했습니다.": {
+  "en": "Something went wrong while updating the community.",
+  "ja": "コミュニティの更新中にエラーが発生しました。",
+  "zh-Hans": "更新社区时出错。",
+  "zh-Hant": "更新社群時發生錯誤。"
+ },
+ "커뮤니티 운영진만 고정할 수 있어요.": {
+  "en": "Only community moderators can pin posts.",
+  "ja": "コミュニティの運営メンバーのみ固定できます。",
+  "zh-Hans": "仅社区管理员可以置顶。",
+  "zh-Hant": "僅社群管理員可以置頂。"
+ },
+ "커뮤니티 운영진만 고칠 수 있어요.": {
+  "en": "Only community moderators can edit this.",
+  "ja": "コミュニティの運営メンバーのみ編集できます。",
+  "zh-Hans": "仅社区管理员可以编辑。",
+  "zh-Hant": "僅社群管理員可以編輯。"
+ },
+ "커뮤니티 정보가 수정되었습니다.": {
+  "en": "Community info updated.",
+  "ja": "コミュニティ情報を更新しました。",
+  "zh-Hans": "社区信息已更新。",
+  "zh-Hant": "社群資訊已更新。"
+ },
+ "커뮤니티 조회 중 오류가 발생했습니다.": {
+  "en": "Something went wrong while loading the community.",
+  "ja": "コミュニティの読み込み中にエラーが発生しました。",
+  "zh-Hans": "加载社区时出错。",
+  "zh-Hant": "載入社群時發生錯誤。"
+ },
+ "커뮤니티 초대 링크예요.": {
+  "en": "This is a community invite link.",
+  "ja": "コミュニティの招待リンクです。",
+  "zh-Hans": "这是社区邀请链接。",
+  "zh-Hant": "這是社群邀請連結。"
+ },
+ "커뮤니티가 삭제되었습니다.": {
+  "en": "Community deleted.",
+  "ja": "コミュニティを削除しました。",
+  "zh-Hans": "社区已删除。",
+  "zh-Hant": "社群已刪除。"
+ },
+ "커뮤니티가 생성되었습니다.": {
+  "en": "Community created.",
+  "ja": "コミュニティを作成しました。",
+  "zh-Hans": "社区已创建。",
+  "zh-Hant": "社群已建立。"
+ },
+ "커뮤니티를 직접 만들었어요": {
+  "en": "Created a community",
+  "ja": "コミュニティを作りました",
+  "zh-Hans": "亲自创建了社区",
+  "zh-Hant": "親自建立了社群"
+ },
+ "커뮤니티를 찾을 수 없어요.": {
+  "en": "Community not found.",
+  "ja": "コミュニティが見つかりません。",
+  "zh-Hans": "找不到该社区。",
+  "zh-Hant": "找不到此社群。"
+ },
+ "커뮤니티에 가입되었습니다.": {
+  "en": "You joined the community.",
+  "ja": "コミュニティに参加しました。",
+  "zh-Hans": "已加入社区。",
+  "zh-Hant": "已加入社群。"
+ },
+ "커뮤니티에 참여한 멤버만 글을 쓸 수 있습니다.": {
+  "en": "Only community members can post.",
+  "ja": "コミュニティに参加したメンバーのみ投稿できます。",
+  "zh-Hans": "仅已加入社区的成员可以发帖。",
+  "zh-Hant": "僅已加入社群的成員可以發文。"
+ },
+ "커뮤니티에서 탈퇴되었습니다.": {
+  "en": "You left the community.",
+  "ja": "コミュニティから退会しました。",
+  "zh-Hans": "已退出社区。",
+  "zh-Hant": "已退出社群。"
+ },
+ "코드가 맞지 않아요.": {
+  "en": "Wrong code.",
+  "ja": "コードが正しくありません。",
+  "zh-Hans": "验证码不正确。",
+  "zh-Hant": "驗證碼不正確。"
+ },
+ "코드가 맞지 않아요. ({0}번 남음)": {
+  "en": "Wrong code. ({0} tries left)",
+  "ja": "コードが正しくありません。（残り{0}回）",
+  "zh-Hans": "验证码不正确。（还剩 {0} 次）",
+  "zh-Hant": "驗證碼不正確。（還剩 {0} 次）"
+ },
+ "코드가 맞지 않아요. 인증 앱의 지금 코드를 넣어 주세요.": {
+  "en": "Wrong code. Enter the current code from your authenticator app.",
+  "ja": "コードが正しくありません。認証アプリに表示されている現在のコードを入力してください。",
+  "zh-Hans": "验证码不正确。请输入身份验证器应用中的当前验证码。",
+  "zh-Hant": "驗證碼不正確。請輸入驗證器應用程式中目前的驗證碼。"
+ },
+ "코드를 너무 많이 틀렸어요. 10분 뒤에 다시 해 주세요.": {
+  "en": "Too many wrong codes. Try again in 10 minutes.",
+  "ja": "コードの入力ミスが多すぎます。10分後にもう一度お試しください。",
+  "zh-Hans": "验证码错误次数过多。请 10 分钟后再试。",
+  "zh-Hant": "驗證碼錯誤次數過多。請 10 分鐘後再試。"
+ },
+ "코드를 너무 많이 틀렸어요. 처음부터 다시 로그인해 주세요.": {
+  "en": "Too many wrong codes. Please log in again.",
+  "ja": "コードの入力ミスが多すぎます。最初からログインし直してください。",
+  "zh-Hans": "验证码错误次数过多。请重新登录。",
+  "zh-Hant": "驗證碼錯誤次數過多。請重新登入。"
+ },
+ "큰 박수": {
+  "en": "Big Applause",
+  "ja": "大きな拍手",
+  "zh-Hans": "热烈掌声",
+  "zh-Hant": "熱烈掌聲"
+ },
+ "키워드는 2~30자로 넣어 주세요.": {
+  "en": "Keywords must be 2–30 characters.",
+  "ja": "キーワードは2〜30文字で入力してください。",
+  "zh-Hans": "关键词须为 2–30 个字。",
+  "zh-Hant": "關鍵字須為 2–30 個字。"
+ },
+ "키워드는 {0}개까지예요.": {
+  "en": "You can add up to {0} keywords.",
+  "ja": "キーワードは{0}個までです。",
+  "zh-Hans": "关键词最多 {0} 个。",
+  "zh-Hant": "關鍵字最多 {0} 個。"
+ },
+ "탈퇴 신청을 받았어요. {0}에 모두 지워지고, 그 전에 다시 로그인하면 취소돼요.": {
+  "en": "Deletion requested. Everything will be deleted on {0}. Log in before then to cancel.",
+  "ja": "退会申請を受け付けました。{0}にすべて削除されます。それまでにログインすれば取り消されます。",
+  "zh-Hans": "已收到注销申请。所有数据将于 {0} 删除，在此之前重新登录即可取消。",
+  "zh-Hant": "已收到刪除帳號申請。所有資料將於 {0} 刪除，在此之前重新登入即可取消。"
+ },
+ "탈퇴한 계정입니다.": {
+  "en": "This account has been deleted.",
+  "ja": "退会済みのアカウントです。",
+  "zh-Hans": "该账号已注销。",
+  "zh-Hant": "此帳號已刪除。"
+ },
+ "투표 선택지가 없어요.": {
+  "en": "The poll has no options.",
+  "ja": "投票の選択肢がありません。",
+  "zh-Hans": "投票没有选项。",
+  "zh-Hant": "投票沒有選項。"
+ },
+ "투표가 있는 글을 올렸어요": {
+  "en": "Posted a poll",
+  "ja": "投票付きの投稿をしました",
+  "zh-Hans": "发布了带投票的帖子",
+  "zh-Hant": "發布了附投票的貼文"
+ },
+ "투표를 찾을 수 없어요.": {
+  "en": "Poll not found.",
+  "ja": "投票が見つかりません。",
+  "zh-Hans": "找不到该投票。",
+  "zh-Hant": "找不到此投票。"
+ },
+ "팔로우할 수 없는 사용자예요.": {
+  "en": "You can't follow this user.",
+  "ja": "このユーザーはフォローできません。",
+  "zh-Hans": "无法关注该用户。",
+  "zh-Hant": "無法追蹤此使用者。"
+ },
+ "팔로워가 10명이 됐어요": {
+  "en": "Reached 10 followers",
+  "ja": "フォロワーが10人になりました",
+  "zh-Hans": "粉丝达到了10人",
+  "zh-Hant": "粉絲達到了10人"
+ },
+ "페이지 제목을 1~80자로 써 주세요.": {
+  "en": "Page title must be 1–80 characters.",
+  "ja": "ページタイトルは1〜80文字で入力してください。",
+  "zh-Hans": "页面标题请输入1~80个字。",
+  "zh-Hant": "頁面標題請輸入1~80個字。"
+ },
+ "페이지를 찾을 수 없어요.": {
+  "en": "Page not found.",
+  "ja": "ページが見つかりません。",
+  "zh-Hans": "找不到该页面。",
+  "zh-Hant": "找不到此頁面。"
+ },
+ "폴더 이름을 1~{0}자로 지어 주세요.": {
+  "en": "Folder names must be 1–{0} characters.",
+  "ja": "フォルダ名は1〜{0}文字で付けてください。",
+  "zh-Hans": "文件夹名称须为 1–{0} 个字。",
+  "zh-Hant": "資料夾名稱須為 1–{0} 個字。"
+ },
+ "폴더는 {0}개까지 만들 수 있어요.": {
+  "en": "You can create up to {0} folders.",
+  "ja": "フォルダは{0}個まで作成できます。",
+  "zh-Hans": "最多可创建 {0} 个文件夹。",
+  "zh-Hant": "最多可建立 {0} 個資料夾。"
+ },
+ "폴더를 찾을 수 없어요.": {
+  "en": "Folder not found.",
+  "ja": "フォルダが見つかりません。",
+  "zh-Hans": "找不到该文件夹。",
+  "zh-Hant": "找不到此資料夾。"
+ },
+ "푸시가 꺼져 있어요.": {
+  "en": "Push notifications are turned off.",
+  "ja": "プッシュ通知がオフになっています。",
+  "zh-Hans": "推送通知已关闭。",
+  "zh-Hant": "推播通知已關閉。"
+ },
+ "하나만 고를 수 있어요.": {
+  "en": "You can only pick one.",
+  "ja": "1つだけ選べます。",
+  "zh-Hans": "只能选择一个。",
+  "zh-Hant": "只能選擇一個。"
+ },
+ "해당 계정은 미승인 계정입니다.": {
+  "en": "This account was not approved.",
+  "ja": "このアカウントは承認されていません。",
+  "zh-Hans": "该账号未通过审核。",
+  "zh-Hant": "此帳號未通過審核。"
+ },
+ "해당 계정은 승인 대기 계정입니다.": {
+  "en": "This account is waiting for approval.",
+  "ja": "このアカウントは承認待ちです。",
+  "zh-Hans": "该账号正在等待审核。",
+  "zh-Hant": "此帳號正在等待審核。"
+ },
+ "해당 계정은 이용 정지 계정입니다.": {
+  "en": "This account is suspended.",
+  "ja": "このアカウントは利用停止中です。",
+  "zh-Hans": "该账号已被停用。",
+  "zh-Hant": "此帳號已被停權。"
+ },
+ "해당 계정은 현재 접속중인 계정입니다.": {
+  "en": "This account is already logged in.",
+  "ja": "このアカウントは現在ログイン中です。",
+  "zh-Hans": "该账号当前已登录。",
+  "zh-Hant": "此帳號目前已登入。"
+ },
+ "현재 비밀번호가 일치하지 않습니다.": {
+  "en": "Your current password is incorrect.",
+  "ja": "現在のパスワードが一致しません。",
+  "zh-Hans": "当前密码不正确。",
+  "zh-Hant": "目前的密碼不正確。"
+ },
+ "확인 시간이 지났어요. 처음부터 다시 로그인해 주세요.": {
+  "en": "Verification timed out. Please log in again.",
+  "ja": "確認の有効期限が切れました。最初からログインし直してください。",
+  "zh-Hans": "验证已超时。请重新登录。",
+  "zh-Hant": "驗證已逾時。請重新登入。"
+ },
+ "확인을 위해 아이디를 정확히 입력해 주세요.": {
+  "en": "To confirm, please enter your ID exactly.",
+  "ja": "確認のため、IDを正確に入力してください。",
+  "zh-Hans": "为确认身份，请准确输入你的 ID。",
+  "zh-Hant": "為確認身分，請正確輸入你的 ID。"
+ },
+ "확인을 위해 커뮤니티 이름을 정확히 입력해 주세요.": {
+  "en": "To confirm, type the community name exactly.",
+  "ja": "確認のため、コミュニティ名を正確に入力してください。",
+  "zh-Hans": "请准确输入社区名称以确认。",
+  "zh-Hant": "請準確輸入社群名稱以確認。"
+ },
+ "활성 멤버가 아닙니다.": {
+  "en": "Not an active member.",
+  "ja": "アクティブなメンバーではありません。",
+  "zh-Hans": "不是活跃成员。",
+  "zh-Hant": "不是活躍成員。"
+ },
+ "회원": {
+  "en": "there",
+  "ja": "会員",
+  "zh-Hans": "用户",
+  "zh-Hant": "使用者"
+ },
+ "회원가입 신청이 완료되었습니다.\n관리자 승인 후 이용할 수 있습니다.": {
+  "en": "Your sign-up request is complete.\nYou can start once an admin approves it.",
+  "ja": "会員登録の申請が完了しました。\n管理者の承認後にご利用いただけます。",
+  "zh-Hans": "注册申请已提交。\n管理员审核通过后即可使用。",
+  "zh-Hant": "註冊申請已送出。\n管理員審核通過後即可使用。"
+ }
+}

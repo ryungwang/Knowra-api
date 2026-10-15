@@ -266,9 +266,9 @@ public class PostService {
         }
         java.time.LocalDateTime now = java.time.LocalDateTime.now();
         if (t.isBefore(now.plusMinutes(RSRV_MIN_MINUTES - 1)))
-            throw new IllegalArgumentException("예약은 " + RSRV_MIN_MINUTES + "분 뒤부터 걸 수 있어요.");
+            throw new IllegalArgumentException(com.knowra.cmm.i18n.Msg.t("예약은 {0}분 뒤부터 걸 수 있어요.", RSRV_MIN_MINUTES));
         if (t.isAfter(now.plusDays(RSRV_MAX_DAYS)))
-            throw new IllegalArgumentException("예약은 " + RSRV_MAX_DAYS + "일 안으로만 걸 수 있어요.");
+            throw new IllegalArgumentException(com.knowra.cmm.i18n.Msg.t("예약은 {0}일 안으로만 걸 수 있어요.", RSRV_MAX_DAYS));
         return t.withSecond(0).withNano(0);
     }
 
@@ -480,8 +480,8 @@ public class PostService {
                 m.put("title", r.get("post_ttl"));
                 m.put("content", r.get("post_cntnt"));   // 저장 전에 HtmlSanitizer 를 거친 본문 그대로
                 m.put("editedAt", r.get("edited_at"));
-                m.put("editor", editor == post.getUserSn() ? "작성자"
-                        : anonymous ? "운영진" : (r.get("name") != null && !String.valueOf(r.get("name")).isBlank() ? r.get("name") : r.get("nick_name")) + " (운영진)");
+                m.put("editor", editor == post.getUserSn() ? com.knowra.cmm.i18n.Msg.t("작성자")
+                        : anonymous ? com.knowra.cmm.i18n.Msg.t("운영진") : com.knowra.cmm.i18n.Msg.t("{0} (운영진)", r.get("name") != null && !String.valueOf(r.get("name")).isBlank() ? r.get("name") : r.get("nick_name")));
                 list.add(m);
             }
             resultVO.putResult("list", list);
@@ -991,7 +991,7 @@ public class PostService {
             if (pin && post.getPinnedAt() == null) {
                 long n = new JPAQueryFactory(em).select(POST.count()).from(POST)
                         .where(POST.commSn.eq(post.getCommSn()), POST.pinnedAt.isNotNull(), POST.actvtnYn.eq("Y")).fetchOne();
-                if (n >= MAX_PINNED) throw new IllegalArgumentException("고정은 " + MAX_PINNED + "개까지예요. 다른 글을 먼저 풀어 주세요.");
+                if (n >= MAX_PINNED) throw new IllegalArgumentException(com.knowra.cmm.i18n.Msg.t("고정은 {0}개까지예요. 다른 글을 먼저 풀어 주세요.", MAX_PINNED));
                 post.setPinnedAt(java.time.LocalDateTime.now());
             } else if (!pin) {
                 post.setPinnedAt(null);
@@ -1280,9 +1280,9 @@ public class PostService {
                         .groupBy(cmt.userSn).orderBy(cmt.postCmtSn.min().asc()).fetch();
                 Map<Long, String> alias = new HashMap<>();
                 int n = 0;
-                for (Long u : order) alias.put(u, u == thePost.getUserSn() ? "글쓴이" : PostQuery.ANONYMOUS_NAME + (++n));
+                for (Long u : order) alias.put(u, u == thePost.getUserSn() ? com.knowra.cmm.i18n.Msg.t("글쓴이") : com.knowra.cmm.i18n.Msg.t("익명{0}", ++n));
                 java.util.function.Consumer<CmtDTO> anon = d -> {
-                    d.setAuthorNm(alias.getOrDefault(d.getUserSn(), PostQuery.ANONYMOUS_NAME));
+                    d.setAuthorNm(alias.getOrDefault(d.getUserSn(), com.knowra.cmm.i18n.Msg.t(PostQuery.ANONYMOUS_NAME)));
                     d.setAnonymous(true); d.setUserSn(0); d.setNickName(null); d.setPfpUrl(null);
                 };
                 for (CmtDTO d : list) { anon.accept(d); d.getReplies().forEach(anon); }

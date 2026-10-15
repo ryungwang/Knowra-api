@@ -1,5 +1,7 @@
 package com.knowra.safety.filter;
 
+import com.knowra.cmm.i18n.Lang;
+import com.knowra.cmm.i18n.Msg;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -39,9 +41,10 @@ public class ContentFilterParamInterceptor implements HandlerInterceptor {
         boolean admin = auth != null && auth.getAuthorities().stream().map(GrantedAuthority::getAuthority).anyMatch("ROLE_ADMIN"::equals);
         String why = filter.check(me, admin, ContentFilter.Kind.TEXT, all.toString(), false);
         if (why == null) return true;
-        // ContentFilterAdvice 와 같은 모양의 실패 응답 — 화면은 resultMessage 를 그대로 띄운다
+        // ContentFilterAdvice 와 같은 모양의 실패 응답 — 화면은 resultMessage 를 그대로 띄운다.
+        // 응답을 직접 써서 TranslateResultAdvice 를 거치지 않으므로 고정 문장은 여기서 요청 언어로(변수 든 문장은 ContentFilter 가 이미 번역)
         res.setContentType("application/json;charset=UTF-8");
-        String msg = why.replace("\\", "\\\\").replace("\"", "\\\"");
+        String msg = Msg.tl(Lang.of(req), why).replace("\\", "\\\\").replace("\"", "\\\"");
         res.getOutputStream().write(("{\"resultCode\":800,\"resultMessage\":\"" + msg + "\"}").getBytes(StandardCharsets.UTF_8));
         return false;
     }

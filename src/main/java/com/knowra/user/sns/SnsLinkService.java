@@ -36,9 +36,9 @@ public class SnsLinkService {
     public void link(long userSn, SnsIdentity id) {
         Long owner = findUser(id.provider(), id.id());
         if (owner != null && owner == userSn) return;
-        if (owner != null) throw new IllegalArgumentException("이 " + label(id.provider()) + " 계정은 이미 다른 knowra 계정에 연결돼 있어요.");
+        if (owner != null) throw new IllegalArgumentException(com.knowra.cmm.i18n.Msg.t("이 {0} 계정은 이미 다른 knowra 계정에 연결돼 있어요.", com.knowra.cmm.i18n.Msg.t(label(id.provider()))));
         Long same = jdbc.queryForObject("SELECT COUNT(*) FROM knowra_user.tbl_user_sns WHERE user_sn = ? AND provider = ?", Long.class, userSn, id.provider());
-        if (same != null && same > 0) throw new IllegalArgumentException("이미 " + label(id.provider()) + " 계정이 연결돼 있어요. 먼저 끊고 다시 연결해 주세요.");
+        if (same != null && same > 0) throw new IllegalArgumentException(com.knowra.cmm.i18n.Msg.t("이미 {0} 계정이 연결돼 있어요. 먼저 끊고 다시 연결해 주세요.", com.knowra.cmm.i18n.Msg.t(label(id.provider()))));
         jdbc.update("INSERT INTO knowra_user.tbl_user_sns (user_sn, provider, sns_id, email) VALUES (?, ?, ?, ?)",
                 userSn, id.provider(), id.id(), id.emailVerified() ? id.email() : null);
     }

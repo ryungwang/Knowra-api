@@ -51,14 +51,14 @@ public class FlairService {
             String name = String.valueOf(m.get("name") == null ? "" : m.get("name")).trim();
             if (name.isEmpty()) continue;
             if (name.length() > 20) throw new IllegalArgumentException("말머리는 20자까지예요.");
-            if (!names.add(name)) throw new IllegalArgumentException("같은 이름의 말머리가 있어요: " + name);
+            if (!names.add(name)) throw new IllegalArgumentException(com.knowra.cmm.i18n.Msg.t("같은 이름의 말머리가 있어요: {0}", name));
             String color = COLORS.contains(String.valueOf(m.get("color"))) ? String.valueOf(m.get("color")) : "gray";
             Map<String, Object> x = new LinkedHashMap<>();
             x.put("flairSn", m.get("flairSn") == null ? null : validFor(m.get("flairSn"), commSn));
             x.put("name", name); x.put("color", color);
             next.add(x);
         }
-        if (next.size() > MAX) throw new IllegalArgumentException("말머리는 " + MAX + "개까지예요.");
+        if (next.size() > MAX) throw new IllegalArgumentException(com.knowra.cmm.i18n.Msg.t("말머리는 {0}개까지예요.", MAX));
         List<Long> keep = next.stream().map(x -> (Long) x.get("flairSn")).filter(java.util.Objects::nonNull).toList();
         for (Map<String, Object> old : list(commSn)) {
             long sn = ((Number) old.get("flairSn")).longValue();

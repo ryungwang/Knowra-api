@@ -96,7 +96,7 @@ public class SessionService {
         for (TblUserSession s : repo.findAllByUserSnAndLastSeenAtAfterOrderByLastSeenAtDesc(userSn, LocalDateTime.now().minusDays(30))) {
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("sid", s.getSid());
-            m.put("device", describe(s.getUserAgent()));
+            m.put("device", label(describe(s.getUserAgent()), com.knowra.cmm.i18n.Lang.current()));
             m.put("ip", maskIp(s.getIp()));
             m.put("createdAt", s.getCreatedAt());
             m.put("lastSeenAt", s.getLastSeenAt());
@@ -117,6 +117,17 @@ public class SessionService {
                 : ua.contains("Mac OS X") || ua.contains("Macintosh") ? "macOS" : ua.contains("Windows") ? "Windows"
                 : ua.contains("Linux") ? "Linux" : null;
         return os == null ? b : b + " · " + os;
+    }
+
+    /**
+     * describe() 는 아는 기기 표(tbl_known_device)의 키라 한국어 그대로 둔다 — 사람에게 보일 때만 그 언어로 바꾼다.
+     */
+    public static String label(String device, String lang) {
+        if (device == null) return null;
+        String s = device;
+        for (String w : new String[]{"알 수 없는 기기", "삼성 인터넷", "웨일", "브라우저"})
+            if (s.contains(w)) s = s.replace(w, com.knowra.cmm.i18n.Msg.tl(lang, w));
+        return s;
     }
 
     /** 목록엔 IP 를 다 보이지 않는다 — 대역만으로 "내 집인가"는 충분하다. */

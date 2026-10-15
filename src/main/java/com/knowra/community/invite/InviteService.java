@@ -110,7 +110,7 @@ public class InviteService {
             if (why == null && (comm == null || !"Y".equals(comm.getStat()))) why = "없어진 커뮤니티예요.";
             r.putResult("valid", why == null);
             if (why != null) {
-                r.putResult("reason", why);
+                r.putResult("reason", com.knowra.cmm.i18n.Msg.t(why));   // 응답 본문이라 Advice 가 못 바꾼다
                 r.setResultCode(ResponseCode.SUCCESS.getCode());
                 return r;
             }

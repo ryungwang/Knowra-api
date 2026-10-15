@@ -49,6 +49,7 @@ public class AccountDeletionService {
     private final FileUtil fileUtil;
     private final TblComFileRepository comFileRepository;
     private final com.knowra.cmm.messaging.MailService mail;
+    private final com.knowra.user.repository.TblUserStngRepository stngs;
     private final org.springframework.transaction.support.TransactionTemplate tx;
     private final SecureRandom random = new SecureRandom();
 
@@ -79,7 +80,7 @@ public class AccountDeletionService {
                 WHERE o.user_sn = ? AND o.role = 'OWNER' AND o.stat = 'ACTIVE' AND c.stat = 'Y'""", me, me);
         for (Map<String, Object> c : owned) {
             if (((Number) c.get("others")).longValue() > 0)
-                return fail(r, "「" + c.get("name") + "」의 주인이에요. 커뮤니티 멤버 목록에서 다른 멤버에게 주인을 넘긴 뒤 탈퇴해 주세요.");
+                return fail(r, com.knowra.cmm.i18n.Msg.t("「{0}」의 주인이에요. 커뮤니티 멤버 목록에서 다른 멤버에게 주인을 넘긴 뒤 탈퇴해 주세요.", c.get("name")));
         }
 
 
@@ -88,19 +89,22 @@ public class AccountDeletionService {
         java.time.LocalDate on = java.time.LocalDate.now().plusDays(GRACE_DAYS);
         if (u.getEmail() != null && mail.isEnabled()) {
             try {
-                mail.send(u.getEmail(), "[knowra] 탈퇴 신청을 받았어요", """
-                        %s님, knowra 입니다.
-
-                        탈퇴 신청을 받았어요. %d월 %d일에 글·댓글·커뮤니티 활동과 개인정보가 모두 지워져요.
-                        마음이 바뀌면 그 전에 다시 로그인만 하세요. 탈퇴가 취소돼요.
-
-                        직접 신청하지 않았다면 바로 로그인해서 비밀번호를 바꿔 주세요.
-                        """.formatted(u.getName() == null ? u.getNickName() : u.getName(), on.getMonthValue(), on.getDayOfMonth()));
+                var st = stngs.findByUserSn(me);   // 메일은 그 사람의 설정 언어로
+                String ml = st != null && st.getLang() != null ? st.getLang() : com.knowra.cmm.i18n.Lang.current();
+                mail.send(u.getEmail(), com.knowra.cmm.i18n.Msg.tl(ml, "[knowra] 탈퇴 신청을 받았어요"),
+                        com.knowra.cmm.i18n.Msg.tl(ml, "{0}님, knowra 입니다.\n\n탈퇴 신청을 받았어요. {1}에 글·댓글·커뮤니티 활동과 개인정보가 모두 지워져요.\n마음이 바뀌면 그 전에 다시 로그인만 하세요. 탈퇴가 취소돼요.\n\n직접 신청하지 않았다면 바로 로그인해서 비밀번호를 바꿔 주세요.\n",
+                                u.getName() == null ? u.getNickName() : u.getName(), longDate(on, ml)));
             } catch (Exception ignore) { /* 메일은 덤 — 신청은 이미 됐다 */ }
         }
         r.setResultCode(ResponseCode.SUCCESS.getCode());
-        r.setResultMessage("탈퇴 신청을 받았어요. " + on.getMonthValue() + "월 " + on.getDayOfMonth() + "일에 모두 지워지고, 그 전에 다시 로그인하면 취소돼요.");
+        String lang = com.knowra.cmm.i18n.Lang.current();
+        r.setResultMessage(com.knowra.cmm.i18n.Msg.tl(lang, "탈퇴 신청을 받았어요. {0}에 모두 지워지고, 그 전에 다시 로그인하면 취소돼요.", longDate(on, lang)));
         return r;
+    }
+
+    /** 그 언어의 긴 날짜 꼴 — 「2026년 10월 29일」 / 「October 29, 2026」 */
+    private static String longDate(java.time.LocalDate d, String lang) {
+        return d.format(java.time.format.DateTimeFormatter.ofLocalizedDate(java.time.format.FormatStyle.LONG).withLocale(com.knowra.cmm.i18n.Fmt.locale(lang)));
     }
 
     /** 로그인 마무리에서 — 탈퇴 신청 중이었으면 취소하고 true */

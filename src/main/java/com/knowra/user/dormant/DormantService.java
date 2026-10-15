@@ -9,7 +9,9 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import com.knowra.cmm.i18n.Msg;
 import java.time.format.DateTimeFormatter;
+import java.time.format.FormatStyle;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -27,7 +29,6 @@ import java.util.Map;
 @Service
 public class DormantService {
 
-    private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("yyyy년 M월 d일");
     /** 마지막 접속 — 로그인 기록·기기 세션 중 늦은 쪽, 둘 다 없으면 가입일 */
     private static final String LAST_SEEN = """
             GREATEST(COALESCE(u.frst_crt_dt, u.join_ymd),
@@ -69,7 +70,8 @@ public class DormantService {
      */
     private int notice(LocalDateTime now) {
         List<Map<String, Object>> rows = jdbc.queryForList("""
-                SELECT u.user_sn, u.email, u.name, %s AS last_seen FROM knowra_user.tbl_user u
+                SELECT u.user_sn, u.email, u.name, st.lang, %s AS last_seen FROM knowra_user.tbl_user u
+                LEFT JOIN knowra_user.tbl_user_stng st ON st.user_sn = u.user_sn
                 WHERE u.status = 'Y' AND u.actvtn_yn = 'Y' AND u.dormant_notice_at IS NULL
                   AND %s""".formatted(LAST_SEEN, MAILABLE) + " AND " + LAST_SEEN + " < ?", now.minusDays(days - noticeDays));
         int sent = 0;
@@ -80,7 +82,8 @@ public class DormantService {
             LocalDateTime lastSeen = ((java.sql.Timestamp) r.get("last_seen")).toLocalDateTime();
             try {
                 LocalDateTime on = lastSeen.plusDays(days), earliest = now.plusDays(noticeDays);
-                mail.send(String.valueOf(r.get("email")), "[knowra] 곧 휴면 계정으로 바뀌어요", body(String.valueOf(r.get("name")), on.isBefore(earliest) ? earliest : on));
+                String lang = r.get("lang") == null ? "ko" : String.valueOf(r.get("lang"));
+                mail.send(String.valueOf(r.get("email")), Msg.tl(lang, "[knowra] 곧 휴면 계정으로 바뀌어요"), body(String.valueOf(r.get("name")), on.isBefore(earliest) ? earliest : on, lang));
                 sent++;
             } catch (RuntimeException e) {
                 // 못 보냈으면 표시를 되돌려 다음 날 다시
@@ -115,20 +118,10 @@ public class DormantService {
         return jdbc.update("UPDATE knowra_user.tbl_user SET status = 'Y', dormant_at = NULL WHERE user_sn = ? AND status = 'D'", userSn) > 0;
     }
 
-    private String body(String name, LocalDateTime on) {
-        return """
-                %s님, 안녕하세요. knowra 입니다.
-
-                마지막으로 들어오신 지 1년이 다 되어 가요. %s에 휴면 계정으로 바뀝니다.
-
-                휴면이 되면
-                - 모든 기기에서 로그인이 풀리고
-                - 알림·소식 메일과 푸시가 멈추고
-                - 사람 찾기와 멘션 추천에서 빠져요.
-                쓰신 글과 댓글은 그대로 남아요.
-
-                계속 쓰시려면 그 전에 한 번 들어와 주세요. 휴면이 된 뒤에도 로그인하면 바로 풀려요.
-                %s
-                """.formatted(name == null || name.isBlank() ? "회원" : name, on.format(DATE), front);
+    private String body(String name, LocalDateTime on, String lang) {
+        // 날짜만 — 그 언어의 긴 날짜 꼴(「2026년 10월 18일」 / 「October 18, 2026」)
+        String date = on.toLocalDate().format(DateTimeFormatter.ofLocalizedDate(FormatStyle.LONG).withLocale(com.knowra.cmm.i18n.Fmt.locale(lang)));
+        return Msg.tl(lang, "{0}님, 안녕하세요. knowra 입니다.\n\n마지막으로 들어오신 지 1년이 다 되어 가요. {1}에 휴면 계정으로 바뀝니다.\n\n휴면이 되면\n- 모든 기기에서 로그인이 풀리고\n- 알림·소식 메일과 푸시가 멈추고\n- 사람 찾기와 멘션 추천에서 빠져요.\n쓰신 글과 댓글은 그대로 남아요.\n\n계속 쓰시려면 그 전에 한 번 들어와 주세요. 휴면이 된 뒤에도 로그인하면 바로 풀려요.\n{2}\n",
+                name == null || name.isBlank() ? Msg.tl(lang, "회원") : name, date, front);
     }
 }

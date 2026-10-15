@@ -1,5 +1,7 @@
 package com.knowra.digest;
 
+import com.knowra.cmm.i18n.Fmt;
+import com.knowra.cmm.i18n.Msg;
 import com.knowra.cmm.messaging.MailService;
 import com.knowra.cmm.service.RedisApiService;
 import com.knowra.community.entity.QTblComm;
@@ -47,7 +49,6 @@ import java.util.*;
 public class DigestService {
 
     private static final int REDIS_DB = 15;
-    private static final String[] WEEK = {"월", "화", "수", "목", "금", "토", "일"};
 
     @PersistenceContext
     private EntityManager em;
@@ -133,44 +134,52 @@ public class DigestService {
         return d != null && !d.isBlank() ? d : t.get(c.commNm);
     }
 
-    public String subject(Digest d) {
-        if (!d.posts().isEmpty()) return "[knowra] 이번 주 내 동네에서 — " + cut(d.posts().get(0).title(), 30);
-        return "[knowra] 이번 주 내 동네에서 — 다가오는 모임 " + d.events().size() + "개";
+    /** 받는 사람의 언어·시간대 — 설정 줄이 없으면 한국어·서울 */
+    public record Prefs(String lang, String tz) {}
+
+    public Prefs prefs(long userSn) {
+        var s = stngs.findByUserSn(userSn);
+        return s == null ? new Prefs("ko", null) : new Prefs(s.getLang() == null ? "ko" : s.getLang(), s.getTimeZone());
     }
 
-    public String render(Digest d, long userSn) {
+    public String subject(Digest d, String lang) {
+        if (!d.posts().isEmpty()) return Msg.tl(lang, "[knowra] 이번 주 내 동네에서 — {0}", cut(d.posts().get(0).title(), 30));
+        return Msg.tl(lang, "[knowra] 이번 주 내 동네에서 — 다가오는 모임 {0}개", d.events().size());
+    }
+
+    public String render(Digest d, long userSn, Prefs p) {
+        String lang = p.lang();
         StringBuilder sb = new StringBuilder();
-        sb.append(d.name()).append("님, 이번 주 내 동네 소식이에요.\n\n");
+        sb.append(Msg.tl(lang, "{0}님, 이번 주 내 동네 소식이에요.", d.name())).append("\n\n");
         if (!d.posts().isEmpty()) {
-            sb.append("■ 이번 주 눈에 띈 글\n");
+            sb.append(Msg.tl(lang, "■ 이번 주 눈에 띈 글")).append("\n");
             for (Post x : d.posts()) {
                 sb.append("· [").append(x.commName()).append("] ").append(cut(x.title(), 60))
-                  .append(x.likeCnt() + x.cmtCnt() > 0 ? "  (좋아요 " + x.likeCnt() + " · 댓글 " + x.cmtCnt() + ")" : "").append("\n")
+                  .append(x.likeCnt() + x.cmtCnt() > 0 ? "  " + Msg.tl(lang, "(좋아요 {0} · 댓글 {1})", x.likeCnt(), x.cmtCnt()) : "").append("\n")
                   .append("  ").append(front).append("/community/").append(x.commNm()).append("/posts/").append(x.postSn()).append("\n");
             }
             sb.append("\n");
         }
         if (!d.events().isEmpty()) {
-            sb.append("■ 다가오는 모임\n");
+            sb.append(Msg.tl(lang, "■ 다가오는 모임")).append("\n");
             for (Event x : d.events()) {
-                LocalDateTime s = x.startsAt();
-                int h = s.getHour();
-                sb.append("· ").append(s.getMonthValue()).append("월 ").append(s.getDayOfMonth()).append("일 (")
-                  .append(WEEK[s.getDayOfWeek().getValue() - 1]).append(") ").append(h < 12 ? "오전 " : "오후 ")
-                  .append((h + 11) % 12 + 1).append(":").append(String.format("%02d", s.getMinute()))
+                // 받는 사람의 언어·시간대로, 요일을 덧붙인다 — 「2026. 10. 18. 오후 7:00 (일)」 / 「Oct 18, 2026, 7:00 PM (Sun)」
+                String dow = x.startsAt().atZone(java.time.ZoneId.systemDefault()).withZoneSameInstant(Fmt.zone(p.tz()))
+                        .getDayOfWeek().getDisplayName(java.time.format.TextStyle.SHORT, Fmt.locale(lang));
+                sb.append("· ").append(Fmt.dateTime(x.startsAt(), lang, p.tz())).append(" (").append(dow).append(")")
                   .append("  [").append(x.commName()).append("] ").append(cut(x.title(), 60)).append("\n")
                   .append("  ").append(front).append("/community/").append(x.commNm()).append("\n");
             }
             sb.append("\n");
         }
         if (!d.comms().isEmpty()) {
-            sb.append("■ 이번 주 새 글\n");
-            for (Comm x : d.comms()) sb.append("· ").append(x.commName()).append(" ").append(x.newPosts()).append("개\n");
+            sb.append(Msg.tl(lang, "■ 이번 주 새 글")).append("\n");
+            for (Comm x : d.comms()) sb.append("· ").append(Msg.tl(lang, "{0} {1}개", x.commName(), x.newPosts())).append("\n");
             sb.append("\n");
         }
         sb.append("—\n")
-          .append("설정에서 「주간 소식 메일」을 켠 분께 매주 월요일 아침에 보내요.\n")
-          .append("그만 받기: ").append(unsubscribeUrl(userSn)).append("\n");
+          .append(Msg.tl(lang, "설정에서 「주간 소식 메일」을 켠 분께 매주 월요일 아침에 보내요.")).append("\n")
+          .append(Msg.tl(lang, "그만 받기: {0}", unsubscribeUrl(userSn))).append("\n");
         return sb.toString();
     }
 
@@ -201,20 +210,34 @@ public class DigestService {
     }
 
     // ── 발송 ───────────────────────────────────────────────────────────────────────────────────
-    @Scheduled(cron = "${knowra.digest.cron:0 0 9 * * MON}", zone = "Asia/Seoul")
+    /**
+     * 매시 정각 — <b>그 사람의 시간대로 월요일 오전 9시</b>인 사람에게만 보낸다. 예전엔 서울 월요일 9시에 전원에게
+     * 보내서, 뉴욕 사용자는 일요일 밤 8시에 받았다. 같은 주에 두 번 가지 않게 주 표식(Redis)은 그대로 쓴다.
+     */
+    @Scheduled(cron = "${knowra.digest.cron:0 0 * * * *}", zone = "UTC")
     public void weekly() {
-        Map<String, Integer> r = sendAll(LocalDateTime.now());
-        log.info("[DIGEST] 주간 소식 발송 끝 {}", r);
+        Map<String, Integer> r = sendAll(LocalDateTime.now(), java.time.Instant.now());
+        if (r.get("target") > 0) log.info("[DIGEST] 주간 소식 발송 {}", r);
     }
 
-    /** 동의한 사람 전원에게 보낸다. 사람마다 실패를 따로 삼켜 한 명 때문에 나머지가 멈추지 않게 한다. */
-    public Map<String, Integer> sendAll(LocalDateTime now) {
+    /** 지금 이 사람의 시계가 월요일 9시인가 */
+    static boolean dueAt(java.time.Instant now, String tz) {
+        var local = now.atZone(com.knowra.cmm.i18n.Fmt.zone(tz));
+        return local.getDayOfWeek() == java.time.DayOfWeek.MONDAY && local.getHour() == 9;
+    }
+
+    /** 동의한 사람 전원에게 보낸다(관리자 수동 발송). 사람마다 실패를 따로 삼켜 한 명 때문에 나머지가 멈추지 않게 한다. */
+    public Map<String, Integer> sendAll(LocalDateTime now) { return sendAll(now, null); }
+
+    /** dueOnly 가 있으면 그 시각에 월요일 9시인 사람만 */
+    public Map<String, Integer> sendAll(LocalDateTime now, java.time.Instant dueOnly) {
         QTblUser u = QTblUser.tblUser;
         QTblUserStng s = QTblUserStng.tblUserStng;
         List<Tuple> rows = q().select(u.userSn, u.email).from(u).join(s).on(s.userSn.eq(u.userSn))
                 .where(s.digestYn.eq("Y"), u.status.eq("Y"), u.actvtnYn.eq("Y"), u.email.isNotNull(),
                         u.email.like("%_@_%.__%"))   // 주소 꼴이 아닌 값(옛 시드의 'deer' 등)은 보내 봐야 실패만 쌓인다
                 .fetch();
+        if (dueOnly != null) rows = rows.stream().filter(t -> dueAt(dueOnly, prefs(t.get(u.userSn)).tz())).toList();
         String week = now.get(IsoFields.WEEK_BASED_YEAR) + "-W" + now.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR);
         int sent = 0, empty = 0, dup = 0, failed = 0;
         for (Tuple t : rows) {
@@ -223,7 +246,8 @@ public class DigestService {
                 Digest d = build(sn, now);
                 if (d.isEmpty()) { empty++; continue; }
                 if (!redis.setIfAbsent(REDIS_DB, "digest:sent:" + week + ":" + sn, "1", 8L * 24 * 3600)) { dup++; continue; }
-                try { mail.send(t.get(u.email), subject(d), render(d, sn)); sent++; }
+                Prefs p = prefs(sn);
+                try { mail.send(t.get(u.email), subject(d, p.lang()), render(d, sn, p)); sent++; }
                 catch (RuntimeException ex) { redis.delRedis(REDIS_DB, "digest:sent:" + week + ":" + sn); throw ex; }   // 실패하면 표식을 지워 다음 실행에서 다시
             } catch (RuntimeException ex) {
                 failed++;

@@ -36,10 +36,10 @@ public class JoinQuestionService {
         for (Object o : raw == null ? List.of() : raw) {
             String q = o == null ? "" : String.valueOf(o).trim();
             if (q.isEmpty()) continue;
-            if (q.length() > Q_LEN) throw new IllegalArgumentException("질문은 " + Q_LEN + "자까지예요.");
+            if (q.length() > Q_LEN) throw new IllegalArgumentException(com.knowra.cmm.i18n.Msg.t("질문은 {0}자까지예요.", Q_LEN));
             qs.add(q);
         }
-        if (qs.size() > MAX) throw new IllegalArgumentException("질문은 " + MAX + "개까지예요.");
+        if (qs.size() > MAX) throw new IllegalArgumentException(com.knowra.cmm.i18n.Msg.t("질문은 {0}개까지예요.", MAX));
         jdbc.update("DELETE FROM knowra_community.tbl_comm_join_q WHERE comm_sn = ?", commSn);
         for (int i = 0; i < qs.size(); i++)
             jdbc.update("INSERT INTO knowra_community.tbl_comm_join_q (comm_sn, ord, question) VALUES (?, ?, ?)", commSn, i, qs.get(i));
@@ -58,7 +58,7 @@ public class JoinQuestionService {
         for (int i = 0; i < qs.size(); i++) {
             String a = i < in.size() && in.get(i) != null ? String.valueOf(in.get(i)).trim() : "";
             if (a.isEmpty()) throw new IllegalArgumentException("가입 질문에 모두 답해 주세요.");
-            if (a.length() > A_LEN) throw new IllegalArgumentException("답은 " + A_LEN + "자까지예요.");
+            if (a.length() > A_LEN) throw new IllegalArgumentException(com.knowra.cmm.i18n.Msg.t("답은 {0}자까지예요.", A_LEN));
             out.add(a);
         }
         return out;

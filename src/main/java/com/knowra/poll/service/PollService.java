@@ -46,11 +46,11 @@ public class PollService {
         for (Object o : list) {
             String s = o == null ? "" : o.toString().trim();
             if (s.isEmpty()) continue;
-            if (s.length() > MAX_LABEL) throw new IllegalArgumentException("선택지는 " + MAX_LABEL + "자까지 쓸 수 있어요.");
+            if (s.length() > MAX_LABEL) throw new IllegalArgumentException(com.knowra.cmm.i18n.Msg.t("선택지는 {0}자까지 쓸 수 있어요.", MAX_LABEL));
             labels.add(s);
         }
         if (labels.size() < MIN_OPTIONS) throw new IllegalArgumentException("서로 다른 선택지를 2개 이상 넣어 주세요.");
-        if (labels.size() > MAX_OPTIONS) throw new IllegalArgumentException("선택지는 " + MAX_OPTIONS + "개까지예요.");
+        if (labels.size() > MAX_OPTIONS) throw new IllegalArgumentException(com.knowra.cmm.i18n.Msg.t("선택지는 {0}개까지예요.", MAX_OPTIONS));
         int days = 7;
         if (m.get("days") != null) {
             try { days = Integer.parseInt(m.get("days").toString()); } catch (NumberFormatException e) { days = 7; }

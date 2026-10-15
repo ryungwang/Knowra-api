@@ -44,6 +44,7 @@ public class CommunityService {
 
     private final TblCommRepository tblCommRepository;
     private final TblCommMbrRepository tblCommMbrRepository;
+    private final com.knowra.user.repository.TblUserStngRepository userStngRepository;
     private final com.knowra.wiki.WikiService wikiService;
     private final TblComFileRepository tblComFileRepository;
     private final FileUtil fileUtil;
@@ -354,8 +355,10 @@ public class CommunityService {
                     }
                     if (existing.get().bannedNow(java.time.LocalDateTime.now())) {
                         java.time.LocalDateTime until = existing.get().getBanUntil();
+                        String lang = com.knowra.cmm.i18n.Lang.current();
                         throw new RuntimeException(until == null ? ResponseCode.COMMUNITY_BANNED_USER.getMessage()
-                                : until.format(java.time.format.DateTimeFormatter.ofPattern("M월 d일 H:mm")) + "까지 다시 참여할 수 없어요.");
+                                : com.knowra.cmm.i18n.Msg.tl(lang, "{0}까지 다시 참여할 수 없어요.",
+                                        com.knowra.cmm.i18n.Fmt.dateTime(until, lang, userTimeZone(userSn))));
                     }
                     // 기간이 지난 강퇴는 풀린 것 — 아래에서 다른 나간 사람과 똑같이 다시 넣는다
                     // WITHDRAWN → 기존 레코드 재활성화
@@ -644,6 +647,12 @@ public class CommunityService {
         return resultVO;
     }
 
+    /** 이 사람의 시간대(설정) — 날짜를 그 사람 기준으로 보여 줄 때 */
+    private String userTimeZone(long userSn) {
+        var st = userStngRepository.findByUserSn(userSn);
+        return st == null ? null : st.getTimeZone();
+    }
+
     /** 고를 수 있는 강퇴 기간(일). 없음·0 = 영구 */
     static final java.util.Set<Integer> BAN_DAYS = java.util.Set.of(1, 3, 7, 30);
 
@@ -732,9 +741,9 @@ public class CommunityService {
                 case "BANNED" -> "COMM_BANNED";
                 default -> unban ? "COMM_UNBANNED" : "COMM_REMOVED";
             };
-            // 강퇴 알림엔 기간·사유를 싣는다 — 「장소|풀리는 때|사유」(NotificationEventListener 가 문장으로 만든다)
+            // 강퇴 알림엔 기간·사유를 싣는다 — 「장소|풀리는 때(ISO)|사유」. 날짜는 받는 사람의 언어·시간대로 리스너가 쓴다
             String extra = "BANNED".equals(stat)
-                    ? comm.getCommDsplNm() + "|" + (banUntil == null ? "" : banUntil.format(java.time.format.DateTimeFormatter.ofPattern("M월 d일 H:mm"))) + "|" + (banReason == null ? "" : banReason)
+                    ? comm.getCommDsplNm() + "|" + (banUntil == null ? "" : banUntil.toString()) + "|" + (banReason == null ? "" : banReason)
                     : comm.getCommDsplNm();
             eventPublisher.publishEvent(new com.knowra.cmm.event.NotifTriggerEvent(target, me, typ, commSn, "COMM", extra));
 

@@ -1,5 +1,6 @@
 package com.knowra.push.controller;
 
+import com.knowra.cmm.i18n.Msg;
 import com.knowra.cmm.model.ResponseCode;
 import com.knowra.cmm.model.ResultVO;
 import com.knowra.cmm.security.CurrentUser;
@@ -60,7 +61,7 @@ public class PushController {
     /** 내 모든 기기로 시험 알림 — 설정 화면의 「테스트 알림 보내기」. */
     @PostMapping("/test")
     public ResultVO test(@CurrentUser Long me) {
-        int sent = push.sendToUser(me, Map.of("title", "knowra", "body", "알림이 잘 와요. 이제 새 소식을 놓치지 않아요.", "url", "/", "tag", "knowra-test"));
+        int sent = push.sendToUser(me, Map.of("title", "knowra", "body", Msg.t("알림이 잘 와요. 이제 새 소식을 놓치지 않아요."), "url", "/", "tag", "knowra-test"));
         ResultVO r = new ResultVO();
         r.putResult("sent", sent);
         r.setResultCode(ResponseCode.SUCCESS.getCode());

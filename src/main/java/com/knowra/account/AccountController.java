@@ -32,6 +32,7 @@ public class AccountController {
     private final VerificationService verification;
     private final PasswordEncoder passwordEncoder;
     private final MailService mail;
+    private final com.knowra.user.repository.TblUserStngRepository stngs;
     private final DataExportService dataExport;
     private final tools.jackson.databind.ObjectMapper objectMapper;
 
@@ -189,7 +190,12 @@ public class AccountController {
         verification.consume(VerificationService.EMAIL, email);
 
         if (StringUtils.hasText(old) && mail.isEnabled()) {
-            try { mail.send(old, "[knowra] 계정 이메일이 바뀌었어요", "knowra 계정의 이메일이 " + email + " 로 바뀌었어요.\n본인이 바꾼 게 아니라면 바로 비밀번호를 재설정하고 문의해 주세요."); }
+            try {
+                var st = stngs.findByUserSn(me);   // 받는 사람(본인)의 설정 언어로
+                String lang = st != null && st.getLang() != null ? st.getLang() : com.knowra.cmm.i18n.Lang.current();
+                mail.send(old, com.knowra.cmm.i18n.Msg.tl(lang, "[knowra] 계정 이메일이 바뀌었어요"),
+                        com.knowra.cmm.i18n.Msg.tl(lang, "knowra 계정의 이메일이 {0} 로 바뀌었어요.\n본인이 바꾼 게 아니라면 바로 비밀번호를 재설정하고 문의해 주세요.", email));
+            }
             catch (Exception ignore) { /* 안내 메일 실패가 변경을 되돌리지는 않는다 */ }
         }
         // loginId 가 토큰에 들어 있으니 새 액세스 토큰을 준다(세션은 그대로)

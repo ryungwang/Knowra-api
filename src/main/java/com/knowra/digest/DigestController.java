@@ -21,8 +21,9 @@ public class DigestController {
         ResultVO r = new ResultVO();
         DigestService.Digest d = svc.build(me, LocalDateTime.now());
         r.putResult("empty", d.isEmpty());
-        r.putResult("subject", d.isEmpty() ? "" : svc.subject(d));
-        r.putResult("text", d.isEmpty() ? "" : svc.render(d, me));
+        var p = svc.prefs(me);   // 미리보기도 실제로 받을 언어로
+        r.putResult("subject", d.isEmpty() ? "" : svc.subject(d, p.lang()));
+        r.putResult("text", d.isEmpty() ? "" : svc.render(d, me, p));
         r.setResultCode(ResponseCode.SUCCESS.getCode());
         return r;
     }

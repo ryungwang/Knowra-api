@@ -67,7 +67,7 @@ public class WikiService {
             if (t.length() > 60 || b.length() > 300) throw new IllegalArgumentException("규칙 제목은 60자, 설명은 300자까지예요.");
             next.add(TblCommRule.builder().commSn(commSn).ord(ord++).title(t).body(b).build());
         }
-        if (next.size() > MAX_RULES) throw new IllegalArgumentException("규칙은 " + MAX_RULES + "개까지예요.");
+        if (next.size() > MAX_RULES) throw new IllegalArgumentException(com.knowra.cmm.i18n.Msg.t("규칙은 {0}개까지예요.", MAX_RULES));
         rules.deleteAllOf(commSn);
         rules.saveAll(next);
         modLog.record(commSn, me, com.knowra.community.modlog.ModLogService.RULES, null, null, "규칙 " + next.size() + "개");
@@ -100,7 +100,7 @@ public class WikiService {
         if (slug != null && !slug.isBlank()) {
             p = pages.findByCommSnAndSlug(commSn, slug).orElseThrow(() -> new IllegalArgumentException("페이지를 찾을 수 없어요."));
         } else {
-            if (pages.countByCommSn(commSn) >= MAX_PAGES) throw new IllegalArgumentException("위키 페이지는 " + MAX_PAGES + "개까지예요.");
+            if (pages.countByCommSn(commSn) >= MAX_PAGES) throw new IllegalArgumentException(com.knowra.cmm.i18n.Msg.t("위키 페이지는 {0}개까지예요.", MAX_PAGES));
             String base = slugOf(t), s = base;
             for (int i = 2; pages.findByCommSnAndSlug(commSn, s).isPresent(); i++) s = base + "-" + i;
             p = TblCommPage.builder().commSn(commSn).slug(s).ord((int) pages.countByCommSn(commSn)).build();

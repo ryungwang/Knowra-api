@@ -1,5 +1,6 @@
 package com.knowra.chat.service;
 
+import com.knowra.cmm.i18n.Msg;
 import com.knowra.chat.entity.TblChatRoom;
 import com.knowra.chat.entity.TblChatRoomMbr;
 import com.knowra.chat.repository.TblChatRoomMbrRepository;
@@ -43,7 +44,7 @@ public class ChatGroupService {
         if (n.isEmpty() || n.length() > 50) throw new IllegalArgumentException("방 이름을 1~50자로 써 주세요.");
         List<Long> invitees = resolve(me, nickNames);
         if (invitees.isEmpty()) throw new IllegalArgumentException("초대할 사람을 한 명 이상 골라 주세요.");
-        if (invitees.size() + 1 > MAX_MEMBERS) throw new IllegalArgumentException("그룹은 " + MAX_MEMBERS + "명까지예요.");
+        if (invitees.size() + 1 > MAX_MEMBERS) throw new IllegalArgumentException(Msg.t("그룹은 {0}명까지예요.", MAX_MEMBERS));
         TblChatRoom room = roomRepository.save(TblChatRoom.builder().roomTyp(GROUP).name(n).createdBy(me).build());
         mbrRepository.save(TblChatRoomMbr.builder().roomSn(room.getRoomSn()).userSn(me).build());
         for (Long u : invitees) mbrRepository.save(TblChatRoomMbr.builder().roomSn(room.getRoomSn()).userSn(u).stat("REQUEST").build());
@@ -62,7 +63,7 @@ public class ChatGroupService {
         for (Long u : resolve(me, nickNames)) {
             TblChatRoomMbr m = existing.get(u);
             if (m != null && !"LEFT".equals(m.getStat())) continue;
-            if (live + added + 1 > MAX_MEMBERS) throw new IllegalArgumentException("그룹은 " + MAX_MEMBERS + "명까지예요.");
+            if (live + added + 1 > MAX_MEMBERS) throw new IllegalArgumentException(Msg.t("그룹은 {0}명까지예요.", MAX_MEMBERS));
             if (m != null) { m.setStat("REQUEST"); mbrRepository.save(m); }
             else mbrRepository.save(TblChatRoomMbr.builder().roomSn(roomSn).userSn(u).stat("REQUEST").build());
             added++;

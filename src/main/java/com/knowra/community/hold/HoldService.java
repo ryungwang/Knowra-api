@@ -76,7 +76,7 @@ public class HoldService {
             m.put("excerpt", text.length() > 300 ? text.substring(0, 300) + "…" : text);
             m.put("createdAt", r.get("frst_crt_dt"));
             m.put("nickName", anon ? null : r.get("nick_name"));
-            m.put("name", anon ? "익명" : r.get("name"));
+            m.put("name", anon ? com.knowra.cmm.i18n.Msg.t("익명") : r.get("name"));
             out.add(m);
         }
         return out;

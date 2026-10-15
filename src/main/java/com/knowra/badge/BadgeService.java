@@ -29,6 +29,7 @@ public class BadgeService {
     private EntityManager em;
     private final TblUserBadgeRepository repo;
     private final ApplicationEventPublisher events;
+    private final com.knowra.user.repository.TblUserStngRepository userStngRepository;
 
     public Map<String, Long> stats(long userSn) {
         JPAQueryFactory q = new JPAQueryFactory(em);
@@ -67,8 +68,11 @@ public class BadgeService {
         }
         // 알림은 한 번만 — 오래 쓴 사람이 뱃지 도입 후 처음 판정되면 한꺼번에 여러 개를 얻는다(알림 폭탄 방지)
         if (!got.isEmpty()) {
-            String first = BadgeCatalog.byKey(got.get(0)).name();
-            String label = got.size() == 1 ? "「" + first + "」" : "「" + first + "」 외 " + (got.size() - 1) + "개";
+            // 알림 문장에 그대로 끼워 들어간다 — 뱃지 이름도 받는 사람(=본인)의 언어로. 남의 프로필을 볼 때도 판정되니 요청 언어가 아니다
+            var stng = userStngRepository.findByUserSn(userSn);
+            String lang = stng == null || stng.getLang() == null ? com.knowra.cmm.i18n.Lang.KO : stng.getLang();
+            String first = com.knowra.cmm.i18n.Msg.tl(lang, BadgeCatalog.byKey(got.get(0)).name());
+            String label = got.size() == 1 ? com.knowra.cmm.i18n.Msg.tl(lang, "「{0}」", first) : com.knowra.cmm.i18n.Msg.tl(lang, "「{0}」 외 {1}개", first, got.size() - 1);
             events.publishEvent(new NotifTriggerEvent(userSn, null, "BADGE", null, "BADGE", label));
         }
         return got;
@@ -85,7 +89,7 @@ public class BadgeService {
             TblUserBadge e = have.get(b.key());
             if (e == null && !mine) continue;   // 남의 프로필엔 얻은 것만
             Map<String, Object> m = new LinkedHashMap<>();
-            m.put("key", b.key()); m.put("name", b.name()); m.put("desc", b.desc()); m.put("tone", b.tone());
+            m.put("key", b.key()); m.put("name", com.knowra.cmm.i18n.Msg.t(b.name())); m.put("desc", com.knowra.cmm.i18n.Msg.t(b.desc())); m.put("tone", b.tone());
             m.put("earnedAt", e == null ? null : e.getEarnedAt());
             if (mine) { m.put("progress", Math.min(st.getOrDefault(b.stat(), 0L), b.goal())); m.put("goal", b.goal()); }
             out.add(m);

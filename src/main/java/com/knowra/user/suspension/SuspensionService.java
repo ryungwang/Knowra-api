@@ -9,7 +9,9 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
+import com.knowra.cmm.i18n.Fmt;
+import com.knowra.cmm.i18n.Lang;
+import com.knowra.cmm.i18n.Msg;
 
 /**
  * 계정 정지(status='S'). 기간이 있으면 끝나는 때 저절로 풀린다.
@@ -21,8 +23,6 @@ import java.time.format.DateTimeFormatter;
 @Service
 @RequiredArgsConstructor
 public class SuspensionService {
-
-    private static final DateTimeFormatter UNTIL_FMT = DateTimeFormatter.ofPattern("yyyy년 M월 d일 HH:mm");
 
     private final TblUserRepository userRepository;
     private final JdbcTemplate jdbc;
@@ -37,13 +37,19 @@ public class SuspensionService {
     }
 
     /** 본인에게 보이는 안내 — 언제까지, 왜. */
-    public static String message(TblUser u) {
-        StringBuilder sb = new StringBuilder();
-        if (u.getSuspendedUntil() != null) sb.append(u.getSuspendedUntil().format(UNTIL_FMT)).append("까지 ");
-        sb.append("이용이 정지된 계정입니다.");
-        if (u.getSuspendReason() != null && !u.getSuspendReason().isBlank()) sb.append(" 사유: ").append(u.getSuspendReason());
-        if (u.getSuspendedUntil() == null) sb.append(" 문의해 주세요.");
-        return sb.toString();
+    public static String message(TblUser u) { return message(u, null); }
+
+    /** 지금 요청의 언어로, 날짜는 그 사람의 시간대(tz)로 */
+    public static String message(TblUser u, String tz) {
+        String lang = Lang.current();
+        boolean why = u.getSuspendReason() != null && !u.getSuspendReason().isBlank();
+        if (u.getSuspendedUntil() != null) {
+            String until = Fmt.dateTime(u.getSuspendedUntil(), lang, tz);
+            return why ? Msg.tl(lang, "{0}까지 이용이 정지된 계정입니다. 사유: {1}", until, u.getSuspendReason())
+                       : Msg.tl(lang, "{0}까지 이용이 정지된 계정입니다.", until);
+        }
+        return why ? Msg.tl(lang, "이용이 정지된 계정입니다. 사유: {0} 문의해 주세요.", u.getSuspendReason())
+                   : Msg.tl(lang, "이용이 정지된 계정입니다. 문의해 주세요.");
     }
 
     @Scheduled(fixedDelay = 60_000, initialDelay = 15_000)
