@@ -154,6 +154,11 @@ public class NotificationEventListener {
             case "COMM_APPROVED"  -> place + " 가입이 승인됐습니다. 환영해요!";
             case "COMM_REJECTED"  -> place + " 가입 신청이 받아들여지지 않았습니다.";
             case "COMM_REMOVED"   -> place + "에서 내보내졌습니다.";
+            case "COMM_BANNED"    -> { String[] x = nz(extra).split("\\|", 3);
+                                       String until = x.length > 1 && !x[1].isEmpty() ? " " + x[1] + "까지 다시 참여할 수 없어요." : " 다시 참여할 수 없어요.";
+                                       String why = x.length > 2 && !x[2].isEmpty() ? " 사유: " + x[2] : "";
+                                       yield x[0] + "에서 내보내졌어요." + until + why; }
+            case "COMM_UNBANNED"  -> place + " 강퇴가 풀렸어요. 원하면 다시 참여할 수 있어요.";
             case "COMM_ADMIN"     -> place + "의 운영진이 됐습니다.";
             case "COMM_ADMIN_OFF" -> place + "의 운영진에서 해제됐습니다.";
             case "COMM_OWNER"     -> sender + "이 " + place + "의 주인 자리를 넘겼습니다.";

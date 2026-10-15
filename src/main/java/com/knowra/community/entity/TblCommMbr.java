@@ -91,4 +91,17 @@ public class TblCommMbr {
     /** 참여할 때 규칙에 동의한 시각(규칙이 없던 때 참여했으면 NULL). */
     @Column(name = "RULES_AGREED_AT")
     private LocalDateTime rulesAgreedAt;
+
+    /** 강퇴가 풀리는 시각 — NULL 이면 영구. 지나면 스스로 다시 참여할 수 있다(가입할 때 본다) */
+    @Column(name = "BAN_UNTIL")
+    private LocalDateTime banUntil;
+
+    /** 강퇴 사유 — 당사자 알림과 운영진 목록에 */
+    @Column(name = "BAN_REASON", length = 300)
+    private String banReason;
+
+    /** 아직 강퇴 중인가 — 기간이 지난 BANNED 는 풀린 것으로 본다 */
+    public boolean bannedNow(LocalDateTime now) {
+        return "BANNED".equals(stat) && (banUntil == null || banUntil.isAfter(now));
+    }
 }

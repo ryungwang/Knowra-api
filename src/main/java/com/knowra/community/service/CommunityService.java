@@ -307,6 +307,12 @@ public class CommunityService {
                 if ("OWNER".equals(member.getRole())) {
                     throw new RuntimeException(ResponseCode.COMMUNITY_OWNER_CANNOT_LEAVE.getMessage());
                 }
+                // 나가기는 멤버이거나 신청 중일 때만. ⚠️ 예전엔 상태를 안 봐서, 강퇴된 사람이 「나가기」를 보내면 BANNED 가
+                // WITHDRAWN 으로 바뀌어 바로 다시 가입할 수 있었고(강퇴 무력화), 부를 때마다 멤버 수도 하나씩 줄었다.
+                String cur = member.getStat();
+                if (!"ACTIVE".equals(cur) && !"PENDING".equals(cur)) {
+                    throw new RuntimeException(ResponseCode.COMMUNITY_NOT_MEMBER.getMessage());
+                }
 
                 // 일괄 update 는 @UpdateTimestamp 를 안 탄다 — 나간 때를 직접 남긴다(통계의 「나간 멤버」가 이걸 센다)
                 q.update(qTblCommMbr)
@@ -316,8 +322,10 @@ public class CommunityService {
                         qTblCommMbr.commSn.eq(tblComm.getCommSn())
                         .and(qTblCommMbr.userSn.eq(userSn))
                     ).execute();
-                tblComm.setMemberCnt(Math.max(0, tblComm.getMemberCnt() - 1));
-                tblCommRepository.save(tblComm);
+                if ("ACTIVE".equals(cur)) {   // 신청 중이던 사람은 인원에 든 적이 없다
+                    tblComm.setMemberCnt(Math.max(0, tblComm.getMemberCnt() - 1));
+                    tblCommRepository.save(tblComm);
+                }
                 interestScoreService.update(userSn, TblUserActionLog.TARGET_COMM, tblComm.getCommSn(), -8);
                 joinQuestions.clear(tblComm.getCommSn(), userSn);   // 신청을 거둔 경우 — 답도 거둔다
                 memberStatus = "WITHDRAWN";
@@ -344,12 +352,17 @@ public class CommunityService {
                     if ("ACTIVE".equals(currentStat) || ("PENDING".equals(currentStat) && !viaInvite)) {
                         throw new RuntimeException(ResponseCode.COMMUNITY_ALREADY_JOINED.getMessage());
                     }
-                    if ("BANNED".equals(currentStat)) {
-                        throw new RuntimeException(ResponseCode.COMMUNITY_BANNED_USER.getMessage());
+                    if (existing.get().bannedNow(java.time.LocalDateTime.now())) {
+                        java.time.LocalDateTime until = existing.get().getBanUntil();
+                        throw new RuntimeException(until == null ? ResponseCode.COMMUNITY_BANNED_USER.getMessage()
+                                : until.format(java.time.format.DateTimeFormatter.ofPattern("M월 d일 H:mm")) + "까지 다시 참여할 수 없어요.");
                     }
+                    // 기간이 지난 강퇴는 풀린 것 — 아래에서 다른 나간 사람과 똑같이 다시 넣는다
                     // WITHDRAWN → 기존 레코드 재활성화
                     q.update(qTblCommMbr)
                         .set(qTblCommMbr.stat, memberStatus)
+                        .setNull(qTblCommMbr.banUntil)
+                        .setNull(qTblCommMbr.banReason)
                         .set(qTblCommMbr.joinTyp, joinTyp)
                         .set(qTblCommMbr.notifYn, "Y")
                         .set(qTblCommMbr.rulesAgreedAt, agreedAt)
@@ -611,6 +624,11 @@ public class CommunityService {
                 row.put("pfpUrl",   com.knowra.cmm.storage.StorageUrls.of(path, t.get(pfp.strgFileNm), t.get(pfp.atchFileExtnNm), t.get(pfp.fileKey)));
                 row.put("role",     mb.getRole());
                 row.put("stat",     mb.getStat());
+                if ("BANNED".equals(mb.getStat())) {   // 운영진만 보는 목록(BANNED)이다
+                    row.put("banUntil",  mb.getBanUntil());
+                    row.put("banReason", mb.getBanReason());
+                    row.put("bannedAt",  mb.getMdfcnDt());
+                }
                 row.put("joinedAt", mb.getFrstCrtDt());
                 if (answers.containsKey(mb.getUserSn())) row.put("answers", answers.get(mb.getUserSn()));
                 list.add(row);
@@ -624,6 +642,24 @@ public class CommunityService {
             resultVO.setResultMessage(ResponseCode.COMMUNITY_SELECT_ERROR.getMessage());
         }
         return resultVO;
+    }
+
+    /** 고를 수 있는 강퇴 기간(일). 없음·0 = 영구 */
+    static final java.util.Set<Integer> BAN_DAYS = java.util.Set.of(1, 3, 7, 30);
+
+    static java.time.LocalDateTime banUntil(Object days, java.time.LocalDateTime now) {
+        if (days == null || String.valueOf(days).isBlank()) return null;
+        int d;
+        try { d = (int) Double.parseDouble(String.valueOf(days)); } catch (NumberFormatException e) { throw new IllegalArgumentException("강퇴 기간이 올바르지 않아요."); }
+        if (d == 0) return null;
+        if (!BAN_DAYS.contains(d)) throw new IllegalArgumentException("강퇴 기간은 1·3·7·30일 또는 영구만 고를 수 있어요.");
+        return now.plusDays(d);
+    }
+
+    /** 운영 기록에 남길 한 줄 — 「7일 · 사유: 도배」 */
+    static String banDetail(java.time.LocalDateTime until, String reason) {
+        String period = until == null ? "영구" : until.format(java.time.format.DateTimeFormatter.ofPattern("M월 d일 H:mm")) + "까지";
+        return reason == null ? period : period + " · 사유: " + reason;
     }
 
     /**
@@ -651,11 +687,23 @@ public class CommunityService {
             // 운영진이 동의 없이 다시 끌어넣을 수 있었다(알림까지 켜진 채로).
             if ("ACTIVE".equals(stat) && !java.util.Set.of("PENDING", "BANNED", "ACTIVE").contains(mb.getStat()))
                 throw new IllegalArgumentException("스스로 나갔거나 거절된 사람은 다시 넣을 수 없어요. 초대 링크를 보내 주세요.");
+            // 강퇴 해제 = BANNED → WITHDRAWN. 억지로 다시 넣지 않고, 본인이 원하면 다시 참여한다.
+            boolean unban = "WITHDRAWN".equals(stat) && "BANNED".equals(mb.getStat());
+            java.time.LocalDateTime banUntil = null;
+            String banReason = null;
+            if ("BANNED".equals(stat)) {
+                banUntil = banUntil(params.get("days"), java.time.LocalDateTime.now());
+                banReason = params.get("reason") == null ? null : params.get("reason").toString().strip();
+                if (banReason != null && banReason.isEmpty()) banReason = null;
+                if (banReason != null && banReason.length() > 300) throw new IllegalArgumentException("사유는 300자까지 쓸 수 있어요.");
+            }
             TblComm comm = tblCommRepository.findByCommSn(commSn);
             String prevStat = mb.getStat();
             boolean wasActive = "ACTIVE".equals(prevStat);
             boolean nowActive = "ACTIVE".equals(stat);
             mb.setStat(stat);
+            mb.setBanUntil(banUntil);
+            mb.setBanReason(banReason);
             mb.setMdfrSn(me);
             if (nowActive && !wasActive) { mb.setJoinTyp("APPROVE"); mb.setNotifYn("Y"); }
             if (!nowActive) mb.setRole("MEMBER");
@@ -675,11 +723,20 @@ public class CommunityService {
                 case "ACTIVE"   -> wasActive ? null : "BANNED".equals(prevStat) ? com.knowra.community.modlog.ModLogService.MEMBER_UNBAN : com.knowra.community.modlog.ModLogService.MEMBER_APPROVE;
                 case "REJECTED" -> com.knowra.community.modlog.ModLogService.MEMBER_REJECT;
                 case "BANNED"   -> com.knowra.community.modlog.ModLogService.MEMBER_BAN;
-                default         -> com.knowra.community.modlog.ModLogService.MEMBER_REMOVE;
+                default         -> unban ? com.knowra.community.modlog.ModLogService.MEMBER_UNBAN : com.knowra.community.modlog.ModLogService.MEMBER_REMOVE;
             };
-            if (logAction != null) modLog.record(commSn, me, logAction, target, null, null);
-            String typ = switch (stat) { case "ACTIVE" -> "COMM_APPROVED"; case "REJECTED" -> "COMM_REJECTED"; default -> "COMM_REMOVED"; };
-            eventPublisher.publishEvent(new com.knowra.cmm.event.NotifTriggerEvent(target, me, typ, commSn, "COMM", comm.getCommDsplNm()));
+            String detail = "BANNED".equals(stat) ? banDetail(banUntil, banReason) : null;
+            if (logAction != null) modLog.record(commSn, me, logAction, target, null, detail);
+            String typ = switch (stat) {
+                case "ACTIVE" -> "COMM_APPROVED"; case "REJECTED" -> "COMM_REJECTED";
+                case "BANNED" -> "COMM_BANNED";
+                default -> unban ? "COMM_UNBANNED" : "COMM_REMOVED";
+            };
+            // 강퇴 알림엔 기간·사유를 싣는다 — 「장소|풀리는 때|사유」(NotificationEventListener 가 문장으로 만든다)
+            String extra = "BANNED".equals(stat)
+                    ? comm.getCommDsplNm() + "|" + (banUntil == null ? "" : banUntil.format(java.time.format.DateTimeFormatter.ofPattern("M월 d일 H:mm"))) + "|" + (banReason == null ? "" : banReason)
+                    : comm.getCommDsplNm();
+            eventPublisher.publishEvent(new com.knowra.cmm.event.NotifTriggerEvent(target, me, typ, commSn, "COMM", extra));
 
             resultVO.putResult("stat", stat);
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());

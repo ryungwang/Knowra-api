@@ -131,7 +131,9 @@ public class InviteService {
             // 승인제인데 운영진 링크면 바로 멤버, 아니면 가입 신청으로 들어간다 — 누르기 전에 알려 준다
             r.putResult("skipsApproval", !isOpen(comm) && activeMember(comm.getCommSn(), inviter).map(InviteService::isManager).orElse(false));
             r.putResult("myStatus", me == null ? null
-                    : mbrRepository.findByCommSnAndUserSn(comm.getCommSn(), me).map(TblCommMbr::getStat).orElse(null));
+                    : mbrRepository.findByCommSnAndUserSn(comm.getCommSn(), me)
+                        // 기간이 끝난 강퇴는 풀린 것 — 「참여할 수 없어요」 대신 참여 버튼이 보이게
+                        .map(m -> "BANNED".equals(m.getStat()) && !m.bannedNow(java.time.LocalDateTime.now()) ? "WITHDRAWN" : m.getStat()).orElse(null));
             r.setResultCode(ResponseCode.SUCCESS.getCode());
         } catch (Exception e) {
             ErrorLog.report(e);
