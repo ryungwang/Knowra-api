@@ -70,7 +70,7 @@ public class UserController {
 
     @PostMapping("/api/user/deleteAccount")
     public ResultVO deleteAccount(@RequestBody Map<String, Object> params, @CurrentUser Long me) {
-        return accountDeletionService.delete(params, me);   // 실제로 지운다 — AccountDeletionService 머리말
+        return accountDeletionService.request(params, me);   // 14일 뒤 지운다 — AccountDeletionService 머리말
     }
 
     @PostMapping("/api/user/getMyTagList")

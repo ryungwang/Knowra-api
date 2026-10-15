@@ -31,6 +31,10 @@ import java.util.Map;
  *       비워 같은 이메일로 다시 가입할 수 있다.</li>
  * </ul>
  * 투표 기록은 남긴다(이미 집계된 결과가 바뀌지 않게, 누구인지는 위에서 지운다).
+ *
+ * <p><b>14일 유예.</b> 탈퇴를 누르면 바로 지우지 않고 신청 시각만 남긴 뒤 모든 기기에서 로그아웃시킨다
+ * ({@link #request}). 그 안에 다시 로그인하면 취소되고({@link #cancel}, 로그인 마무리에서 부른다), 지나면 매일 새벽
+ * {@link #purgeDue} 가 위의 방식대로 지운다({@link #purge}). 실수로 눌렀거나 계정을 빼앗긴 사람이 되돌릴 수 있게.
  */
 @Service
 @RequiredArgsConstructor
@@ -44,11 +48,18 @@ public class AccountDeletionService {
     private final PasswordEncoder passwordEncoder;
     private final FileUtil fileUtil;
     private final TblComFileRepository comFileRepository;
+    private final com.knowra.cmm.messaging.MailService mail;
+    private final org.springframework.transaction.support.TransactionTemplate tx;
     private final SecureRandom random = new SecureRandom();
 
-    /** params: password(일반 계정) 또는 confirm=아이디(소셜 계정 — 비밀번호가 없다) */
+    public static final int GRACE_DAYS = 14;
+
+    /**
+     * 탈퇴 신청. params: password(일반 계정) 또는 confirm=아이디(소셜 계정 — 비밀번호가 없다).
+     * 확인과 주인 검사는 지금 하고, 지우는 건 {@link #GRACE_DAYS}일 뒤다.
+     */
     @Transactional
-    public ResultVO delete(Map<String, Object> params, long me) {
+    public ResultVO request(Map<String, Object> params, long me) {
         ResultVO r = new ResultVO();
         TblUser u = userRepository.findById(me).orElse(null);
         if (u == null || !"Y".equals(u.getActvtnYn())) return fail(r, "이미 탈퇴한 계정이에요.");
@@ -69,6 +80,69 @@ public class AccountDeletionService {
         for (Map<String, Object> c : owned) {
             if (((Number) c.get("others")).longValue() > 0)
                 return fail(r, "「" + c.get("name") + "」의 주인이에요. 커뮤니티 멤버 목록에서 다른 멤버에게 주인을 넘긴 뒤 탈퇴해 주세요.");
+        }
+
+
+        jdbc.update("UPDATE knowra_user.tbl_user SET delete_req_at = ? WHERE user_sn = ?", java.time.LocalDateTime.now(), me);
+        sessionService.revokeOthers(me, null);   // 이 기기까지 전부 — 다시 들어오면 그게 「취소」다
+        java.time.LocalDate on = java.time.LocalDate.now().plusDays(GRACE_DAYS);
+        if (u.getEmail() != null && mail.isEnabled()) {
+            try {
+                mail.send(u.getEmail(), "[knowra] 탈퇴 신청을 받았어요", """
+                        %s님, knowra 입니다.
+
+                        탈퇴 신청을 받았어요. %d월 %d일에 글·댓글·커뮤니티 활동과 개인정보가 모두 지워져요.
+                        마음이 바뀌면 그 전에 다시 로그인만 하세요. 탈퇴가 취소돼요.
+
+                        직접 신청하지 않았다면 바로 로그인해서 비밀번호를 바꿔 주세요.
+                        """.formatted(u.getName() == null ? u.getNickName() : u.getName(), on.getMonthValue(), on.getDayOfMonth()));
+            } catch (Exception ignore) { /* 메일은 덤 — 신청은 이미 됐다 */ }
+        }
+        r.setResultCode(ResponseCode.SUCCESS.getCode());
+        r.setResultMessage("탈퇴 신청을 받았어요. " + on.getMonthValue() + "월 " + on.getDayOfMonth() + "일에 모두 지워지고, 그 전에 다시 로그인하면 취소돼요.");
+        return r;
+    }
+
+    /** 로그인 마무리에서 — 탈퇴 신청 중이었으면 취소하고 true */
+    public boolean cancel(long userSn) {
+        return jdbc.update("UPDATE knowra_user.tbl_user SET delete_req_at = NULL WHERE user_sn = ? AND delete_req_at IS NOT NULL AND actvtn_yn = 'Y'", userSn) > 0;
+    }
+
+    /** 매일 새벽 — 유예가 끝난 계정을 지운다. 한 사람 실패가 나머지를 막지 않게 한 명씩 */
+    @org.springframework.scheduling.annotation.Scheduled(cron = "${knowra.deletion.cron:0 40 4 * * *}", zone = "Asia/Seoul")
+    public void daily() { purgeDue(java.time.LocalDateTime.now()); }
+
+    public int purgeDue(java.time.LocalDateTime now) {
+        int n = 0;
+        for (Long sn : jdbc.queryForList("SELECT user_sn FROM knowra_user.tbl_user WHERE delete_req_at <= ? AND actvtn_yn = 'Y'",
+                Long.class, now.minusDays(GRACE_DAYS))) {
+            try {
+                if (Boolean.TRUE.equals(tx.execute(st -> purge(sn)))) n++;
+            } catch (Exception e) {
+                com.knowra.cmm.errlog.ErrorLog.report(e);
+            }
+        }
+        return n;
+    }
+
+    /**
+     * 실제로 지운다. 신청한 뒤 혼자이던 커뮤니티에 멤버가 생겼을 수 있다 — 그때는 막지 않고(본인은 이미 떠났다)
+     * 운영진, 없으면 가장 오래된 멤버에게 주인을 넘긴다.
+     */
+    boolean purge(long me) {
+        TblUser u = userRepository.findById(me).orElse(null);
+        if (u == null || !"Y".equals(u.getActvtnYn())) return false;
+        List<Map<String, Object>> owned = new java.util.ArrayList<>();
+        for (Map<String, Object> c : jdbc.queryForList("""
+                SELECT c.comm_sn FROM knowra_community.tbl_comm c JOIN knowra_community.tbl_comm_mbr o ON o.comm_sn = c.comm_sn
+                WHERE o.user_sn = ? AND o.role = 'OWNER' AND o.stat = 'ACTIVE' AND c.stat = 'Y'""", me)) {
+            Long heir = jdbc.query("""
+                    SELECT user_sn FROM knowra_community.tbl_comm_mbr WHERE comm_sn = ? AND stat = 'ACTIVE' AND user_sn <> ?
+                    ORDER BY CASE role WHEN 'ADMIN' THEN 0 ELSE 1 END, frst_crt_dt LIMIT 1""",
+                    rs -> rs.next() ? rs.getLong(1) : null, c.get("comm_sn"), me);
+            if (heir == null) { owned.add(c); continue; }   // 혼자 — 아래에서 닫는다
+            jdbc.update("UPDATE knowra_community.tbl_comm_mbr SET role = 'OWNER' WHERE comm_sn = ? AND user_sn = ?", c.get("comm_sn"), heir);
+            jdbc.update("UPDATE knowra_community.tbl_comm_mbr SET role = 'MEMBER' WHERE comm_sn = ? AND user_sn = ?", c.get("comm_sn"), me);
         }
 
         // 1) 글·댓글 — 기존 삭제 경로로
@@ -119,11 +193,10 @@ public class AccountDeletionService {
         u.setSnsName(null);
         u.setActvtnYn("N");
         userRepository.save(u);
+        jdbc.update("UPDATE knowra_user.tbl_user SET delete_req_at = NULL WHERE user_sn = ?", me);
 
         sessionService.revokeOthers(me, null);
-        r.setResultCode(ResponseCode.SUCCESS.getCode());
-        r.setResultMessage("탈퇴했어요. 그동안 고마웠어요.");
-        return r;
+        return true;
     }
 
     private static ResultVO fail(ResultVO r, String msg) {
