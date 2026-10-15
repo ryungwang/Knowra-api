@@ -201,6 +201,10 @@ public class UserService {
 
     private static boolean isYn(Object v) { return "Y".equals(v) || "N".equals(v); }
 
+    static boolean validZone(String z) {
+        try { java.time.ZoneId.of(z); return z.length() <= 64; } catch (Exception e) { return false; }
+    }
+
     public ResultVO setUserSetting(java.util.Map<String, Object> b, Long me) {
         ResultVO resultVO = new ResultVO();
 
@@ -219,6 +223,10 @@ public class UserService {
             if (isYn(b.get("likeNtfctnYn"))) org.setLikeNtfctnYn(String.valueOf(b.get("likeNtfctnYn")));
             if (isYn(b.get("sysNtfctnYn")))  org.setSysNtfctnYn(String.valueOf(b.get("sysNtfctnYn")));
             if (isYn(b.get("msgNtfctnYn")))  org.setMsgNtfctnYn(String.valueOf(b.get("msgNtfctnYn")));
+            // 언어·시간대 — 화면에서 고르면 온다. 알림·메일을 이 언어·시간대로 보낸다
+            String lang = com.knowra.cmm.i18n.Lang.normalize(b.get("lang") == null ? null : String.valueOf(b.get("lang")));
+            if (lang != null) org.setLang(lang);
+            if (b.get("timeZone") != null && validZone(String.valueOf(b.get("timeZone")))) org.setTimeZone(String.valueOf(b.get("timeZone")));
             if (isYn(b.get("digestYn")))     org.setDigestYn(String.valueOf(b.get("digestYn")));
             org.setMdfrSn(userSn);
             tblUserStngRepository.save(org);

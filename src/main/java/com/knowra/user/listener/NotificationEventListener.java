@@ -73,9 +73,13 @@ public class NotificationEventListener {
         boolean anonymous = event.senderSn() != null && "POST".equals(event.targetKind()) && event.targetSn() != null
                 && !em.createQuery("select c.commSn from TblPost p, TblComm c where p.postSn = :sn and c.commSn = p.commSn and c.prvcyStng = 'anonymous'")
                       .setParameter("sn", event.targetSn()).setMaxResults(1).getResultList().isEmpty();
-        if (anonymous) { nickName = com.knowra.post.service.PostQuery.ANONYMOUS_NAME; pfpUrl = null; }
+        // 받는 사람의 언어·시간대 — 알림 문장과 푸시를 그 언어로
+        com.knowra.user.entity.TblUserStng rst = stngRepository.findByUserSn(event.receiverSn());
+        String lang = rst == null || rst.getLang() == null ? com.knowra.cmm.i18n.Lang.KO : rst.getLang();
+        String tz = rst == null ? null : rst.getTimeZone();
+        if (anonymous) { nickName = tr(lang, com.knowra.post.service.PostQuery.ANONYMOUS_NAME); pfpUrl = null; }
 
-        String message = buildMessage(event.notifTyp(), nickName, event.extra());
+        String message = buildMessage(lang, tz, event.notifTyp(), nickName, event.extra());
 
         TblUserNotif entity = TblUserNotif.builder()
                 .userSn(event.receiverSn())
@@ -134,46 +138,65 @@ public class NotificationEventListener {
         return "/";
     }
 
-    private String buildMessage(String notifTyp, String nickName, String extra) {
-        String sender = nickName != null ? nickName + "님" : "누군가";
-        String place  = extra != null ? extra : "커뮤니티";
+    /**
+     * 알림 문장 — <b>받는 사람의 언어로</b>. 원문은 한국어 템플릿이고(번역 표의 키), 조사는 「이(가)」처럼 적어 두면
+     * 한국어일 때만 앞말을 보고 고른다(Josa). 날짜는 받는 사람의 시간대로.
+     */
+    String buildMessage(String lang, String tz, String notifTyp, String nickName, String extra) {
+        boolean ko = com.knowra.cmm.i18n.Lang.KO.equals(lang);
+        String sender = nickName != null ? (ko ? nickName + "님" : nickName) : tr(lang, "누군가");
+        String place  = extra != null ? extra : tr(lang, "커뮤니티");
+        String[] x = nz(extra).split("\\|", 3);
+        String a0 = x[0], a1 = x.length > 1 ? x[1] : "", a2 = x.length > 2 ? x[2] : "";
         String msg = switch (notifTyp) {
-            case "LIKE"        -> sender + "이 내 게시글을 좋아합니다.";
-            case "COMMENT"     -> sender + "이 내 게시글에 댓글을 달았습니다.";
-            case "REPLY"       -> sender + "이 내 댓글에 답글을 달았습니다.";
-            case "MENTION"     -> sender + "이 회원님을 언급했습니다.";
-            case "EVENT_NEW"      -> { String[] x = (extra == null ? "|" : extra).split("\\|", 2); String t = x.length > 1 ? x[1] : ""; yield sender + "이 " + x[0] + "에 모임 「" + t + "」" + objectJosa(t) + " 열었습니다."; }
+            case "LIKE"        -> tr(lang, "{0}이(가) 내 게시글을 좋아합니다.", sender);
+            case "COMMENT"     -> tr(lang, "{0}이(가) 내 게시글에 댓글을 달았습니다.", sender);
+            case "REPLY"       -> tr(lang, "{0}이(가) 내 댓글에 답글을 달았습니다.", sender);
+            case "MENTION"     -> tr(lang, "{0}이(가) 회원님을 언급했습니다.", sender);
+            case "EVENT_NEW"      -> tr(lang, "{0}이(가) {1}에 모임 「{2}」을(를) 열었습니다.", sender, a0, a1);
             // 하루 전(20~24시간 남음) — 「내일」이라 쓰면 오늘 밤 모임에 틀린 말이 된다
-            case "EVENT_TOMORROW" -> "모임 「" + nz(extra) + "」" + subjectJosa(nz(extra)) + " 하루 앞으로 다가왔어요.";
-            case "EVENT_SOON"     -> "모임 「" + nz(extra) + "」" + subjectJosa(nz(extra)) + " 곧 시작해요.";
-            case "EVENT_CANCEL"   -> "참석하려던 모임 「" + nz(extra) + "」" + subjectJosa(nz(extra)) + " 취소됐어요.";
-            case "BADGE"       -> "새 뱃지 " + (extra == null ? "" : extra) + objectJosa(extra) + " 얻었어요!";
-            case "FOLLOW"      -> sender + "이 팔로우를 시작했습니다.";
-            case "COMM_POST"   -> sender + "이 " + place + "에 새 글을 올렸습니다.";
-            case "COMM_NOTICE" -> place + "에 새 공지가 올라왔습니다.";
-            case "COMM_APPROVED"  -> place + " 가입이 승인됐습니다. 환영해요!";
-            case "COMM_REJECTED"  -> place + " 가입 신청이 받아들여지지 않았습니다.";
-            case "COMM_REMOVED"   -> place + "에서 내보내졌습니다.";
-            case "COMM_BANNED"    -> { String[] x = nz(extra).split("\\|", 3);
-                                       String until = x.length > 1 && !x[1].isEmpty() ? " " + x[1] + "까지 다시 참여할 수 없어요." : " 다시 참여할 수 없어요.";
-                                       String why = x.length > 2 && !x[2].isEmpty() ? " 사유: " + x[2] : "";
-                                       yield x[0] + "에서 내보내졌어요." + until + why; }
-            case "COMM_UNBANNED"  -> place + " 강퇴가 풀렸어요. 원하면 다시 참여할 수 있어요.";
-            case "COMM_ADMIN"     -> place + "의 운영진이 됐습니다.";
-            case "COMM_ADMIN_OFF" -> place + "의 운영진에서 해제됐습니다.";
-            case "COMM_OWNER"     -> sender + "이 " + place + "의 주인 자리를 넘겼습니다.";
-            case "KEYWORD"        -> { String[] x = nz(extra).split("\\|", 2); yield "관심 키워드 「" + x[0] + "」 새 글: " + (x.length > 1 ? x[1] : ""); }
-            case "SERIES_NEW"     -> { String[] x = nz(extra).split("\\|", 2); yield "구독 중인 연재 「" + x[0] + "」 새 편: " + (x.length > 1 ? x[1] : ""); }
-            case "CMT_PINNED"     -> sender + "이 「" + nz(extra) + "」에서 회원님의 댓글을 맨 위에 고정했어요.";
-            case "HOLD_NEW"       -> place + "에 검토할 새 멤버 글이 있어요.";
-            case "HOLD_APPROVED"  -> { String[] x = nz(extra).split("\\|", 2); yield x[0] + " 운영진이 확인해 글이 올라갔어요: " + (x.length > 1 ? x[1] : ""); }
-            case "HOLD_REJECTED"  -> { String[] x = nz(extra).split("\\|", 2); yield x[0] + " 운영진이 확인한 뒤 글을 올리지 않았어요: " + (x.length > 1 ? x[1] : ""); }
-            case "NEW_LOGIN"      -> "새 기기에서 로그인했어요: " + nz(extra) + ". 본인이 아니면 비밀번호를 바꾸고 그 기기를 로그아웃하세요.";
-            case "REPORT_HIDDEN"  -> "신고가 여러 건 들어와 회원님의 " + nz(extra) + subjectJosa(nz(extra)) + " 검토 중이에요. 문제가 없으면 다시 보여요.";
-            default            -> "새 알림이 있습니다. (" + notifTyp + ")";
+            case "EVENT_TOMORROW" -> tr(lang, "모임 「{0}」이(가) 하루 앞으로 다가왔어요.", nz(extra));
+            case "EVENT_SOON"     -> tr(lang, "모임 「{0}」이(가) 곧 시작해요.", nz(extra));
+            case "EVENT_CANCEL"   -> tr(lang, "참석하려던 모임 「{0}」이(가) 취소됐어요.", nz(extra));
+            case "BADGE"       -> tr(lang, "새 뱃지 {0}을(를) 얻었어요!", nz(extra));
+            case "FOLLOW"      -> tr(lang, "{0}이(가) 팔로우를 시작했습니다.", sender);
+            case "COMM_POST"   -> tr(lang, "{0}이(가) {1}에 새 글을 올렸습니다.", sender, place);
+            case "COMM_NOTICE" -> tr(lang, "{0}에 새 공지가 올라왔습니다.", place);
+            case "COMM_APPROVED"  -> tr(lang, "{0} 가입이 승인됐습니다. 환영해요!", place);
+            case "COMM_REJECTED"  -> tr(lang, "{0} 가입 신청이 받아들여지지 않았습니다.", place);
+            case "COMM_REMOVED"   -> tr(lang, "{0}에서 내보내졌습니다.", place);
+            // 「장소|풀리는 때(ISO, 비면 영구)|사유」 — 날짜는 받는 사람의 언어·시간대로
+            case "COMM_BANNED"    -> (a1.isEmpty() ? tr(lang, "{0}에서 내보내졌어요. 다시 참여할 수 없어요.", a0)
+                                                   : tr(lang, "{0}에서 내보내졌어요. {1}까지 다시 참여할 수 없어요.", a0, untilText(a1, lang, tz)))
+                                     + (a2.isEmpty() ? "" : " " + tr(lang, "사유: {0}", a2));
+            case "COMM_UNBANNED"  -> tr(lang, "{0} 강퇴가 풀렸어요. 원하면 다시 참여할 수 있어요.", place);
+            case "COMM_ADMIN"     -> tr(lang, "{0}의 운영진이 됐습니다.", place);
+            case "COMM_ADMIN_OFF" -> tr(lang, "{0}의 운영진에서 해제됐습니다.", place);
+            case "COMM_OWNER"     -> tr(lang, "{0}이(가) {1}의 주인 자리를 넘겼습니다.", sender, place);
+            case "KEYWORD"        -> tr(lang, "관심 키워드 「{0}」 새 글: {1}", a0, a1);
+            case "SERIES_NEW"     -> tr(lang, "구독 중인 연재 「{0}」 새 편: {1}", a0, a1);
+            case "CMT_PINNED"     -> tr(lang, "{0}이(가) 「{1}」에서 회원님의 댓글을 맨 위에 고정했어요.", sender, nz(extra));
+            case "HOLD_NEW"       -> tr(lang, "{0}에 검토할 새 멤버 글이 있어요.", place);
+            case "HOLD_APPROVED"  -> tr(lang, "{0} 운영진이 확인해 글이 올라갔어요: {1}", a0, a1);
+            case "HOLD_REJECTED"  -> tr(lang, "{0} 운영진이 확인한 뒤 글을 올리지 않았어요: {1}", a0, a1);
+            case "NEW_LOGIN"      -> tr(lang, "새 기기에서 로그인했어요: {0}. 본인이 아니면 비밀번호를 바꾸고 그 기기를 로그아웃하세요.", nz(extra));
+            // extra 는 「글」·「댓글」 — 그 말도 받는 사람의 언어로
+            case "REPORT_HIDDEN"  -> tr(lang, "신고가 여러 건 들어와 회원님의 {0}이(가) 검토 중이에요. 문제가 없으면 다시 보여요.", tr(lang, nz(extra)));
+            default            -> tr(lang, "새 알림이 있습니다. ({0})", notifTyp);
         };
         // MESSAGE 컬럼은 255자다 — 커뮤니티 이름이 길어도 넘치지 않게 자른다.
         return msg.length() > 250 ? msg.substring(0, 250) + "…" : msg;
+    }
+
+    /** 번역하고, 한국어면 조사를 고른다 */
+    private static String tr(String lang, String ko, Object... args) {
+        String s = com.knowra.cmm.i18n.Msg.tl(lang, ko, args);
+        return com.knowra.cmm.i18n.Lang.KO.equals(lang) ? com.knowra.cmm.i18n.Josa.resolve(s) : s;
+    }
+
+    private static String untilText(String iso, String lang, String tz) {
+        try { return com.knowra.cmm.i18n.Fmt.dateTime(java.time.LocalDateTime.parse(iso), lang, tz); }
+        catch (Exception e) { return iso; }   // 예전 형식(「10월 18일 23:13」)이 남아 있으면 그대로
     }
 
     /** 을/를 — 마지막 한글 글자에 받침이 있으면 「을」. 「첫 글」을 · 「작은 박수」를 · 외 3개를 */

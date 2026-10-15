@@ -51,6 +51,14 @@ public class TblUserStng {
   @Comment("메시지(DM·그룹) 푸시 알림 여부 (Y / N)")
   private String msgNtfctnYn = "Y";
 
+  @Column(name = "LANG", length = 10, nullable = false)
+  @Comment("알림·메일 언어 (ko / en / ja / zh-Hans / zh-Hant)")
+  private String lang = "ko";
+
+  @Column(name = "TIME_ZONE", length = 64, nullable = false)
+  @Comment("IANA 시간대 — 알림 속 날짜와 메일 보내는 시각")
+  private String timeZone = "Asia/Seoul";
+
   @Column(name = "DIGEST_YN", length = 1, nullable = false)
   @Comment("주간 소식 메일 수신 동의 (Y / N) — 기본 N")
   private String digestYn = "N";
