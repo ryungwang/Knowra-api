@@ -194,17 +194,30 @@ public class CommEventService {
         for (Long u : to) publisher.publishEvent(new NotifTriggerEvent(u, sender, typ, commSn, "COMM", label));
     }
 
-    /** 리마인더 — 5분마다. 하루 전(23~24시간 남음)·한 시간 전(0~60분 남음) 참석자에게 한 번씩. */
+    /** 하루 전 알림을 보내는 구간의 시작 — 이보다 가까워진 뒤에 만든 모임은 하루 전 알림 없이 한 시간 전만 간다 */
+    static final long DAY_REMINDER_FROM_MIN = 20 * 60;
+
+    /**
+     * 지금 보낼 리마인더 — 없으면 null. 하루 전은 20~24시간 남았을 때, 한 시간 전은 60분 안.
+     * ⚠️ 예전엔 「60분보다 많이 남음」만 봐서, 세 시간 뒤 모임을 만들면 5분 안에 「하루 전」 알림이 갔다.
+     */
+    static String reminderType(long minutes, boolean remindedDay, boolean remindedHour) {
+        if (minutes <= 60) return remindedHour ? null : "EVENT_SOON";
+        if (minutes >= DAY_REMINDER_FROM_MIN && !remindedDay) return "EVENT_TOMORROW";
+        return null;
+    }
+
+    /** 리마인더 — 5분마다. 하루 전(20~24시간 남음)·한 시간 전(0~60분 남음) 참석자에게 한 번씩. */
     @Scheduled(fixedDelay = 5 * 60 * 1000L, initialDelay = 60 * 1000L)
     @Transactional
     public void remind() {
         LocalDateTime now = LocalDateTime.now();
         for (TblCommEvent e : events.findAllByStatAndStartsAtBetween("ACTIVE", now, now.plusHours(24))) {
             long minutes = java.time.Duration.between(now, e.getStartsAt()).toMinutes();
-            String typ = null;
-            if (minutes <= 60 && !e.isRemindedHour()) { typ = "EVENT_SOON"; e.setRemindedHour(true); e.setRemindedDay(true); }
-            else if (minutes > 60 && !e.isRemindedDay()) { typ = "EVENT_TOMORROW"; e.setRemindedDay(true); }
+            String typ = reminderType(minutes, e.isRemindedDay(), e.isRemindedHour());
             if (typ == null) continue;
+            e.setRemindedDay(true);
+            if ("EVENT_SOON".equals(typ)) e.setRemindedHour(true);
             events.save(e);
             for (TblCommEventRsvp r : rsvps.findAllByEventSnOrderByFrstCrtDtAsc(e.getEventSn())) {
                 publisher.publishEvent(new NotifTriggerEvent(r.getUserSn(), null, typ, e.getCommSn(), "COMM", e.getTitle()));

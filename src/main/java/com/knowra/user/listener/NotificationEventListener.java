@@ -143,7 +143,8 @@ public class NotificationEventListener {
             case "REPLY"       -> sender + "이 내 댓글에 답글을 달았습니다.";
             case "MENTION"     -> sender + "이 회원님을 언급했습니다.";
             case "EVENT_NEW"      -> { String[] x = (extra == null ? "|" : extra).split("\\|", 2); String t = x.length > 1 ? x[1] : ""; yield sender + "이 " + x[0] + "에 모임 「" + t + "」" + objectJosa(t) + " 열었습니다."; }
-            case "EVENT_TOMORROW" -> "내일 모임 「" + nz(extra) + "」" + subjectJosa(nz(extra)) + " 있어요.";
+            // 하루 전(20~24시간 남음) — 「내일」이라 쓰면 오늘 밤 모임에 틀린 말이 된다
+            case "EVENT_TOMORROW" -> "모임 「" + nz(extra) + "」" + subjectJosa(nz(extra)) + " 하루 앞으로 다가왔어요.";
             case "EVENT_SOON"     -> "모임 「" + nz(extra) + "」" + subjectJosa(nz(extra)) + " 곧 시작해요.";
             case "EVENT_CANCEL"   -> "참석하려던 모임 「" + nz(extra) + "」" + subjectJosa(nz(extra)) + " 취소됐어요.";
             case "BADGE"       -> "새 뱃지 " + (extra == null ? "" : extra) + objectJosa(extra) + " 얻었어요!";
