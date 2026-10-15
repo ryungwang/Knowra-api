@@ -80,7 +80,8 @@ public class FileUtil {
 	public TblComFile storeImage(MultipartFile f, long ownerSn, String category, String psnTblSn) throws IOException {
 		String origin = f.getOriginalFilename();
 		String ext = requireAllowedExtension(origin);
-		com.knowra.cmm.storage.StorageService.PublicFile saved = storage.storePublic(f.getBytes(), ownerSn + "/" + category, "x." + ext);
+		byte[] bytes = com.knowra.cmm.image.ImageSanitizer.clean(f.getBytes(), ext);   // 위치정보를 지우고 큰 사진은 줄인다
+		com.knowra.cmm.storage.StorageService.PublicFile saved = storage.storePublic(bytes, ownerSn + "/" + category, "x." + ext);
 		String key = saved.key();
 		int slash = key.lastIndexOf('/');
 		String file = key.substring(slash + 1);
@@ -90,7 +91,7 @@ public class FileUtil {
 		c.setStrgFileNm(file.contains(".") ? file.substring(0, file.lastIndexOf('.')) : file);
 		c.setAtchFileExtnNm(ext);
 		c.setAtchFileNm(origin == null ? "" : (origin.length() > 100 ? origin.substring(origin.length() - 100) : origin));
-		c.setAtchFileSz(f.getSize());
+		c.setAtchFileSz(bytes.length);
 		c.setPsnTblSn(psnTblSn);
 		return c;
 	}
@@ -98,7 +99,8 @@ public class FileUtil {
 	/** 에디터·댓글·DM 사진 — 공개 URL(운영은 S3 절대 주소)을 돌려준다. 그대로 본문 HTML 에 박힌다. */
 	public String uploadImage(MultipartFile file, long ownerSn, String category) throws IOException {
 		String ext = requireAllowedExtension(file.getOriginalFilename());
-		return storage.storePublic(file.getBytes(), ownerSn + "/" + category, "x." + ext).url();
+		byte[] bytes = com.knowra.cmm.image.ImageSanitizer.clean(file.getBytes(), ext);
+		return storage.storePublic(bytes, ownerSn + "/" + category, "x." + ext).url();
 	}
 
 	/**
