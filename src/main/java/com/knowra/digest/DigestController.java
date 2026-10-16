@@ -42,6 +42,16 @@ public class DigestController {
         return r;
     }
 
+    /**
+     * 메일 프로그램의 「구독 해지」 한 번 누르기(RFC 8058) — 본문이 form 「List-Unsubscribe=One-Click」으로 온다.
+     * 로그인 없이, 서명(t)으로만 확인한다. 응답 본문은 메일 프로그램이 보지 않으니 상태 코드만 맞춘다.
+     */
+    @PostMapping("/api/digest/oneclick")
+    public org.springframework.http.ResponseEntity<Void> oneClick(@RequestParam("u") long u, @RequestParam("t") String t) {
+        try { svc.unsubscribe(u, t); return org.springframework.http.ResponseEntity.ok().build(); }
+        catch (IllegalArgumentException e) { return org.springframework.http.ResponseEntity.badRequest().build(); }
+    }
+
     /** 관리자: 지금 바로 보내기(이번 주에 이미 받은 사람은 건너뛴다). {@code /api/admin/**} 는 ROLE_ADMIN 전용. */
     @PostMapping("/api/admin/console/digestRun")
     public ResultVO run() {

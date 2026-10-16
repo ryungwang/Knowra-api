@@ -30,9 +30,27 @@ public class MailService {
 
     public boolean isEnabled() { return enabled; }
 
-    public void send(String to, String subject, String text) {
+    public void send(String to, String subject, String text) { send(to, subject, text, null); }
+
+    /**
+     * 머리글을 더 붙여 보낸다 — 주간 소식처럼 한꺼번에 보내는 메일은 List-Unsubscribe(한 번 눌러 그만 받기, RFC 8058)가
+     * 있어야 Gmail·Yahoo 가 스팸함으로 보내지 않는다(2024년부터 대량 발송자 요건). headers 가 없으면 예전과 같다.
+     */
+    public void send(String to, String subject, String text, java.util.Map<String, String> headers) {
         if (!enabled) {
-            log.info("[MAIL(dry-run)] to={} subject={}\n{}", to, subject, text);
+            log.info("[MAIL(dry-run)] to={} subject={} headers={}\n{}", to, subject, headers, text);
+            return;
+        }
+        if (headers != null && !headers.isEmpty()) {
+            JavaMailSender sender = senderProvider.getIfAvailable();
+            if (sender == null) throw new IllegalStateException("메일 발송기가 설정되지 않았습니다 (spring.mail.*)");
+            try {
+                jakarta.mail.internet.MimeMessage m = sender.createMimeMessage();
+                org.springframework.mail.javamail.MimeMessageHelper h = new org.springframework.mail.javamail.MimeMessageHelper(m, false, "UTF-8");
+                h.setFrom(from); h.setTo(to); h.setSubject(subject); h.setText(text, false);
+                for (var e : headers.entrySet()) m.setHeader(e.getKey(), e.getValue());
+                sender.send(m);
+            } catch (jakarta.mail.MessagingException ex) { throw new IllegalStateException(ex); }
             return;
         }
         JavaMailSender sender = senderProvider.getIfAvailable();

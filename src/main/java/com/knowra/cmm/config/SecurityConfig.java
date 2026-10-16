@@ -84,7 +84,7 @@ public class SecurityConfig {
                                 // 가입 전 인증 코드(메일·문자) · 비밀번호 재설정 — 로그인 전에 쓰는 것들
                                 "/api/auth/verify/send", "/api/auth/verify/check",
                                 "/api/auth/password/forgot", "/api/auth/password/reset",
-                                "/api/digest/unsubscribe",
+                                "/api/digest/unsubscribe", "/api/digest/oneclick",
                                 "/api/err/report").permitAll()
 
                         // 비로그인 열람 — 피드·글·댓글

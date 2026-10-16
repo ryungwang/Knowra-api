@@ -200,6 +200,16 @@ public class DigestService {
 
     public String unsubscribeUrl(long userSn) { return front + "/digest/off?u=" + userSn + "&t=" + token(userSn); }
 
+    /** 메일 프로그램의 「구독 해지」 버튼이 POST 로 부르는 주소(RFC 8058) — 같은 도메인에서 nginx 가 /api 를 넘긴다 */
+    public String oneClickUrl(long userSn) { return front + "/api/digest/oneclick?u=" + userSn + "&t=" + token(userSn); }
+
+    /** 주간 소식 메일 머리글 — 한 번 눌러 그만 받기 */
+    Map<String, String> unsubscribeHeaders(long userSn) { return oneClickHeaders(oneClickUrl(userSn)); }
+
+    static Map<String, String> oneClickHeaders(String url) {
+        return Map.of("List-Unsubscribe", "<" + url + ">", "List-Unsubscribe-Post", "List-Unsubscribe=One-Click");
+    }
+
     /** 서명이 맞으면 끈다. 이미 꺼져 있어도 성공(링크를 두 번 눌러도 같은 화면). */
     @Transactional
     public void unsubscribe(long userSn, String t) {
@@ -247,7 +257,7 @@ public class DigestService {
                 if (d.isEmpty()) { empty++; continue; }
                 if (!redis.setIfAbsent(REDIS_DB, "digest:sent:" + week + ":" + sn, "1", 8L * 24 * 3600)) { dup++; continue; }
                 Prefs p = prefs(sn);
-                try { mail.send(t.get(u.email), subject(d, p.lang()), render(d, sn, p)); sent++; }
+                try { mail.send(t.get(u.email), subject(d, p.lang()), render(d, sn, p), unsubscribeHeaders(sn)); sent++; }
                 catch (RuntimeException ex) { redis.delRedis(REDIS_DB, "digest:sent:" + week + ":" + sn); throw ex; }   // 실패하면 표식을 지워 다음 실행에서 다시
             } catch (RuntimeException ex) {
                 failed++;

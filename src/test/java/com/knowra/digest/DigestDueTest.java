@@ -18,4 +18,11 @@ class DigestDueTest {
         assertThat(DigestService.dueAt(nyMon9, "Asia/Seoul")).isFalse();
         assertThat(DigestService.dueAt(seoulMon9, null)).isTrue();   // 설정이 없으면 서울
     }
+
+    @Test
+    void 한_번_눌러_그만_받기_머리글() {   // RFC 8058 — Gmail·Yahoo 대량 발송 요건
+        var h = DigestService.oneClickHeaders("https://knowra.example/api/digest/oneclick?u=1&t=x");
+        assertThat(h.get("List-Unsubscribe")).isEqualTo("<https://knowra.example/api/digest/oneclick?u=1&t=x>");
+        assertThat(h.get("List-Unsubscribe-Post")).isEqualTo("List-Unsubscribe=One-Click");
+    }
 }
