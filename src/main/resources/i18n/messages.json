@@ -725,11 +725,17 @@
   "zh-Hans": "有人",
   "zh-Hant": "有人"
  },
- "닉네임은 한글·영문·숫자와 . _ - 로 2~30자예요.": {
-  "en": "Nicknames must be 2–30 characters: Korean, English letters, numbers, and . _ -",
-  "ja": "ニックネームはハングル・英字・数字と . _ - で2〜30文字です。",
-  "zh-Hans": "昵称须为 2–30 个字符，可使用韩文、英文、数字及 . _ -",
-  "zh-Hant": "暱稱須為 2–30 個字元，可使用韓文、英文、數字及 . _ -"
+ "닉네임에 쓸 수 없는 글자가 있어요.": {
+  "en": "Your nickname contains characters that aren't allowed.",
+  "ja": "ニックネームに使用できない文字が含まれています。",
+  "zh-Hans": "昵称中含有不允许使用的字符。",
+  "zh-Hant": "暱稱中含有不允許使用的字元。"
+ },
+ "닉네임은 글자·숫자와 . _ - 로 2~30자예요.": {
+  "en": "Nicknames can use letters, numbers, and . _ - (2–30 characters).",
+  "ja": "ニックネームは文字・数字と . _ - で2〜30文字です。",
+  "zh-Hans": "昵称可使用文字、数字及 . _ -，长度为 2–30 个字符。",
+  "zh-Hant": "暱稱可使用文字、數字及 . _ -，長度為 2–30 個字元。"
  },
  "다른 기기에서 로그인하여, 로그아웃되었습니다.": {
   "en": "You were logged out because you logged in on another device.",
@@ -880,6 +886,12 @@
   "ja": "ログインすると見られる投稿か、削除された投稿です。",
   "zh-Hans": "该帖子需要登录才能查看，或已被删除。",
   "zh-Hant": "此貼文需要登入才能查看，或已被刪除。"
+ },
+ "로마자와 키릴·그리스 문자를 섞은 닉네임은 쓸 수 없어요.": {
+  "en": "Nicknames can't mix Latin letters with Cyrillic or Greek letters.",
+  "ja": "ローマ字とキリル文字・ギリシャ文字を混ぜたニックネームは使用できません。",
+  "zh-Hans": "昵称不能混用拉丁字母与西里尔或希腊字母。",
+  "zh-Hant": "暱稱不能混用拉丁字母與西里爾或希臘字母。"
  },
  "링크가 만료됐거나 올바르지 않습니다. 다시 요청해주세요.": {
   "en": "This link has expired or is invalid. Please request a new one.",

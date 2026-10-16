@@ -32,10 +32,13 @@ import static com.knowra.post.service.PostQuery.POST;
 public class MentionService {
 
     /** 앞이 글자나 @ 가 아닐 때만 — 이메일(a@b.com)을 멘션으로 읽지 않게. 닉네임 허용 문자와 같게. */
-    static final Pattern MENTION = Pattern.compile("(?<![0-9A-Za-z가-힣._@-])@([0-9A-Za-z가-힣._-]{2,30})");
+    static final Pattern MENTION = Pattern.compile("(?<![\\p{L}\\p{M}\\p{N}._@-])@([\\p{L}\\p{M}\\p{N}._-]{2,30})");
     public static final int MAX_PER_TEXT = 10;
     /** "@deer님", "@deer에게" 처럼 띄우지 않고 붙는 말. 닉네임에 한글이 들어갈 수 있어 정규식만으로는 못 가른다. */
-    static final List<String> TAILS = List.of("님께서", "에게서", "한테서", "님께", "님이", "님은", "님을", "님의", "에게", "한테", "께서", "님", "씨", "이", "가", "은", "는", "을", "를", "의", "도", "아", "야", "께");
+    static final List<String> TAILS = List.of("님께서", "에게서", "한테서", "님께", "님이", "님은", "님을", "님의", "에게", "한테", "께서", "님", "씨", "이", "가", "은", "는", "을", "를", "의", "도", "아", "야", "께",
+            "さん", "くん", "ちゃん", "さま", "様", "氏", "先生");   // 일본어 호칭도 붙여 쓴다
+    /** 띄어쓰기 없이 쓰는 글자(한자·가나). 「@田中こんにちは」 는 어디까지가 이름인지 글자로는 못 가른다. */
+    private static final Pattern NO_SPACE_SCRIPT = Pattern.compile("[\\p{IsHan}\\p{IsHiragana}\\p{IsKatakana}]");
 
     /** 멘션 하나가 가리킬 수 있는 닉네임 후보 — 긴 것부터. 실제 있는 것 중 가장 긴 걸 고른다. */
     static List<String> variants(String token) {
@@ -44,6 +47,9 @@ public class MentionService {
         for (String t : TAILS) {
             if (token.length() > t.length() + 1 && token.endsWith(t)) out.add(token.substring(0, token.length() - t.length()));
         }
+        // 한자·가나가 섞이면 앞부분 전부를 후보로 — 실제 있는 닉네임 중 가장 긴 것을 고른다(notify)
+        if (NO_SPACE_SCRIPT.matcher(token).find())
+            for (int n = token.length() - 1; n >= 2; n--) out.add(token.substring(0, n));
         out.sort(Comparator.comparingInt(String::length).reversed());
         return out.stream().distinct().toList();
     }
