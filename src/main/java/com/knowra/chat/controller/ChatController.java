@@ -98,4 +98,16 @@ public class ChatController {
     public ResultVO markRead(@RequestBody Map<String, Object> params, @CurrentUser Long me) {
         return chatService.markRead(params, me);
     }
+
+    /** body: msgSn, emoji, on — 메시지 반응 */
+    @PostMapping("/react")
+    public ResultVO react(@RequestBody Map<String, Object> params, @CurrentUser Long me) {
+        return chatService.react(params, me);
+    }
+
+    /** body: roomSn, q — 대화 안 검색 */
+    @PostMapping("/searchMsg")
+    public ResultVO searchMsg(@RequestBody Map<String, Object> params, @CurrentUser Long me) {
+        return chatService.searchMsg(params, me);
+    }
 }

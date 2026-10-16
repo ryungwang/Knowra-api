@@ -44,6 +44,8 @@ public class RateLimitInterceptor implements HandlerInterceptor {
             Map.entry("/api/community/invite/create", new Rule("invite", 20, 3600)),
             Map.entry("/api/community/modmail/create", new Rule("modmail", 5, 3600)),   // 운영진 문의함을 덮는 도배
             Map.entry("/api/tag/follow",              new Rule("tag-follow", 60, 600)),
+            Map.entry("/api/chat/react",              new Rule("chat-react", 60, 60)),
+            Map.entry("/api/chat/searchMsg",          new Rule("chat-search", 30, 60)),
             Map.entry("/api/community/modmail/reply",  new Rule("modmail-re", 30, 600)),
             Map.entry("/api/community/invite/accept", new Rule("invite-use", 30, 3600)),
             Map.entry("/api/community/wiki/page/save", new Rule("wiki", 30, 600)),

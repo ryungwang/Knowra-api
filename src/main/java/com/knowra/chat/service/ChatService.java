@@ -52,6 +52,13 @@ public class ChatService {
     private final com.knowra.safety.service.SafetyService safetyService;
     private final ChatGroupService groupService;
     private final org.springframework.context.ApplicationEventPublisher events;
+    private final org.springframework.jdbc.core.JdbcTemplate jdbc;
+
+    /** 받는 반응 — 고른 몇 가지만(아무 글자나 받으면 반응이 또 하나의 메시지 창구가 된다) */
+    static final List<String> REACTIONS = List.of("👍", "❤️", "😂", "😮", "😢", "🙏");
+    /** 입력 중 신호를 같은 사람·방에서 이 간격보다 자주 흘리지 않는다 */
+    private static final long TYPING_GAP_MS = 2500;
+    private final java.util.concurrent.ConcurrentHashMap<String, Long> typingAt = new java.util.concurrent.ConcurrentHashMap<>();
 
     @PersistenceContext
     private EntityManager em;
@@ -218,7 +225,7 @@ public class ChatService {
             Set<Long> blocked = new HashSet<>();
             if (group) for (TblChatRoomMbr x : roomMbrRepository.findAllByRoomSn(roomSn))
                 if (x.getUserSn() != userSn && safetyService.blockedEitherWay(userSn, x.getUserSn())) blocked.add(x.getUserSn());
-            List<Map<String, Object>> list = rows.stream().filter(x -> !blocked.contains(x.getUserSn())).map(this::toDto).toList();
+            List<Map<String, Object>> list = decorate(rows.stream().filter(x -> !blocked.contains(x.getUserSn())).map(this::toDto).toList());
             resultVO.putResult("list", list);
             Map<String, Object> roomInfo = new HashMap<>();
             roomInfo.put("roomTyp", room.getRoomTyp());
@@ -262,7 +269,11 @@ public class ChatService {
                     throw new IllegalArgumentException("대화할 수 없는 상대예요.");
             }
 
-            TblChatMsg saved = msgRepository.save(TblChatMsg.builder().roomSn(roomSn).userSn(userSn).msgCntnt(text).imgUrl(imgUrl).build());
+            // 답장 — 같은 방의 메시지에만(다른 방 메시지 번호로 그 내용을 떠보지 못하게)
+            Long replyTo = params.get("replyToMsgSn") == null || String.valueOf(params.get("replyToMsgSn")).isBlank() ? null : Long.parseLong(String.valueOf(params.get("replyToMsgSn")));
+            if (replyTo != null && msgRepository.findById(replyTo).filter(x -> x.getRoomSn() == roomSn).isEmpty())
+                throw new IllegalArgumentException("답장할 수 없는 메시지예요.");
+            TblChatMsg saved = msgRepository.save(TblChatMsg.builder().roomSn(roomSn).userSn(userSn).msgCntnt(text).imgUrl(imgUrl).replyToMsgSn(replyTo).build());
             TblChatRoom room = roomRepository.findById(roomSn).orElseThrow();
             room.setLastMsgSn(saved.getMsgSn());
             room.setLastMsgAt(saved.getFrstCrtDt());
@@ -272,7 +283,7 @@ public class ChatService {
                 mb.setLastReadMsgSn(saved.getMsgSn()); roomMbrRepository.save(mb);
             });
 
-            Map<String, Object> dto = toDto(saved);
+            Map<String, Object> dto = decorate(List.of(toDto(saved))).get(0);
             Map<Long, Boolean> recipients = new LinkedHashMap<>();
             for (TblChatRoomMbr mb : roomMbrRepository.findAllByRoomSn(roomSn)) {
                 if (mb.getUserSn() == userSn || "DECLINED".equals(mb.getStat()) || "LEFT".equals(mb.getStat())) continue;   // 거절·나간 사람에겐 아무것도 안 간다
@@ -390,6 +401,142 @@ public class ChatService {
         d.put("hidden",    hidden);
         d.put("deleted",   deleted);
         d.put("createdAt", m.getFrstCrtDt().format(ISO));
+        d.put("replyToMsgSn", m.getReplyToMsgSn());
         return d;
+    }
+
+    /**
+     * 메시지들에 답장 대상 요약(replyTo)과 반응(reactions: [{ emoji, users }])을 붙인다 — 한 번에 읽는다.
+     * 답장 대상이 지워졌거나 가려졌으면 내용 없이 표시만(원 메시지와 같은 규칙).
+     */
+    List<Map<String, Object>> decorate(List<Map<String, Object>> list) {
+        if (list.isEmpty()) return list;
+        List<Long> sns = list.stream().map(d -> ((Number) d.get("msgSn")).longValue()).toList();
+        List<Long> replySns = list.stream().map(d -> (Long) d.get("replyToMsgSn")).filter(java.util.Objects::nonNull).distinct().toList();
+        Map<Long, List<Map<String, Object>>> reacts = reactionsOf(sns);
+        Map<Long, Map<String, Object>> replies = new HashMap<>();
+        if (!replySns.isEmpty())
+            for (TblChatMsg r : msgRepository.findAllById(replySns)) {
+                Map<String, Object> o = new HashMap<>();
+                boolean gone = r.getHiddenAt() != null || r.getDeletedAt() != null;
+                o.put("msgSn", r.getMsgSn());
+                o.put("userSn", r.getUserSn());
+                o.put("gone", gone);
+                String c = gone ? "" : r.getMsgCntnt();
+                o.put("msgCntnt", c.length() > 80 ? c.substring(0, 79) + "…" : c);
+                o.put("hasImg", !gone && r.getImgUrl() != null);
+                replies.put(r.getMsgSn(), o);
+            }
+        List<Map<String, Object>> out = new ArrayList<>(list.size());
+        for (Map<String, Object> d : list) {
+            Map<String, Object> x = new HashMap<>(d);
+            long sn = ((Number) d.get("msgSn")).longValue();
+            x.put("reactions", reacts.getOrDefault(sn, List.of()));
+            Long r = (Long) d.get("replyToMsgSn");
+            if (r != null) x.put("replyTo", replies.getOrDefault(r, Map.of("msgSn", r, "gone", true)));
+            out.add(x);
+        }
+        return out;
+    }
+
+    private Map<Long, List<Map<String, Object>>> reactionsOf(List<Long> msgSns) {
+        Map<Long, Map<String, List<Long>>> acc = new HashMap<>();
+        if (msgSns.isEmpty()) return Map.of();
+        String in = String.join(",", java.util.Collections.nCopies(msgSns.size(), "?"));
+        jdbc.query("SELECT msg_sn, emoji, user_sn FROM knowra_user.tbl_chat_msg_react WHERE msg_sn IN (" + in + ") ORDER BY created_at", rs -> {
+            acc.computeIfAbsent(rs.getLong(1), k -> new LinkedHashMap<>()).computeIfAbsent(rs.getString(2), k -> new ArrayList<>()).add(rs.getLong(3));
+        }, msgSns.toArray());
+        Map<Long, List<Map<String, Object>>> out = new HashMap<>();
+        acc.forEach((sn, byEmoji) -> out.put(sn, byEmoji.entrySet().stream()
+                .map(e -> Map.<String, Object>of("emoji", e.getKey(), "users", e.getValue())).toList()));
+        return out;
+    }
+
+    // ── 반응 ─────────────────────────────────────────────────────────────
+    /** params: msgSn, emoji, on — 방 멤버만. 바뀐 반응을 방 사람들에게 밀어 준다(CHAT_REACT) */
+    @Transactional
+    public ResultVO react(Map<String, Object> params, Long me) {
+        ResultVO resultVO = new ResultVO();
+        try {
+            long msgSn = Long.parseLong(String.valueOf(params.get("msgSn")));
+            String emoji = String.valueOf(params.get("emoji"));
+            boolean on = Boolean.parseBoolean(String.valueOf(params.get("on")));
+            if (!REACTIONS.contains(emoji)) throw new IllegalArgumentException("잘못된 요청이에요.");
+            TblChatMsg m = msgRepository.findById(msgSn).orElseThrow(() -> new IllegalArgumentException("메시지를 찾을 수 없어요."));
+            requireMember(m.getRoomSn(), me);
+            if (m.getDeletedAt() != null || m.getHiddenAt() != null) throw new IllegalArgumentException("메시지를 찾을 수 없어요.");
+            if (on) jdbc.update("INSERT INTO knowra_user.tbl_chat_msg_react (msg_sn, user_sn, emoji) VALUES (?,?,?) ON CONFLICT DO NOTHING", msgSn, me, emoji);
+            else jdbc.update("DELETE FROM knowra_user.tbl_chat_msg_react WHERE msg_sn = ? AND user_sn = ? AND emoji = ?", msgSn, me, emoji);
+            List<Map<String, Object>> reactions = reactionsOf(List.of(msgSn)).getOrDefault(msgSn, List.of());
+            Map<String, Object> ev = Map.of("roomSn", m.getRoomSn(), "msgSn", msgSn, "reactions", reactions);
+            for (TblChatRoomMbr mb : roomMbrRepository.findAllByRoomSn(m.getRoomSn()))
+                if ("ACTIVE".equals(mb.getStat()) && mb.getUserSn() != me) wsHandler.pushEvent(mb.getUserSn(), "CHAT_REACT", ev);
+            resultVO.putResult("reactions", reactions);
+            resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
+        } catch (IllegalArgumentException e) {
+            resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
+            resultVO.setResultMessage(e.getMessage());
+        } catch (Exception e) {
+            ErrorLog.report(e);
+            resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
+            resultVO.setResultMessage(ResponseCode.SAVE_ERROR.getMessage());
+        }
+        return resultVO;
+    }
+
+    // ── 입력 중 ──────────────────────────────────────────────────────────
+    /**
+     * 웹소켓 TYPING 을 방의 다른 사람들에게 흘린다(저장하지 않는다). 수락한 멤버끼리만 — 요청함 상대에게는 안 간다.
+     * 같은 사람·방은 TYPING_GAP_MS 안에 한 번만(화면이 자주 보내도 서버가 거른다).
+     */
+    @org.springframework.context.event.EventListener
+    public void onTyping(com.knowra.cmm.handler.ChatTypingEvent e) {
+        String key = e.userSn() + ":" + e.roomSn();
+        long now = System.currentTimeMillis();
+        Long last = typingAt.get(key);
+        if (last != null && now - last < TYPING_GAP_MS) return;
+        typingAt.put(key, now);
+        if (typingAt.size() > 10_000) typingAt.clear();
+        List<TblChatRoomMbr> mbs = roomMbrRepository.findAllByRoomSn(e.roomSn());
+        if (mbs.stream().noneMatch(m -> m.getUserSn() == e.userSn() && "ACTIVE".equals(m.getStat()))) return;
+        Map<String, Object> ev = Map.of("roomSn", e.roomSn(), "userSn", e.userSn());
+        for (TblChatRoomMbr mb : mbs)
+            if (mb.getUserSn() != e.userSn() && "ACTIVE".equals(mb.getStat()) && !safetyService.blockedEitherWay(e.userSn(), mb.getUserSn()))
+                wsHandler.pushEvent(mb.getUserSn(), "CHAT_TYPING", ev);
+    }
+
+    // ── 대화 안 검색 ─────────────────────────────────────────────────────
+    /** params: roomSn, q(2~50자) — 이 방에서 글자가 들어간 메시지, 최근 것부터 30개. 지운·가린 메시지와 차단한 사람 것은 뺀다 */
+    @Transactional(readOnly = true)
+    public ResultVO searchMsg(Map<String, Object> params, Long me) {
+        ResultVO resultVO = new ResultVO();
+        try {
+            long roomSn = Long.parseLong(String.valueOf(params.get("roomSn")));
+            String q = params.get("q") == null ? "" : String.valueOf(params.get("q")).trim();
+            if (q.length() < 2 || q.length() > 50) throw new IllegalArgumentException("두 글자 이상으로 찾아 주세요.");
+            requireMember(roomSn, me);
+            String like = "%" + q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%";
+            Set<Long> blocked = new HashSet<>();
+            for (TblChatRoomMbr x : roomMbrRepository.findAllByRoomSn(roomSn))
+                if (x.getUserSn() != me && safetyService.blockedEitherWay(me, x.getUserSn())) blocked.add(x.getUserSn());
+            List<Long> ids = jdbc.queryForList("""
+                    SELECT msg_sn FROM knowra_user.tbl_chat_msg
+                    WHERE room_sn = ? AND deleted_at IS NULL AND hidden_at IS NULL AND msg_cntnt ILIKE ? ESCAPE '\\'
+                    ORDER BY msg_sn DESC LIMIT 30""", Long.class, roomSn, like);
+            List<Map<String, Object>> list = msgRepository.findAllById(ids).stream()
+                    .filter(x -> !blocked.contains(x.getUserSn()))
+                    .sorted(java.util.Comparator.comparing(TblChatMsg::getMsgSn).reversed())
+                    .map(this::toDto).toList();
+            resultVO.putResult("list", list);
+            resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
+        } catch (IllegalArgumentException e) {
+            resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
+            resultVO.setResultMessage(e.getMessage());
+        } catch (Exception e) {
+            ErrorLog.report(e);
+            resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
+            resultVO.setResultMessage(ResponseCode.SELECT_ERROR.getMessage());
+        }
+        return resultVO;
     }
 }

@@ -35,6 +35,7 @@ public class NotificationWebSocketHandler extends TextWebSocketHandler {
     private final NotifService notifService;
     private final RedisApiService redisApiService;
     private final SessionService sessionService;
+    private final org.springframework.context.ApplicationEventPublisher events;
 
     private static final int REDIS_DB = 15;          // 로그아웃 토큰 블랙리스트 — JwtAuthenticationFilter 와 같은 DB
     private static final String ATTR_USER = "userSn";
@@ -166,6 +167,11 @@ public class NotificationWebSocketHandler extends TextWebSocketHandler {
                 notifService.dismiss(notifSn, userSn);
             }
             case "DISMISS_ALL" -> notifService.dismissAll(userSn);
+            // 입력 중 — 저장하지 않고 방의 다른 사람에게 흘린다(ChatService.onTyping 이 멤버·간격을 본다)
+            case "TYPING" -> {
+                Object r = payload.get("roomSn");
+                if (r != null) events.publishEvent(new ChatTypingEvent(userSn, Long.parseLong(String.valueOf(r))));
+            }
         }
     }
 

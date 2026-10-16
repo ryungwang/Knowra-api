@@ -29,6 +29,10 @@ public class TblChatMsg {
     private LocalDateTime frstCrtDt = LocalDateTime.now();
 
     /** 사진 한 장 — 업로드 경로(/upload/editor/...)만. */
+    /** 답한 메시지(같은 방). V57 */
+    @Column(name = "REPLY_TO_MSG_SN")
+    private Long replyToMsgSn;
+
     @Column(name = "IMG_URL", length = 300)
     private String imgUrl;
 
