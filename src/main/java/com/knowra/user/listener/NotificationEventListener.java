@@ -118,7 +118,7 @@ public class NotificationEventListener {
         if (st == null) return !"LIKE".equals(typ);
         String yn = switch (typ) {
             case "LIKE" -> st.getLikeNtfctnYn();
-            case "COMMENT", "REPLY", "MENTION", "CMT_PINNED" -> st.getCmtNtfctnYn();
+            case "COMMENT", "REPLY", "MENTION", "CMT_PINNED", "QUOTE" -> st.getCmtNtfctnYn();
             case "SERIES_NEW", "KEYWORD" -> st.getSysNtfctnYn();
             case "FOLLOW" -> st.getFlwrNtfctnYn();
             default -> st.getSysNtfctnYn();   // 모임(EVENT_*)도 커뮤니티 소식 쪽
@@ -179,6 +179,7 @@ public class NotificationEventListener {
             case "CMT_PINNED"     -> tr(lang, "{0}이(가) 「{1}」에서 회원님의 댓글을 맨 위에 고정했어요.", sender, nz(extra));
             case "HOLD_NEW"       -> tr(lang, "{0}에 검토할 새 멤버 글이 있어요.", place);
             case "MODMAIL_NEW"    -> tr(lang, "{0} 운영진 문의함에 새 문의가 왔어요.", place);
+            case "QUOTE"          -> tr(lang, "{0}이(가) 회원님의 글 「{1}」을(를) 인용했어요.", sender, nz(extra));
             case "MODMAIL_REPLY"  -> tr(lang, "{0} 운영진이 문의에 답했어요.", place);
             case "HOLD_APPROVED"  -> tr(lang, "{0} 운영진이 확인해 글이 올라갔어요: {1}", a0, a1);
             case "HOLD_REJECTED"  -> tr(lang, "{0} 운영진이 확인한 뒤 글을 올리지 않았어요: {1}", a0, a1);

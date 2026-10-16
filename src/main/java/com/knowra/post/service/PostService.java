@@ -221,6 +221,14 @@ public class PostService {
                 tblPost.setSeriesSn(seriesService.validFor(params.get("seriesSn"), userSn, tblPost.getCommSn()));
                 tblPost.setStat("ACTIVE"); tblPost.setRsrvAt(null);
                 tblPost.setFrstCrtDt(java.time.LocalDateTime.now());
+                // 인용 — 쓰는 사람이 지금 볼 수 있는 글만. 못 보는 글 번호를 넣어 비공개 글의 존재를 떠보지 못하게
+                tblPost.setQuotePostSn(null);
+                if (params.get("quotePostSn") != null && !String.valueOf(params.get("quotePostSn")).isBlank()) {
+                    long q = Long.parseLong(String.valueOf(params.get("quotePostSn")));
+                    if (postQuery.base().where(POST.postSn.eq(q), PostQuery.alive(), PostQuery.visibleTo(userSn)).fetchFirst() == null)
+                        throw new IllegalArgumentException("인용할 수 없는 글이에요.");
+                    tblPost.setQuotePostSn(q);
+                }
                 java.time.LocalDateTime rsrvAt = parseReservation(params.get("rsrvAt"));
                 if (rsrvAt != null) { tblPost.setStat(STAT_SCHEDULED); tblPost.setRsrvAt(rsrvAt); }
                 // 새 멤버 글 검토 — 잡아 두면 피드·알림·뱃지는 승인 때 낸다(releaseHeld). 예약 글은 올라갈 때 다시 본다
@@ -300,6 +308,16 @@ public class PostService {
     }
 
     /** 새 글이 "세상에 나올 때" 한 번만 하는 일 — 바로 올릴 때와 예약 글이 올라갈 때 똑같이. */
+    /** 원글 주인에게 「인용했어요」 — 그 사람이 인용 글을 볼 수 있을 때만(비공개 커뮤니티 글로 인용하면 알리지 않는다) */
+    private void notifyQuoted(TblPost post, long userSn) {
+        if (post.getQuotePostSn() == null) return;
+        TblPost orig = tblPostRepository.findByPostSn(post.getQuotePostSn());
+        if (orig == null || orig.getUserSn() == userSn) return;
+        if (postQuery.base().where(POST.postSn.eq(post.getPostSn()), PostQuery.alive(), PostQuery.visibleTo(orig.getUserSn())).fetchFirst() == null) return;
+        boolean anon = post.getCommSn() != null && postQuery.isAnonymousComm(post.getCommSn());
+        eventPublisher.publishEvent(new com.knowra.cmm.event.NotifTriggerEvent(orig.getUserSn(), anon ? null : userSn, "QUOTE", post.getPostSn(), "POST", orig.getPostTtl()));
+    }
+
     private void publishEffects(TblPost post, long userSn) {
         actionLogService.log(userSn, TblUserActionLog.TARGET_POST, post.getPostSn(), TblUserActionLog.ACTION_POST);
         eventPublisher.publishEvent(new PostCreatedEvent(post.getPostSn(), userSn, post.getCommSn(), post.getFrstCrtDt()));
@@ -307,6 +325,7 @@ public class PostService {
         mentionService.notify(post.getPostSn(), userSn, post.getPostCntnt(), null, List.of());
         seriesService.onPublished(post);    // 연재 구독자에게 새 편 — 키워드보다 먼저(키워드는 구독자를 뺀다)
         keywordService.onPublished(post);   // 관심 키워드 알림
+        notifyQuoted(post, userSn);
         badgeService.evaluate(userSn);   // 첫 글·글 10개·첫 투표 같은 뱃지
     }
 
@@ -475,6 +494,7 @@ public class PostService {
                 resultVO.putResult("cmtLockedAt", rs.getTimestamp(1).toLocalDateTime());
                 resultVO.putResult("cmtLockBy", rs.getString(2));
             }, postSn);
+            resultVO.putResult("quoteCnt", jdbc.queryForObject("SELECT COUNT(*) FROM knowra_post.tbl_post WHERE quote_post_sn = ? AND actvtn_yn = 'Y' AND stat = 'ACTIVE'", Long.class, postSn));
             resultVO.putResult("myLikeTyp", dto.getMyLikeTyp());
             resultVO.putResult("poll", pollService.view(postSn, dto.getUserSn(), me));
             if (dto.getCommSn() != null) {

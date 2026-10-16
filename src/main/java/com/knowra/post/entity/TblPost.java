@@ -53,6 +53,10 @@ public class TblPost extends BasePostEntity {
     @Comment("커뮤니티 SN (tbl_comm 논리 참조) — NULL 이면 전체 공개 글")
     private Long commSn;
 
+    /** 인용한 글. 새 글을 쓸 때만 정하고 고칠 때는 바꾸지 않는다. V56. */
+    @Column(name = "QUOTE_POST_SN", updatable = false)
+    private Long quotePostSn;
+
     /** 스포일러 글 — 목록·미리보기에서 본문 요약과 사진을 가린다. 글쓴이·운영진이 켜고 끈다. V54. */
     @Column(name = "SPOILER", nullable = false)
     private boolean spoiler;

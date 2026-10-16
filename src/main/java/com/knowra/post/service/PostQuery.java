@@ -114,6 +114,7 @@ public class PostQuery {
         dto.setPfpUrl(pfpUrl(t));
         dto.setPinned(p.getPinnedAt() != null);
         dto.setSpoiler(p.isSpoiler());
+        dto.setQuotePostSn(p.getQuotePostSn());
         return dto;
     }
 
@@ -152,7 +153,10 @@ public class PostQuery {
             Object[] r = (Object[]) row;
             series.put(((Number) r[0]).longValue(), r);
         }
+        Map<Long, Map<String, Object>> quotes = quoteCards(list, viewerSn);
         for (PostDTO dto : list) {
+            if (dto.getQuotePostSn() != null)
+                dto.setQuote(quotes.getOrDefault(dto.getQuotePostSn(), Map.of("postSn", dto.getQuotePostSn(), "unavailable", true)));
             Object[] sr = series.get(dto.getPostSn());
             if (sr != null) { dto.setSeriesSn(((Number) sr[1]).longValue()); dto.setSeriesTitle((String) sr[2]); }
             dto.setMine(viewerSn != null && dto.getUserSn() == viewerSn);
@@ -165,6 +169,33 @@ public class PostQuery {
             dto.setMySaved(savedSet.contains(dto.getPostSn()));
         }
         return list;
+    }
+
+    /**
+     * 인용한 글들의 작은 카드 — 한 번에 읽는다. 보는 사람이 볼 수 있는 원글만(visibleTo: 비공개·차단·숨김·삭제 제외).
+     * 익명 커뮤니티 원글은 작성자를 비운다. 스포일러 원글은 요약 대신 표시만 넘긴다(화면이 가린다).
+     */
+    private Map<Long, Map<String, Object>> quoteCards(List<PostDTO> list, Long viewerSn) {
+        List<Long> sns = list.stream().map(PostDTO::getQuotePostSn).filter(java.util.Objects::nonNull).distinct().toList();
+        if (sns.isEmpty()) return Map.of();
+        Map<Long, Map<String, Object>> out = new java.util.HashMap<>();
+        for (Tuple t : base().where(POST.postSn.in(sns), alive(), visibleTo(viewerSn)).fetch()) {
+            PostDTO q = toDto(t);
+            if (q.getCommSn() != null && isAnonymousComm(q.getCommSn())) anonymize(q);
+            Map<String, Object> c = new java.util.LinkedHashMap<>();
+            c.put("postSn", q.getPostSn());
+            c.put("postTtl", q.getPostTtl());
+            c.put("postCntnt", q.isSpoiler() ? null : q.getPostCntnt());
+            c.put("spoiler", q.isSpoiler());
+            c.put("nickName", q.getNickName());
+            c.put("authorNm", q.getAuthorNm());
+            c.put("anonymous", q.isAnonymous());
+            c.put("commNm", q.getCommNm());
+            c.put("commDsplNm", q.getCommDsplNm());
+            c.put("frstCrtDt", q.getFrstCrtDt());
+            out.put(q.getPostSn(), c);
+        }
+        return out;
     }
 
     public static final String ANONYMOUS_NAME = "익명";
