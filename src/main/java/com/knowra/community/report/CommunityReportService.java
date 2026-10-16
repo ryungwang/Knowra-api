@@ -103,7 +103,7 @@ public class CommunityReportService {
             Long postSn = "POST".equals(kind) ? Long.valueOf(targetSn)
                     : jdbc.query("SELECT post_sn FROM knowra_post.tbl_post_cmt WHERE post_cmt_sn = ?", rs -> rs.next() ? rs.getLong(1) : null, targetSn);
             modLog.record(commSn, me, "RESOLVE".equals(action) ? ModLogService.REPORT_RESOLVE : ModLogService.REPORT_DISMISS, null, postSn,
-                    ("POST".equals(kind) ? "글" : "댓글") + " 신고 " + n + "건");
+                    com.knowra.community.modlog.ModLogDetail.reports(kind, n));
         }
         return n;
     }

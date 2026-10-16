@@ -77,7 +77,8 @@ public class ChatPushListener {
             title = Msg.tl(lang, "메시지 요청");
             body = Msg.tl(lang, "{0}님이 메시지를 보냈어요.", who);
         } else if (e.group()) {
-            title = e.roomName() == null || e.roomName().isBlank() ? Msg.tl(lang, "그룹 대화") : e.roomName();
+            title = e.roomName() == null || e.roomName().isBlank() ? Msg.tl(lang, "그룹 대화")
+                    : e.eventRoom() ? Msg.tl(lang, "모임 · {0}", e.roomName()) : e.roomName();
             body = who + ": " + snippet(e.text(), e.hasImage(), lang);
         } else {
             title = who;

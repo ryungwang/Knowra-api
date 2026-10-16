@@ -670,12 +670,7 @@ public class CommunityService {
         return now.plusDays(d);
     }
 
-    /** 운영 기록에 남길 한 줄 — 「7일 · 사유: 도배」 */
-    static String banDetail(java.time.LocalDateTime until, String reason) {
-        String period = until == null ? "영구" : until.format(java.time.format.DateTimeFormatter.ofPattern("M월 d일 H:mm")) + "까지";
-        return reason == null ? period : period + " · 사유: " + reason;
-    }
-
+    
     /**
      * 멤버 상태 변경. params: commSn, userSn, stat(ACTIVE=승인 | REJECTED=거절 | BANNED=강퇴 | WITHDRAWN=제명해제 없이 내보내기).
      * 운영진만. OWNER 는 바꿀 수 없고, ADMIN 은 다른 ADMIN 을 건드리지 못한다(OWNER 만 가능).
@@ -739,7 +734,7 @@ public class CommunityService {
                 case "BANNED"   -> com.knowra.community.modlog.ModLogService.MEMBER_BAN;
                 default         -> unban ? com.knowra.community.modlog.ModLogService.MEMBER_UNBAN : com.knowra.community.modlog.ModLogService.MEMBER_REMOVE;
             };
-            String detail = "BANNED".equals(stat) ? banDetail(banUntil, banReason) : null;
+            String detail = "BANNED".equals(stat) ? com.knowra.community.modlog.ModLogDetail.ban(banUntil, banReason) : null;
             if (logAction != null) modLog.record(commSn, me, logAction, target, null, detail);
             String typ = switch (stat) {
                 case "ACTIVE" -> "COMM_APPROVED"; case "REJECTED" -> "COMM_REJECTED";
@@ -891,30 +886,29 @@ public class CommunityService {
             TblComm comm = tblCommRepository.findByCommSn(commSn);
             if (comm == null) throw new IllegalArgumentException("존재하지 않는 커뮤니티입니다.");
 
-            List<String> changed = new java.util.ArrayList<>();   // 운영 기록용 — 무엇이 바뀌었나
+            var changed = new com.knowra.community.modlog.ModLogDetail.Settings();   // 운영 기록용 — 무엇이 바뀌었나(값으로, 화면이 문장을 만든다)
             String dspl = request.getParameter("commDsplNm");
             if (dspl != null && dspl.trim().length() >= 2 && !dspl.trim().equals(comm.getCommDsplNm())) {
-                changed.add("이름 「" + comm.getCommDsplNm() + "」→「" + dspl.trim() + "」");
+                changed.add("name", comm.getCommDsplNm(), dspl.trim());
                 comm.setCommDsplNm(dspl.trim());
             }
             String desc = request.getParameter("commDesc");
             if (desc != null && !desc.trim().equals(comm.getCommDesc() == null ? "" : comm.getCommDesc())) {
-                changed.add("소개");
+                changed.add("desc");
                 comm.setCommDesc(desc.trim());
             }
             String prv = request.getParameter("prvcyStng");
             if (prv != null && java.util.Set.of("public", "restricted", "anonymous", "private").contains(prv) && !prv.equals(comm.getPrvcyStng())) {
                 // 공개 범위는 OWNER 만 — 비공개를 공개로 돌리면 지난 글 전부가 피드·검색에 열린다. 운영진(ADMIN)이 혼자 바꿀 일이 아니다.
                 if (!"OWNER".equals(roleOf(commSn, me))) throw new IllegalArgumentException("공개 범위는 커뮤니티 주인만 바꿀 수 있어요.");
-                Map<String, String> label = Map.of("public", "공개", "restricted", "제한적", "anonymous", "익명", "private", "비공개");
-                changed.add("공개 범위 " + label.getOrDefault(String.valueOf(comm.getPrvcyStng()), "?") + "→" + label.get(prv));
+                changed.add("privacy", comm.getPrvcyStng(), prv);
                 comm.setPrvcyStng(prv);
             }
 
             // 주 언어 — 빈 값이면 「여러 언어」
             if (request.getParameter("commLang") != null) {
                 String lang = com.knowra.cmm.i18n.LangDetect.commLang(request.getParameter("commLang"));
-                if (!java.util.Objects.equals(lang, comm.getLang())) { changed.add("언어"); comm.setLang(lang); }
+                if (!java.util.Objects.equals(lang, comm.getLang())) { changed.add("lang", null, lang == null ? "multi" : lang); comm.setLang(lang); }
             }
 
             String psnTblSn = "community_" + commSn;
@@ -922,23 +916,23 @@ public class CommunityService {
                 TblComFile f = fileUtil.storeImage(request.getFile("logoImage"), me, FileUtil.CAT_COMMUNITY_LOGO, psnTblSn);
                 f.setCreatrSn(me);
                 comm.setLogoFileSn(tblComFileRepository.save(f).getAtchFileSn());
-                changed.add("로고");
+                changed.add("logo");
             } else if ("true".equals(request.getParameter("removeLogo")) && comm.getLogoFileSn() != null) {
                 comm.setLogoFileSn(null);
-                changed.add("로고 삭제");
+                changed.add("logoRemoved");
             }
             if (request.getFile("bannerImage") != null) {
                 TblComFile f = fileUtil.storeImage(request.getFile("bannerImage"), me, FileUtil.CAT_COMMUNITY_BANNER, psnTblSn);
                 f.setCreatrSn(me);
                 comm.setBnrFileSn(tblComFileRepository.save(f).getAtchFileSn());
-                changed.add("배너");
+                changed.add("banner");
             } else if ("true".equals(request.getParameter("removeBanner")) && comm.getBnrFileSn() != null) {
                 comm.setBnrFileSn(null);
-                changed.add("배너 삭제");
+                changed.add("bannerRemoved");
             }
             comm.setMdfrSn(me);
             tblCommRepository.save(comm);
-            if (!changed.isEmpty()) modLog.record(commSn, me, com.knowra.community.modlog.ModLogService.SETTINGS, null, null, String.join(", ", changed));
+            if (!changed.isEmpty()) modLog.record(commSn, me, com.knowra.community.modlog.ModLogService.SETTINGS, null, null, changed.json());
             resultVO.setResultCode(ResponseCode.COMMUNITY_UPDATE_SUCCESS.getCode());
             resultVO.setResultMessage(ResponseCode.COMMUNITY_UPDATE_SUCCESS.getMessage());
         } catch (IllegalArgumentException e) {

@@ -75,7 +75,7 @@ public class FlairService {
                 jdbc.update("INSERT INTO knowra_community.tbl_comm_flair (comm_sn, name, color, ord) VALUES (?, ?, ?, ?)", commSn, x.get("name"), x.get("color"), ord);
             ord++;
         }
-        modLog.record(commSn, me, ModLogService.FLAIRS, null, null, "말머리 " + next.size() + "개");
+        modLog.record(commSn, me, ModLogService.FLAIRS, null, null, com.knowra.community.modlog.ModLogDetail.count(next.size()));
         return list(commSn);
     }
 }

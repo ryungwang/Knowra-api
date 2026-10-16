@@ -103,7 +103,8 @@ public class ChatGroupService {
         TblChatRoom room = roomRepository.findByEventSn(eventSn).orElse(null);
         if (room == null) {
             String title = String.valueOf(ev.get("title"));
-            String name = ("모임 · " + title).length() > 50 ? ("모임 · " + title).substring(0, 49) + "…" : "모임 · " + title;
+            // 이름엔 제목만 — 「모임 · 」 머리말은 화면·푸시가 보는 사람 언어로 붙인다(V62)
+            String name = title.length() > 50 ? title.substring(0, 49) + "…" : title;
             room = roomRepository.save(TblChatRoom.builder().roomTyp(GROUP).name(name).createdBy(me).eventSn(eventSn).build());
             Set<Long> people = new LinkedHashSet<>();
             people.add(me);

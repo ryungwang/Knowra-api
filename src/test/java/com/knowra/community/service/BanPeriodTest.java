@@ -38,7 +38,8 @@ class BanPeriodTest {
 
     @Test
     void 운영_기록_한줄() {
-        assertThat(CommunityService.banDetail(null, null)).isEqualTo("영구");
-        assertThat(CommunityService.banDetail(NOW.plusDays(3), "도배")).isEqualTo("10월 18일 12:00까지 · 사유: 도배");
+        // 운영 기록은 문장이 아니라 값(JSON) — 화면이 보는 사람 언어·시간대로 문장을 만든다
+        assertThat(com.knowra.community.modlog.ModLogDetail.ban(null, null)).isEqualTo("{\"until\":null}");
+        assertThat(com.knowra.community.modlog.ModLogDetail.ban(NOW.plusDays(3), "도배")).contains("\"until\":\"20").contains("\"reason\":\"도배\"");
     }
 }

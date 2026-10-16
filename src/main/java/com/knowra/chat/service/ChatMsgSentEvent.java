@@ -8,4 +8,9 @@ import java.util.Map;
  * @param recipients 받는 사람 → 메시지 요청함 쪽인지(아직 수락 전). 거절·나간 사람과 차단 관계는 이미 뺐다.
  */
 public record ChatMsgSentEvent(long roomSn, long senderSn, String text, boolean hasImage,
-                               boolean group, String roomName, Map<Long, Boolean> recipients) {}
+                               boolean group, String roomName, Map<Long, Boolean> recipients, boolean eventRoom) {
+    /** 모임 방이 아닌 경우 */
+    public ChatMsgSentEvent(long roomSn, long senderSn, String text, boolean hasImage, boolean group, String roomName, Map<Long, Boolean> recipients) {
+        this(roomSn, senderSn, text, hasImage, group, roomName, recipients, false);
+    }
+}

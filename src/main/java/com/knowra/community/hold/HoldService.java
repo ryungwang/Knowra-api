@@ -52,7 +52,7 @@ public class HoldService {
         requireManager(commSn, me);
         if (!DAYS.contains(days)) throw new IllegalArgumentException("고를 수 있는 날수가 아니에요.");
         if (jdbc.update("UPDATE knowra_community.tbl_comm SET new_member_hold_days = ? WHERE comm_sn = ? AND new_member_hold_days <> ?", days, commSn, days) > 0)
-            modLog.record(commSn, me, ModLogService.HOLD_DAYS, null, null, days == 0 ? "끔" : days + "일");
+            modLog.record(commSn, me, ModLogService.HOLD_DAYS, null, null, com.knowra.community.modlog.ModLogDetail.holdDays(days));
     }
 
     public long count(long commSn) {

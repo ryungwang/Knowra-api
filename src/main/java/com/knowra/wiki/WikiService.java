@@ -70,7 +70,7 @@ public class WikiService {
         if (next.size() > MAX_RULES) throw new IllegalArgumentException(com.knowra.cmm.i18n.Msg.t("규칙은 {0}개까지예요.", MAX_RULES));
         rules.deleteAllOf(commSn);
         rules.saveAll(next);
-        modLog.record(commSn, me, com.knowra.community.modlog.ModLogService.RULES, null, null, "규칙 " + next.size() + "개");
+        modLog.record(commSn, me, com.knowra.community.modlog.ModLogService.RULES, null, null, com.knowra.community.modlog.ModLogDetail.count(next.size()));
         return rules(commSn);
     }
 

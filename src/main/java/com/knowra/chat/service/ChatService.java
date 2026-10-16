@@ -130,7 +130,11 @@ public class ChatService {
                 if (ChatGroupService.GROUP.equals(room.getRoomTyp())) {
                     // 그룹은 상대 한 명이 아니라 방 이름·인원
                     long cnt = roomMbrRepository.findAllByRoomSn(room.getRoomSn()).stream().filter(x -> "ACTIVE".equals(x.getStat())).count();
-                    row.put("group", Map.of("name", room.getName() == null ? Msg.t("그룹") : room.getName(), "memberCnt", cnt));
+                    Map<String, Object> g = new HashMap<>();
+                    g.put("name", room.getName() == null ? Msg.t("그룹") : room.getName());
+                    g.put("memberCnt", cnt);
+                    g.put("eventSn", room.getEventSn());   // 모임 방 — 화면이 「모임 · 」 머리말을 언어에 맞게 붙인다
+                    row.put("group", g);
                 } else {
                     row.put("peer",  peerByRoom.get(room.getRoomSn()));
                 }
@@ -295,7 +299,7 @@ public class ChatService {
             }
             // 접속하지 않은 사람에겐 웹 푸시 — 커밋 뒤에(ChatPushListener)
             if (!recipients.isEmpty())
-                events.publishEvent(new ChatMsgSentEvent(roomSn, userSn, text, imgUrl != null, group, room.getName(), recipients));
+                events.publishEvent(new ChatMsgSentEvent(roomSn, userSn, text, imgUrl != null, group, room.getName(), recipients, room.getEventSn() != null));
             resultVO.putResult("msg", dto);
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
         } catch (IllegalArgumentException e) {
