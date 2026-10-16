@@ -75,6 +75,10 @@ public class TblComm {
   @Comment("멤버 수 (캐시)")
   private long memberCnt = 0;
 
+  /** 닫힌 시각(NULL = 열림). 바꾸는 건 CommunityService.setClosed 만 — 만들기·설정 저장 본문으로 못 바꾸게 읽기 전용. V52. */
+  @Column(name = "CLOSED_AT", insertable = false, updatable = false)
+  private LocalDateTime closedAt;
+
   @Column(name = "STAT", length = 1, nullable = false)
   @Comment("Y / N")
   private String stat = "Y";

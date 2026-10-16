@@ -76,6 +76,12 @@ public class PostController {
         return postService.setPostLike(params, me);
     }
 
+    /** body: postSn, lock — 글쓴이나 커뮤니티 운영진. 운영진이 잠근 건 운영진만 푼다 */
+    @PostMapping("/setCmtLock")
+    public ResultVO setCmtLock(@RequestBody Map<String, Object> params, @CurrentUser Long me) {
+        return postService.setCmtLock(params, me);
+    }
+
     /** body: postSn, pin — 커뮤니티 운영진만 */
     @PostMapping("/setPostPin")
     public ResultVO setPostPin(@RequestBody Map<String, Object> params, @CurrentUser Long me) {

@@ -120,6 +120,26 @@ public class PostService {
         return "OWNER".equals(role) || "ADMIN".equals(role);
     }
 
+    /** 닫힌 커뮤니티인가(V52). 닫히면 새 글·댓글은 운영진만. */
+    private boolean isClosed(Long commSn) {
+        if (commSn == null) return false;
+        TblComm c = tblCommRepository.findByCommSn(commSn);
+        return c != null && c.getClosedAt() != null;
+    }
+
+    /**
+     * 이 사람이 이 글에 새 댓글을 못 다는 이유. 달 수 있으면 null.
+     * 커뮤니티 운영진은 닫혔거나 잠겼어도 단다 — 왜 막았는지 안내할 수 있어야 한다.
+     */
+    private String cmtBlockedFor(long postSn, long userSn) {
+        Map<String, Object> row = jdbc.queryForMap("SELECT comm_sn, cmt_locked_at FROM knowra_post.tbl_post WHERE post_sn = ?", postSn);
+        Long commSn = row.get("comm_sn") == null ? null : ((Number) row.get("comm_sn")).longValue();
+        if (commSn != null && isManagerRole(roleIn(commSn, userSn))) return null;
+        if (isClosed(commSn)) return "닫힌 커뮤니티라 댓글을 달 수 없어요.";
+        if (row.get("cmt_locked_at") != null) return "댓글이 잠긴 글이에요.";
+        return null;
+    }
+
     /**
      * 글을 고치거나 지울 수 있는가 — 작성자 본인, 또는 그 커뮤니티의 OWNER/ADMIN.
      *
@@ -181,6 +201,11 @@ public class PostService {
                 if (tblPost.getCommSn() != null && roleIn(tblPost.getCommSn(), userSn) == null) {
                     resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
                     resultVO.setResultMessage("커뮤니티에 참여한 멤버만 글을 쓸 수 있습니다.");
+                    return resultVO;
+                }
+                if (tblPost.getCommSn() != null && isClosed(tblPost.getCommSn()) && !isManagerRole(roleIn(tblPost.getCommSn(), userSn))) {
+                    resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
+                    resultVO.setResultMessage("닫힌 커뮤니티에는 새 글을 쓸 수 없어요.");
                     return resultVO;
                 }
                 tblPost.setUserSn(userSn);
@@ -344,7 +369,10 @@ public class PostService {
     @Transactional(readOnly = true)
     public List<Long> dueScheduled() {
         return new JPAQueryFactory(em).select(POST.postSn).from(POST)
-                .where(POST.stat.eq(STAT_SCHEDULED), POST.actvtnYn.eq("Y"), POST.rsrvAt.loe(java.time.LocalDateTime.now()))
+                .where(POST.stat.eq(STAT_SCHEDULED), POST.actvtnYn.eq("Y"), POST.rsrvAt.loe(java.time.LocalDateTime.now()),
+                        // 닫힌 커뮤니티의 예약 글은 올리지 않고 기다린다 — 다시 열면 그때 올라간다
+                        POST.commSn.isNull().or(POST.commSn.notIn(com.querydsl.jpa.JPAExpressions.select(com.knowra.community.entity.QTblComm.tblComm.commSn)
+                                .from(com.knowra.community.entity.QTblComm.tblComm).where(com.knowra.community.entity.QTblComm.tblComm.closedAt.isNotNull()))))
                 .orderBy(POST.rsrvAt.asc()).limit(100).fetch();
     }
 
@@ -440,6 +468,10 @@ public class PostService {
                     "SELECT COUNT(*) FROM knowra_post.tbl_post_mute WHERE user_sn = ? AND post_sn = ?", Long.class, me, postSn) > 0);
             jdbc.query("SELECT COUNT(*), MAX(edited_at) FROM knowra_post.tbl_post_hist WHERE post_sn = ?", rs -> {
                 if (rs.getLong(1) > 0) { resultVO.putResult("editCount", rs.getLong(1)); resultVO.putResult("editedAt", rs.getTimestamp(2).toLocalDateTime()); }
+            }, postSn);
+            jdbc.query("SELECT cmt_locked_at, cmt_lock_by FROM knowra_post.tbl_post WHERE post_sn = ? AND cmt_locked_at IS NOT NULL", rs -> {
+                resultVO.putResult("cmtLockedAt", rs.getTimestamp(1).toLocalDateTime());
+                resultVO.putResult("cmtLockBy", rs.getString(2));
             }, postSn);
             resultVO.putResult("myLikeTyp", dto.getMyLikeTyp());
             resultVO.putResult("poll", pollService.view(postSn, dto.getUserSn(), me));
@@ -775,6 +807,12 @@ public class PostService {
                 resultVO.setResultMessage("답글을 달 수 없는 댓글이에요.");
                 return resultVO;
             }
+            String blocked = cmtBlockedFor(postSn, userSn);
+            if (blocked != null) {
+                resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
+                resultVO.setResultMessage(blocked);
+                return resultVO;
+            }
             String cmtText = params.get("cmtCntnt") == null ? "" : params.get("cmtCntnt").toString().trim();
             String imgUrl  = cleanImgUrl(params.get("imgUrl"));
             if (cmtText.isEmpty() && imgUrl == null) throw new IllegalArgumentException("내용이나 사진을 넣어 주세요.");
@@ -966,6 +1004,44 @@ public class PostService {
                 jdbc.update("UPDATE knowra_post.tbl_post SET pinned_cmt_sn = NULL WHERE post_sn = ?", postSn);
             }
             resultVO.putResult("pinnedCmtSn", cmtSn);
+            resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
+        } catch (IllegalArgumentException e) {
+            resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
+            resultVO.setResultMessage(e.getMessage());
+        } catch (Exception e) {
+            ErrorLog.report(e);
+            resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
+            resultVO.setResultMessage(ResponseCode.SAVE_ERROR.getMessage());
+        }
+        return resultVO;
+    }
+
+    /**
+     * 댓글 잠금·풀기. params: postSn, lock
+     * 글쓴이는 자기 글을 잠그고 풀 수 있다. 운영진은 커뮤니티 글 누구 것이든. 운영진이 잠근 건 글쓴이가 못 푼다 —
+     * 싸움을 말리려 잠근 걸 당사자가 바로 되돌리면 잠금이 소용없다. 이미 달린 댓글은 그대로 보인다.
+     */
+    public ResultVO setCmtLock(Map<String, Object> params, Long me) {
+        ResultVO resultVO = new ResultVO();
+        try {
+            long postSn = Long.parseLong(String.valueOf(params.get("postSn")));
+            boolean lock = Boolean.parseBoolean(String.valueOf(params.get("lock")));
+            TblPost post = tblPostRepository.findByPostSn(postSn);
+            if (post == null || !"Y".equals(post.getActvtnYn())) throw new IllegalArgumentException("글을 찾을 수 없어요.");
+            boolean manager = post.getCommSn() != null && isManagerRole(roleIn(post.getCommSn(), me));
+            boolean author = post.getUserSn() == me;
+            if (!manager && !author) throw new IllegalArgumentException("글쓴이나 운영진만 댓글을 잠글 수 있어요.");
+            String by = jdbc.query("SELECT cmt_lock_by FROM knowra_post.tbl_post WHERE post_sn = ?", rs -> rs.next() ? rs.getString(1) : null, postSn);
+            if (!lock && "MOD".equals(by) && !manager) throw new IllegalArgumentException("운영진이 잠근 댓글은 운영진만 풀 수 있어요.");
+            // 운영진이 자기 글을 잠그면 MOD 로 남긴다 — 나중에 운영진에서 내려와도 잠금의 성격은 그대로다
+            int n = lock
+                    ? jdbc.update("UPDATE knowra_post.tbl_post SET cmt_locked_at = now(), cmt_lock_by = ? WHERE post_sn = ? AND cmt_locked_at IS NULL", manager ? "MOD" : "AUTHOR", postSn)
+                    : jdbc.update("UPDATE knowra_post.tbl_post SET cmt_locked_at = NULL, cmt_lock_by = NULL WHERE post_sn = ? AND cmt_locked_at IS NOT NULL", postSn);
+            // 운영 기록은 운영진이 남의 글에 손댄 것만(ModLogService 원칙)
+            if (n > 0 && manager && !author)
+                modLog.record(post.getCommSn(), me, lock ? com.knowra.community.modlog.ModLogService.CMT_LOCK : com.knowra.community.modlog.ModLogService.CMT_UNLOCK, post.getUserSn(), postSn, post.getPostTtl());
+            resultVO.putResult("locked", lock);
+            resultVO.putResult("cmtLockBy", lock ? (n > 0 ? (manager ? "MOD" : "AUTHOR") : by) : null);
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
         } catch (IllegalArgumentException e) {
             resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());

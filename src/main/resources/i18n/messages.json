@@ -581,6 +581,12 @@
   "zh-Hans": "仅作者或管理员可以置顶。",
   "zh-Hant": "僅作者或管理員可以置頂。"
  },
+ "글쓴이나 운영진만 댓글을 잠글 수 있어요.": {
+  "en": "Only the author or moderators can lock comments.",
+  "ja": "コメントをロックできるのは投稿者かモデレーターだけです。",
+  "zh-Hans": "只有作者或管理员可以锁定评论。",
+  "zh-Hant": "只有作者或管理員可以鎖定留言。"
+ },
  "글을 찾을 수 없어요.": {
   "en": "Post not found.",
   "ja": "投稿が見つかりません。",
@@ -737,6 +743,24 @@
   "zh-Hans": "下载时出错。",
   "zh-Hant": "下載時發生錯誤。"
  },
+ "닫힌 커뮤니티라 댓글을 달 수 없어요.": {
+  "en": "This community is closed, so you can't comment.",
+  "ja": "閉鎖中のコミュニティのため、コメントできません。",
+  "zh-Hans": "该社区已关闭，无法评论。",
+  "zh-Hant": "這個社群已關閉，無法留言。"
+ },
+ "닫힌 커뮤니티라 지금은 참여할 수 없어요.": {
+  "en": "This community is closed and isn't accepting new members.",
+  "ja": "このコミュニティは閉鎖中のため、現在参加できません。",
+  "zh-Hans": "该社区已关闭，暂时无法加入。",
+  "zh-Hant": "這個社群已關閉，目前無法加入。"
+ },
+ "닫힌 커뮤니티에는 새 글을 쓸 수 없어요.": {
+  "en": "You can't post in a closed community.",
+  "ja": "閉鎖中のコミュニティには新しい投稿ができません。",
+  "zh-Hans": "已关闭的社区无法发布新帖子。",
+  "zh-Hant": "已關閉的社群無法發布新貼文。"
+ },
  "답글을 달 수 없는 댓글이에요.": {
   "en": "You can't reply to this comment.",
   "ja": "返信できないコメントです。",
@@ -790,6 +814,12 @@
   "ja": "コメントが見つかりません。",
   "zh-Hans": "找不到该评论。",
   "zh-Hant": "找不到此留言。"
+ },
+ "댓글이 잠긴 글이에요.": {
+  "en": "Comments are locked on this post.",
+  "ja": "この投稿はコメントがロックされています。",
+  "zh-Hans": "该帖子的评论已锁定。",
+  "zh-Hant": "這篇貼文的留言已鎖定。"
  },
  "동네 기록가": {
   "en": "Community Chronicler",
@@ -1631,6 +1661,12 @@
   "zh-Hans": "仅所有者可以更改管理员。",
   "zh-Hant": "僅擁有者可以變更管理員。"
  },
+ "운영진이 잠근 댓글은 운영진만 풀 수 있어요.": {
+  "en": "Comments locked by moderators can only be unlocked by moderators.",
+  "ja": "モデレーターがロックしたコメントは、モデレーターしか解除できません。",
+  "zh-Hans": "管理员锁定的评论只能由管理员解锁。",
+  "zh-Hant": "管理員鎖定的留言只能由管理員解鎖。"
+ },
  "웨일": {
   "en": "Whale",
   "ja": "Whale",
@@ -2044,6 +2080,12 @@
   "ja": "譲渡できるのはオーナーのみです。",
   "zh-Hans": "仅所有者可以转让。",
   "zh-Hant": "僅擁有者可以轉移。"
+ },
+ "주인만 닫거나 열 수 있어요.": {
+  "en": "Only the owner can close or reopen this community.",
+  "ja": "閉鎖・再開できるのはオーナーだけです。",
+  "zh-Hans": "只有所有者可以关闭或重新开放社区。",
+  "zh-Hant": "只有擁有者可以關閉或重新開放社群。"
  },
  "주인만 운영진을 정할 수 있습니다.": {
   "en": "Only the owner can assign moderators.",

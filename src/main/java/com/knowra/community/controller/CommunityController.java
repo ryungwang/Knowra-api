@@ -238,6 +238,12 @@ public class CommunityController {
         return communityService.transferOwner(params, me);
     }
 
+    /** 커뮤니티 닫기·다시 열기 — 주인만. params: commSn, closed, confirm(닫을 때 커뮤니티 이름) */
+    @PostMapping("/api/community/setClosed")
+    public ResultVO setClosed(@RequestBody Map<String, Object> params, @CurrentUser Long me) {
+        return communityService.setClosed(params, me);
+    }
+
     /** 커뮤니티 정보 수정(멀티파트). */
     @PostMapping("/api/community/updateCommunity")
     public ResultVO updateCommunity(MultipartHttpServletRequest request, @CurrentUser Long me) {

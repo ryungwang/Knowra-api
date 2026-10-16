@@ -331,6 +331,8 @@ public class CommunityService {
                 joinQuestions.clear(tblComm.getCommSn(), userSn);   // 신청을 거둔 경우 — 답도 거둔다
                 memberStatus = "WITHDRAWN";
             } else {
+                // 닫힌 커뮤니티는 새 사람을 받지 않는다 — 초대 링크로 와도 마찬가지(읽기는 그대로 된다)
+                if (tblComm.getClosedAt() != null) throw new RuntimeException("닫힌 커뮤니티라 지금은 참여할 수 없어요.");
                 String privacy = tblComm.getPrvcyStng();
                 if ("public".equals(privacy) || "anonymous".equals(privacy)) {
                     memberStatus = "ACTIVE";
@@ -822,6 +824,45 @@ public class CommunityService {
             modLog.record(commSn, me, com.knowra.community.modlog.ModLogService.OWNER_TRANSFER, target, null, null);
             eventPublisher.publishEvent(new com.knowra.cmm.event.NotifTriggerEvent(target, me, "COMM_OWNER", commSn, "COMM", name));
             resultVO.putResult("myRole", "ADMIN");
+            resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
+        } catch (IllegalArgumentException e) {
+            resultVO.setResultCode(ResponseCode.COMMUNITY_MEMBER_ERROR.getCode());
+            resultVO.setResultMessage(e.getMessage());
+        } catch (Exception e) {
+            ErrorLog.report(e);
+            resultVO.setResultCode(ResponseCode.COMMUNITY_MEMBER_ERROR.getCode());
+            resultVO.setResultMessage(ResponseCode.COMMUNITY_MEMBER_ERROR.getMessage());
+        }
+        return resultVO;
+    }
+
+    /**
+     * 커뮤니티 닫기·다시 열기 — 주인만. params: commSn, closed, confirm(닫을 때만, 커뮤니티 이름)
+     *
+     * <p>닫으면 읽기 전용이다: 글은 그대로 읽히고 새 글·댓글·가입이 막힌다(운영진의 안내 글·댓글은 된다).
+     * 지우기 대신 이걸 두는 이유 — 운영을 그만둬도 쌓인 글은 검색으로 계속 찾아오는 기록이라서다.
+     */
+    @Transactional
+    public ResultVO setClosed(Map<String, Object> params, Long me) {
+        ResultVO resultVO = new ResultVO();
+        try {
+            long commSn = Long.parseLong(params.get("commSn").toString());
+            boolean close = Boolean.parseBoolean(String.valueOf(params.get("closed")));
+            TblComm comm = em.find(TblComm.class, commSn, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
+            if (comm == null || !"Y".equals(comm.getStat())) throw new IllegalArgumentException("없는 커뮤니티예요.");
+            tblCommMbrRepository.findByCommSnAndUserSn(commSn, me)
+                    .filter(x -> "ACTIVE".equals(x.getStat()) && "OWNER".equals(x.getRole()))
+                    .orElseThrow(() -> new IllegalArgumentException("주인만 닫거나 열 수 있어요."));
+            if (close) {
+                String name = StringUtils.hasText(comm.getCommDsplNm()) ? comm.getCommDsplNm() : comm.getCommNm();
+                if (!name.equals(String.valueOf(params.get("confirm")).trim())) throw new IllegalArgumentException("확인을 위해 커뮤니티 이름을 정확히 입력해 주세요.");
+            }
+            // 이미 그 상태면 아무것도 안 한다 — 두 번 눌러 기록이 겹치거나 닫힌 시각이 밀리지 않게
+            int n = close
+                    ? em.createNativeQuery("UPDATE knowra_community.tbl_comm SET closed_at = now() WHERE comm_sn = ?1 AND closed_at IS NULL").setParameter(1, commSn).executeUpdate()
+                    : em.createNativeQuery("UPDATE knowra_community.tbl_comm SET closed_at = NULL WHERE comm_sn = ?1 AND closed_at IS NOT NULL").setParameter(1, commSn).executeUpdate();
+            if (n > 0) modLog.record(commSn, me, close ? com.knowra.community.modlog.ModLogService.COMM_CLOSE : com.knowra.community.modlog.ModLogService.COMM_REOPEN, null, null, null);
+            resultVO.putResult("closed", close);
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
         } catch (IllegalArgumentException e) {
             resultVO.setResultCode(ResponseCode.COMMUNITY_MEMBER_ERROR.getCode());

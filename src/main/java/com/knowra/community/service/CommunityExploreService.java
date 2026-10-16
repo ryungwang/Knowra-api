@@ -242,6 +242,9 @@ public class CommunityExploreService {
             String kw = params.get("keyword").toString();
             builder.and(qComm.commDsplNm.containsIgnoreCase(kw)
                     .or(qComm.commDesc.containsIgnoreCase(kw)));
+        } else {
+            // 닫힌 커뮤니티는 추천·둘러보기에 띄우지 않는다 — 들어가도 가입할 수 없다. 이름으로 찾으면 나온다(글은 읽힌다)
+            builder.and(qComm.closedAt.isNull());
         }
 
         List<Tuple> rows = new JPAQueryFactory(em)
