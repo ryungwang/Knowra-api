@@ -196,6 +196,7 @@ public class PostService {
                 if (STAT_SCHEDULED.equals(tblPost.getStat())) resultVO.putResult("rsrvAt", tblPost.getRsrvAt());   // 수정해도 예약은 그대로
             } else {
                 tblPost = modelMapper.map(params, TblPost.class);
+                tblPost.setPostSn(null);   // 새 글이다 — 요청 본문이 무엇이든 번호는 DB 가 정한다(아니면 남의 글을 덮어쓴다)
                 tblPost.setPostCntnt(com.knowra.cmm.util.HtmlSanitizer.clean(tblPost.getPostCntnt()));   // XSS — HtmlSanitizer 주석
                 // 커뮤니티 글은 활성 멤버만 쓴다. 예전엔 이 검사가 없어 가입 대기(PENDING)·비멤버도
                 // API 로는 아무 커뮤니티에나 글을 넣을 수 있었다.
