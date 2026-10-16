@@ -287,6 +287,7 @@ public class FeedService {
 
         Set<Long> followedUserSns = userSn != null ? fetchFollowedUserSns(userSn) : Set.of();
         Set<Long> joinedCommSns   = userSn != null ? fetchJoinedCommSns(userSn)   : Set.of();
+        Set<Long> followedTagSns  = userSn != null ? new HashSet<>(fetchFollowedTagSns(userSn)) : Set.of();
         Map<Long, Double> userTagScores = userSn != null ? buildTagScoreMap(userSn)    : Map.of();
         Map<Long, Double> authorScores  = userSn != null ? buildAuthorScoreMap(userSn) : Map.of();
         Map<Long, Double> commScores    = userSn != null ? buildCommScoreMap(userSn)   : Map.of();
@@ -360,6 +361,11 @@ public class FeedService {
                 reason = "FRESH";
             } else {
                 reason = "POPULAR";
+            }
+            // 팔로우한 태그가 붙은 글이면 그게 가장 구체적인 이유다 — 사람·커뮤니티를 고른 것보다는 약하게(그 둘이면 그대로 둔다)
+            if (!"FOLLOWING".equals(reason) && !"JOINED_COMM".equals(reason)) {
+                Long hit = tagSns.stream().filter(followedTagSns::contains).findFirst().orElse(null);
+                if (hit != null) { reason = "TAG_FOLLOW"; detail = tagNames.get(hit); }
             }
             dto.setFeedReason(reason);
             dto.setFeedReasonDetail(detail);
@@ -591,9 +597,16 @@ public class FeedService {
         // 글 모델을 합치기 전에는 아래 호출이 전부 일반 글 / 커뮤니티 글 두 벌이었고,
         // 각각 MAX_CANDIDATES / 2 씩 가져와 합쳤다. 이제 한 쿼리가 둘 다 가져온다.
         if ("FOLLOWING".equals(mode)) {
-            // 팔로잉 피드: 팔로우한 유저가 작성한 게시글만
+            // 팔로잉 피드: 팔로우한 유저가 쓴 글 + 팔로우한 태그의 최근 글(V55)
             if (!followedUserSns.isEmpty()) {
                 fetchPostsByUsers(followedUserSns, userSn).stream()
+                        .filter(p -> dedup.add(p.postSn()))
+                        .forEach(result::add);
+            }
+            List<Long> followedTags = userSn == null ? List.of() : fetchFollowedTagSns(userSn);
+            if (!followedTags.isEmpty()) {
+                // 태그는 사람보다 글이 훨씬 많다 — 최근 30일로 묶어 팔로잉 피드가 「최신」처럼 되지 않게
+                fetchPostsByTags(followedTags, LocalDateTime.now().minusDays(30), userSn).stream()
                         .filter(p -> dedup.add(p.postSn()))
                         .forEach(result::add);
             }
@@ -721,6 +734,12 @@ public class FeedService {
     // ─────────────────────────────────────────────────────────────────────
     // 후보 게시글 조회 — 전부 PostQuery.base() 위에 조건·정렬만 얹는다
     // ─────────────────────────────────────────────────────────────────────
+    @SuppressWarnings("unchecked")
+    private List<Long> fetchFollowedTagSns(long userSn) {
+        return ((List<Object>) em.createNativeQuery("SELECT tag_sn FROM knowra_user.tbl_tag_follow WHERE user_sn = ?1")
+                .setParameter(1, userSn).getResultList()).stream().map(x -> ((Number) x).longValue()).toList();
+    }
+
     private List<FeedPost> fetchPostsByUsers(Set<Long> userSns, Long viewerSn) {
         return toFeedPosts(postQuery.base()
                 .where(POST.userSn.in(userSns), PostQuery.alive(), PostQuery.visibleTo(viewerSn), PostQuery.notMuted(viewerSn),
