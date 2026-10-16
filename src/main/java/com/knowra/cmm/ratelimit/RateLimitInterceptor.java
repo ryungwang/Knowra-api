@@ -46,6 +46,7 @@ public class RateLimitInterceptor implements HandlerInterceptor {
             Map.entry("/api/tag/follow",              new Rule("tag-follow", 60, 600)),
             Map.entry("/api/chat/react",              new Rule("chat-react", 60, 60)),
             Map.entry("/api/appeal/submit",           new Rule("appeal", 10, 3600)),
+            Map.entry("/api/copyright/notice",        new Rule("copyright", 10, 3600)),   // 로그인 없이 받으니 IP 로 묶인다
             Map.entry("/api/appeal/suspended",        new Rule("appeal", 10, 3600)),
             Map.entry("/api/chat/searchMsg",          new Rule("chat-search", 30, 60)),
             Map.entry("/api/community/modmail/reply",  new Rule("modmail-re", 30, 600)),

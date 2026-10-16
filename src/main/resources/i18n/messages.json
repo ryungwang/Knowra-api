@@ -83,6 +83,12 @@
   "zh-Hans": "你的 knowra 账号邮箱已更改为 {0}。\n如果不是你本人操作，请立即重置密码并联系我们。",
   "zh-Hant": "你的 knowra 帳號電子郵件已變更為 {0}。\n如果不是你本人操作，請立即重設密碼並聯絡我們。"
  },
+ "knowra 글 주소를 적어 주세요(예: …/posts/123).": {
+  "en": "Please enter a knowra post URL (e.g. …/posts/123).",
+  "ja": "knowraの投稿URLを入力してください（例：…/posts/123）。",
+  "zh-Hans": "请输入 knowra 帖子网址（例如 …/posts/123）。",
+  "zh-Hant": "請輸入 knowra 貼文網址（例如 …/posts/123）。"
+ },
  "knowra 초대": {
   "en": "knowra invite",
   "ja": "knowraへの招待",
@@ -533,6 +539,12 @@
   "zh-Hans": "你订阅的连载「{0}」更新了：{1}",
   "zh-Hant": "你訂閱的連載「{0}」更新了：{1}"
  },
+ "권리자의 저작권 침해 신고: {0}": {
+  "en": "Copyright complaint from the rights holder: {0}",
+  "ja": "権利者からの著作権侵害の報告：{0}",
+  "zh-Hans": "权利人的版权侵权举报：{0}",
+  "zh-Hant": "權利人的著作權侵權檢舉：{0}"
+ },
  "권한이 없습니다.": {
   "en": "You don't have permission.",
   "ja": "権限がありません。",
@@ -550,6 +562,12 @@
   "ja": "ルールは{0}個までです。",
   "zh-Hans": "最多{0}条规则。",
   "zh-Hant": "最多{0}條規則。"
+ },
+ "그 글을 찾을 수 없어요. 이미 내려갔을 수 있어요.": {
+  "en": "We couldn't find that post. It may already have been removed.",
+  "ja": "その投稿が見つかりません。すでに削除されている可能性があります。",
+  "zh-Hans": "找不到该帖子，可能已被删除。",
+  "zh-Hant": "找不到該貼文，可能已被刪除。"
  },
  "그룹": {
   "en": "Group",
@@ -1151,6 +1169,12 @@
   "zh-Hans": "找不到该咨询。",
   "zh-Hant": "找不到該詢問。"
  },
+ "문제가 된 글 주소를 적어 주세요.": {
+  "en": "Please enter the URL of the infringing post.",
+  "ja": "問題の投稿のURLを入力してください。",
+  "zh-Hans": "请填写侵权帖子的网址。",
+  "zh-Hant": "請填寫侵權貼文的網址。"
+ },
  "반응할 수 없는 댓글이에요.": {
   "en": "You can't react to this comment.",
   "ja": "リアクションできないコメントです。",
@@ -1385,6 +1409,12 @@
   "zh-Hans": "签名错误",
   "zh-Hant": "簽章錯誤"
  },
+ "서명으로 이름을 적어 주세요.": {
+  "en": "Please type your full name as your signature.",
+  "ja": "署名としてお名前を入力してください。",
+  "zh-Hans": "请输入姓名作为签名。",
+  "zh-Hant": "請輸入姓名作為簽名。"
+ },
  "선택지가 올바르지 않아요.": {
   "en": "Invalid option.",
   "ja": "選択肢が正しくありません。",
@@ -1523,6 +1553,12 @@
   "zh-Hans": "找不到该举报。",
   "zh-Hant": "找不到此檢舉。"
  },
+ "신고를 찾을 수 없어요.": {
+  "en": "Report not found.",
+  "ja": "報告が見つかりません。",
+  "zh-Hans": "找不到该举报。",
+  "zh-Hant": "找不到該檢舉。"
+ },
  "쓸 수 없는 닉네임이에요.": {
   "en": "That nickname isn't available.",
   "ja": "このニックネームは使用できません。",
@@ -1654,6 +1690,12 @@
   "ja": "連携されていません。",
   "zh-Hans": "尚未关联。",
   "zh-Hant": "尚未連結。"
+ },
+ "연락받을 이메일을 적어 주세요.": {
+  "en": "Please enter an email address where we can reach you.",
+  "ja": "連絡先のメールアドレスを入力してください。",
+  "zh-Hans": "请填写联系邮箱。",
+  "zh-Hant": "請填寫聯絡信箱。"
  },
  "연재 제목은 60자까지예요.": {
   "en": "Series titles can be up to 60 characters.",
@@ -1829,6 +1871,12 @@
   "zh-Hans": "只能转让给该社区的成员。",
   "zh-Hant": "只能轉移給此社群的成員。"
  },
+ "이름을 적어 주세요.": {
+  "en": "Please enter your name.",
+  "ja": "お名前を入力してください。",
+  "zh-Hans": "请填写姓名。",
+  "zh-Hant": "請填寫姓名。"
+ },
  "이메일 또는 비밀번호가 올바르지 않습니다.": {
   "en": "Incorrect email or password.",
   "ja": "メールアドレスまたはパスワードが正しくありません。",
@@ -1984,6 +2032,12 @@
   "ja": "すでに処理された投稿です。",
   "zh-Hans": "该帖子已处理。",
   "zh-Hant": "此貼文已處理。"
+ },
+ "이미 처리한 신고예요.": {
+  "en": "This report has already been handled.",
+  "ja": "すでに処理済みの報告です。",
+  "zh-Hans": "该举报已处理。",
+  "zh-Hant": "該檢舉已處理。"
  },
  "이미 켜져 있어요.": {
   "en": "It's already on.",
@@ -2489,6 +2543,12 @@
   "zh-Hans": "该活动已取消。",
   "zh-Hant": "此活動已取消。"
  },
+ "침해된 저작물을 설명해 주세요.": {
+  "en": "Please describe the copyrighted work.",
+  "ja": "侵害された著作物について説明してください。",
+  "zh-Hans": "请描述被侵权的作品。",
+  "zh-Hant": "請描述被侵權的作品。"
+ },
  "카카오": {
   "en": "Kakao",
   "ja": "Kakao",
@@ -2764,6 +2824,12 @@
   "ja": "プッシュ通知がオフになっています。",
   "zh-Hans": "推送通知已关闭。",
   "zh-Hant": "推播通知已關閉。"
+ },
+ "필수 진술에 동의해 주세요.": {
+  "en": "Please confirm the required statements.",
+  "ja": "必須の宣誓事項に同意してください。",
+  "zh-Hans": "请确认必要的声明。",
+  "zh-Hant": "請確認必要的聲明。"
  },
  "하나만 고를 수 있어요.": {
   "en": "You can only pick one.",

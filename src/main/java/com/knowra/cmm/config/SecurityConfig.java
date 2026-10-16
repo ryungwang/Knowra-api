@@ -94,7 +94,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/feed/**", "/api/post/getPost", "/api/post/getPostHistory", "/api/post/getCmtHistory", "/api/series/get", "/api/series/byUser", "/api/search", "/api/search/suggest", "/api/tag/info", "/api/tag/posts", "/api/legal/info", "/api/appeal/suspended").permitAll()
                         .requestMatchers(HttpMethod.POST,
                                 "/api/post/getPostCmtList", "/api/post/viewPost", "/api/post/getCommPostList",
-                                "/api/appeal/suspended").permitAll()   // 정지돼 로그인할 수 없는 사람의 이의 — 로그인 때 받은 확인표로만
+                                "/api/appeal/suspended",
+                                "/api/copyright/notice").permitAll()   // 권리자는 회원이 아닐 수 있다   // 정지돼 로그인할 수 없는 사람의 이의 — 로그인 때 받은 확인표로만
 
                         // 비로그인 열람 — 커뮤니티
                         .requestMatchers(HttpMethod.GET,
