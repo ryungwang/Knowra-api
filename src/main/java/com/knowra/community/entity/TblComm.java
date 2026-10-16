@@ -79,6 +79,10 @@ public class TblComm {
   @Column(name = "CLOSED_AT", insertable = false, updatable = false)
   private LocalDateTime closedAt;
 
+  /** 주 언어(ko·en·ja…). NULL = 여러 언어. 만들 때와 설정에서 운영진이 정한다(LangDetect.COMM_LANGS). V61 */
+  @Column(name = "LANG", length = 10)
+  private String lang;
+
   @Column(name = "STAT", length = 1, nullable = false)
   @Comment("Y / N")
   private String stat = "Y";

@@ -234,6 +234,10 @@ public class CommunityExploreService {
 
         builder.and(CommunityQueryHelper.accessCondition(qComm, userSn));
 
+        // 언어로 거르기 — 고른 언어이거나 「여러 언어」인 커뮤니티
+        String lang = com.knowra.cmm.i18n.LangDetect.commLang(params.get("lang"));
+        if (lang != null) builder.and(qComm.lang.eq(lang).or(qComm.lang.isNull()));
+
         if (params.get("ctgrSn") != null) {
             builder.and(qComm.ctgrSn.eq(Long.parseLong(params.get("ctgrSn").toString())));
         }
@@ -250,7 +254,7 @@ public class CommunityExploreService {
         List<Tuple> rows = new JPAQueryFactory(em)
                 .select(qComm.commSn, qComm.commNm, qComm.commDsplNm, qComm.commDesc,
                         qComm.ctgrSn, qComm.memberCnt, qComm.prvcyStng,
-                        qComm.logoFile)
+                        qComm.logoFile, qComm.lang)
                 .from(qComm)
                 .leftJoin(qComm.logoFile, qLogo)
                 .where(builder)
@@ -266,6 +270,7 @@ public class CommunityExploreService {
             m.put("memberCnt",  t.get(qComm.memberCnt));
             m.put("prvcyStng",  t.get(qComm.prvcyStng));
             m.put("logoFile",   t.get(qComm.logoFile));
+            m.put("lang",       t.get(qComm.lang));
             return m;
         }).toList();
     }

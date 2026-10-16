@@ -115,6 +115,7 @@ public class PostQuery {
         dto.setPinned(p.getPinnedAt() != null);
         dto.setSpoiler(p.isSpoiler());
         dto.setQuotePostSn(p.getQuotePostSn());
+        dto.setLang(p.getLang());
         return dto;
     }
 

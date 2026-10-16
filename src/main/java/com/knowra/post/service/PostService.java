@@ -186,6 +186,7 @@ public class PostService {
                             tblPost.getPostSn(), tblPost.getPostTtl(), tblPost.getPostCntnt() == null ? "" : tblPost.getPostCntnt(), userSn);
                 tblPost.setPostTtl(newTtl);
                 tblPost.setPostCntnt(newCntnt);
+                tblPost.setLang(java.util.Objects.requireNonNullElse(com.knowra.cmm.i18n.LangDetect.detect(newTtl, newCntnt), "und"));
                 if (params.containsKey("flairSn")) tblPost.setFlairSn(flairService.validFor(params.get("flairSn"), tblPost.getCommSn()));
                 // 연재는 글쓴이만 바꾼다 — 운영진이 남의 글을 고칠 때 연재가 빠지지 않게
                 if (params.containsKey("seriesSn") && tblPost.getUserSn() == userSn)
@@ -221,6 +222,7 @@ public class PostService {
                 tblPost.setSeriesSn(seriesService.validFor(params.get("seriesSn"), userSn, tblPost.getCommSn()));
                 tblPost.setStat("ACTIVE"); tblPost.setRsrvAt(null);
                 tblPost.setFrstCrtDt(java.time.LocalDateTime.now());
+                tblPost.setLang(java.util.Objects.requireNonNullElse(com.knowra.cmm.i18n.LangDetect.detect(tblPost.getPostTtl(), tblPost.getPostCntnt()), "und"));   // und = 판단 못 함
                 // 인용 — 쓰는 사람이 지금 볼 수 있는 글만. 못 보는 글 번호를 넣어 비공개 글의 존재를 떠보지 못하게
                 tblPost.setQuotePostSn(null);
                 if (params.get("quotePostSn") != null && !String.valueOf(params.get("quotePostSn")).isBlank()) {

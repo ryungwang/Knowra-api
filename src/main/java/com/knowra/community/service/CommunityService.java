@@ -94,6 +94,7 @@ public class CommunityService {
             tblComm.setMdfrSn(null); tblComm.setMdfcnDt(null);
             if (!java.util.Set.of("public", "restricted", "anonymous", "private").contains(tblComm.getPrvcyStng()))
                 tblComm.setPrvcyStng("public");
+            tblComm.setLang(com.knowra.cmm.i18n.LangDetect.commLang(tblComm.getLang()));   // 고를 수 있는 값만
             tblComm.setCreatrSn(userSn);
             tblCommRepository.save(tblComm);
 
@@ -908,6 +909,12 @@ public class CommunityService {
                 Map<String, String> label = Map.of("public", "공개", "restricted", "제한적", "anonymous", "익명", "private", "비공개");
                 changed.add("공개 범위 " + label.getOrDefault(String.valueOf(comm.getPrvcyStng()), "?") + "→" + label.get(prv));
                 comm.setPrvcyStng(prv);
+            }
+
+            // 주 언어 — 빈 값이면 「여러 언어」
+            if (request.getParameter("commLang") != null) {
+                String lang = com.knowra.cmm.i18n.LangDetect.commLang(request.getParameter("commLang"));
+                if (!java.util.Objects.equals(lang, comm.getLang())) { changed.add("언어"); comm.setLang(lang); }
             }
 
             String psnTblSn = "community_" + commSn;

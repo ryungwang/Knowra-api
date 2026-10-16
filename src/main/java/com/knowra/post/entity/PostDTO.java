@@ -47,6 +47,7 @@ public class PostDTO {
     private boolean pinned;          // 커뮤니티 상단 고정
     private boolean spoiler;         // 스포일러 글 — 화면이 요약·사진을 가린다
     private Long quotePostSn;        // 인용한 글 — decorate 가 quote 를 채운다
+    private String lang;             // 글 언어(ko·ja·zh·latn) — 화면이 번역 단추를 띄울지 정한다
     /** 인용한 글의 작은 카드. 보는 사람이 원글을 볼 수 없으면 { postSn, unavailable: true } 만 */
     private java.util.Map<String, Object> quote;
     private Long flairSn;            // 말머리 — decorate 가 채운다
