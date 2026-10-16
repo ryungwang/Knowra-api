@@ -45,6 +45,7 @@ import java.util.Optional;
 public class AuthService {
 
     private final RestTemplate restTemplate = new RestTemplate();
+    private final com.knowra.legal.LegalService legalService;
 
     private final AuthenticationManager authenticationManager;
     private final JwtProvider jwtProvider;
@@ -390,6 +391,13 @@ public class AuthService {
             String loginId = ComUtil.getStrValue(params.get("loginId"));
             String rawPassword = ComUtil.getStrValue(params.get("password"));
             String snsYn = ComUtil.getStrValue(params.get("snsYn"));
+            // 약관·처리방침 동의와 나이 확인 — 계정을 만들기 전에(만들고 나서 거절하면 빈 계정이 남는다)
+            try { legalService.requireAtJoin(params); }
+            catch (IllegalArgumentException e) {
+                resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
+                resultVO.setResultMessage(e.getMessage());
+                return resultVO;
+            }
             String email = VerificationService.normalize(VerificationService.EMAIL, ComUtil.getStrValue(params.get("email")));
             String phone = VerificationService.normalize(VerificationService.PHONE, ComUtil.getStrValue(params.get("phone")));
 
@@ -485,6 +493,7 @@ public class AuthService {
             }
             tblUserRepository.save(tblUser);
             if (joinedSns != null) snsLinks.link(tblUser.getUserSn(), joinedSns);
+            legalService.record(tblUser.getUserSn(), java.util.List.of(com.knowra.legal.LegalService.TERMS, com.knowra.legal.LegalService.PRIVACY, com.knowra.legal.LegalService.AGE), clientIp);
 
             UserService.profileImageSave(profileImage, tblUser, fileUtil, tblComFileRepository, tblUserRepository);
 

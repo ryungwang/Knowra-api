@@ -27,6 +27,8 @@ public class DataExportService {
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("exportedAt", LocalDateTime.now().toString());
         out.put("service", "knowra");
+        // 무엇에 언제 동의했는지 — 본인도 볼 수 있어야 한다(GDPR 15조)
+        out.put("consents", jdbc.queryForList("SELECT kind, version, agreed_at FROM knowra_user.tbl_user_consent WHERE user_sn = ? ORDER BY agreed_at", me));
 
         out.put("profile", jdbc.queryForMap("""
                 SELECT login_id AS "loginId", email, phone, name, nick_name AS "nickName", bio, interest,

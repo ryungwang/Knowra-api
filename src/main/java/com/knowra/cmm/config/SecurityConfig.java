@@ -91,7 +91,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/notice/current", "/api/sitemap.xml", "/api/auth/sns/providers", "/api/push/publicKey", "/api/link/preview", "/api/link/image", "/api/badge/list").permitAll()
                         // 공유 링크 미리보기 — 봇은 로그인하지 않는다. 비로그인 기준 공개 정보만 낸다(ShareController).
                         .requestMatchers(HttpMethod.GET, "/s/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/feed/**", "/api/post/getPost", "/api/post/getPostHistory", "/api/post/getCmtHistory", "/api/series/get", "/api/series/byUser", "/api/search", "/api/search/suggest", "/api/tag/info", "/api/tag/posts").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/feed/**", "/api/post/getPost", "/api/post/getPostHistory", "/api/post/getCmtHistory", "/api/series/get", "/api/series/byUser", "/api/search", "/api/search/suggest", "/api/tag/info", "/api/tag/posts", "/api/legal/info").permitAll()
                         .requestMatchers(HttpMethod.POST,
                                 "/api/post/getPostCmtList", "/api/post/viewPost", "/api/post/getCommPostList").permitAll()
 

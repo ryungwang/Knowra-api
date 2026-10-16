@@ -977,6 +977,12 @@
   "zh-Hans": "这是你唯一的登录方式，无法解除关联。请先设置密码或关联其他社交账号。",
   "zh-Hant": "這是你唯一的登入方式，無法解除連結。請先設定密碼或連結其他社群帳號。"
  },
+ "만 {0}세 이상만 가입할 수 있어요.": {
+  "en": "You must be at least {0} years old to sign up.",
+  "ja": "{0}歳以上の方のみ登録できます。",
+  "zh-Hans": "年满 {0} 岁才能注册。",
+  "zh-Hant": "年滿 {0} 歲才能註冊。"
+ },
  "만든 사람이나 운영진만 고칠 수 있어요.": {
   "en": "Only the creator or moderators can edit this.",
   "ja": "作成者または運営メンバーのみ編集できます。",
@@ -1972,6 +1978,12 @@
   "ja": "画像を読み込めません。",
   "zh-Hans": "无法读取图片。",
   "zh-Hant": "無法讀取圖片。"
+ },
+ "이용약관과 개인정보 처리방침에 동의해야 가입할 수 있어요.": {
+  "en": "You need to agree to the Terms of Service and Privacy Policy to sign up.",
+  "ja": "利用規約とプライバシーポリシーに同意すると登録できます。",
+  "zh-Hans": "需同意服务条款和隐私政策才能注册。",
+  "zh-Hant": "需同意服務條款和隱私權政策才能註冊。"
  },
  "이용이 정지된 계정입니다.": {
   "en": "This account has been suspended.",
