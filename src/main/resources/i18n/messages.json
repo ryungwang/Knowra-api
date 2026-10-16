@@ -1571,6 +1571,12 @@
   "zh-Hans": "该 ID 不可用。",
   "zh-Hant": "此 ID 無法使用。"
  },
+ "아동 안전 신고가 들어와 대상을 바로 가렸어요. 관리자 콘솔에서 먼저 확인해 주세요.": {
+  "en": "A child-safety report came in and the content was hidden immediately. Please review it first in the admin console.",
+  "ja": "児童の安全に関する報告があり、対象を直ちに非表示にしました。管理コンソールで最優先で確認してください。",
+  "zh-Hans": "收到儿童安全举报，内容已立即隐藏。请优先在管理后台处理。",
+  "zh-Hant": "收到兒童安全檢舉，內容已立即隱藏。請優先在管理後台處理。"
+ },
  "아래 링크에서 새 비밀번호를 설정할 수 있습니다. 링크는 30분 동안만 유효합니다.\n\n{0}\n\n본인이 요청하지 않았다면 이 메일은 무시하셔도 됩니다.": {
   "en": "You can set a new password using the link below. The link is valid for 30 minutes.\n\n{0}\n\nIf you didn't request this, you can ignore this email.",
   "ja": "以下のリンクから新しいパスワードを設定できます。リンクの有効期限は30分です。\n\n{0}\n\nお心当たりがない場合は、このメールを無視してください。",
@@ -1864,6 +1870,12 @@
   "ja": "この端末からログアウトされました。もう一度ログインしてください。",
   "zh-Hans": "你已在此设备上退出登录。请重新登录。",
   "zh-Hant": "你已在此裝置上登出。請重新登入。"
+ },
+ "이 사진은 올릴 수 없어요.": {
+  "en": "This image can't be uploaded.",
+  "ja": "この画像はアップロードできません。",
+  "zh-Hans": "无法上传此图片。",
+  "zh-Hant": "無法上傳此圖片。"
  },
  "이 커뮤니티의 멤버에게만 넘길 수 있어요.": {
   "en": "You can only transfer to a member of this community.",

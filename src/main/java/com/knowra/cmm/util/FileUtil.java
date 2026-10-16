@@ -65,7 +65,17 @@ public class FileUtil {
 
 	private final com.knowra.cmm.storage.StorageService storage;
 
-	public FileUtil(com.knowra.cmm.storage.StorageService storage) { this.storage = storage; }
+	private final com.knowra.cmm.image.ImageScanner scanner;
+
+	public FileUtil(com.knowra.cmm.storage.StorageService storage, com.knowra.cmm.image.ImageScanner scanner) { this.storage = storage; this.scanner = scanner; }
+
+	/** 위치정보를 지우고 줄인 뒤 불법 이미지 해시와 대조한다(ImageScanner). 걸리면 저장하지 않는다 — 이유는 밝히지 않는다 */
+	private byte[] cleanAndScan(byte[] raw, String ext) throws IOException {
+		byte[] bytes = com.knowra.cmm.image.ImageSanitizer.clean(raw, ext);
+		if (scanner.scan(bytes, ext) == com.knowra.cmm.image.ImageScanner.Verdict.MATCH)
+			throw new IllegalArgumentException("이 사진은 올릴 수 없어요.");
+		return bytes;
+	}
 
 	/** 업로드 분류(전역 규칙 키의 {category}). 새 분류는 여기에만 추가한다. */
 	public static final String CAT_PROFILE = "profile", CAT_COMMUNITY_LOGO = "community-logo",
@@ -80,7 +90,7 @@ public class FileUtil {
 	public TblComFile storeImage(MultipartFile f, long ownerSn, String category, String psnTblSn) throws IOException {
 		String origin = f.getOriginalFilename();
 		String ext = requireAllowedExtension(origin);
-		byte[] bytes = com.knowra.cmm.image.ImageSanitizer.clean(f.getBytes(), ext);   // 위치정보를 지우고 큰 사진은 줄인다
+		byte[] bytes = cleanAndScan(f.getBytes(), ext);   // 위치정보를 지우고 큰 사진은 줄인 뒤 불법 이미지 대조
 		com.knowra.cmm.storage.StorageService.PublicFile saved = storage.storePublic(bytes, ownerSn + "/" + category, "x." + ext);
 		String key = saved.key();
 		int slash = key.lastIndexOf('/');
@@ -99,7 +109,7 @@ public class FileUtil {
 	/** 에디터·댓글·DM 사진 — 공개 URL(운영은 S3 절대 주소)을 돌려준다. 그대로 본문 HTML 에 박힌다. */
 	public String uploadImage(MultipartFile file, long ownerSn, String category) throws IOException {
 		String ext = requireAllowedExtension(file.getOriginalFilename());
-		byte[] bytes = com.knowra.cmm.image.ImageSanitizer.clean(file.getBytes(), ext);
+		byte[] bytes = cleanAndScan(file.getBytes(), ext);
 		return storage.storePublic(bytes, ownerSn + "/" + category, "x." + ext).url();
 	}
 

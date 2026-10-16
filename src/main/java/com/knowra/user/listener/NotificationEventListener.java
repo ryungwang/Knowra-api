@@ -114,7 +114,7 @@ public class NotificationEventListener {
     /** 알림 설정: 좋아요=like, 댓글·답글=cmt, 팔로우=flwr, 나머지(커뮤니티 소식)=sys. 설정 행이 없으면 기본값. */
     private boolean wantsPush(long userSn, String typ) {
         com.knowra.user.entity.TblUserStng st = stngRepository.findByUserSn(userSn);
-        if ("NEW_LOGIN".equals(typ)) return true;   // 보안 알림은 설정과 상관없이 보낸다
+        if ("NEW_LOGIN".equals(typ) || "CHILD_SAFETY_REPORT".equals(typ)) return true;   // 보안·아동 안전 알림은 설정과 상관없이 보낸다
         if (st == null) return !"LIKE".equals(typ);
         String yn = switch (typ) {
             case "LIKE" -> st.getLikeNtfctnYn();
@@ -132,6 +132,7 @@ public class NotificationEventListener {
         if ("POST".equals(e.targetKind()) && e.targetSn() != null) return "/posts/" + e.targetSn();
         if ("MODMAIL".equals(e.targetKind()) && e.targetSn() != null) return "/modmail/" + e.targetSn();
         if ("DECISION".equals(e.targetKind()) && e.targetSn() != null) return "/appeal/" + e.targetSn();
+        if ("ADMIN".equals(e.targetKind())) return "/admin";
         if ("FOLLOW".equals(e.notifTyp()) && senderNick != null) return "/user/" + senderNick;
         if ("COMM".equals(e.targetKind()) && e.targetSn() != null) {
             com.knowra.community.entity.TblComm c = commRepository.findByCommSn(e.targetSn());
@@ -184,6 +185,7 @@ public class NotificationEventListener {
             case "MOD_DECISION"   -> tr(lang, "운영 정책에 따라 회원님의 {0}에 조치했어요. 눌러서 사유를 보고 이의를 낼 수 있어요.", tr(lang, decisionTarget(extra)));
             case "APPEAL_UPHELD"  -> tr(lang, "이의를 검토했지만 조치를 유지하기로 했어요. 눌러서 결과를 볼 수 있어요.");
             case "APPEAL_REVERSED" -> tr(lang, "이의를 받아들여 조치를 되돌렸어요.");
+            case "CHILD_SAFETY_REPORT" -> tr(lang, "아동 안전 신고가 들어와 대상을 바로 가렸어요. 관리자 콘솔에서 먼저 확인해 주세요.");
             case "MODMAIL_REPLY"  -> tr(lang, "{0} 운영진이 문의에 답했어요.", place);
             case "HOLD_APPROVED"  -> tr(lang, "{0} 운영진이 확인해 글이 올라갔어요: {1}", a0, a1);
             case "HOLD_REJECTED"  -> tr(lang, "{0} 운영진이 확인한 뒤 글을 올리지 않았어요: {1}", a0, a1);

@@ -84,7 +84,7 @@ public class AdminConsoleService {
             String stat = params.get("stat") == null ? "OPEN" : String.valueOf(params.get("stat"));
             if (!REPORT_STATS.contains(stat)) stat = "OPEN";
             int page = params.get("page") == null ? 0 : Integer.parseInt(String.valueOf(params.get("page")));
-            Page<TblReport> p = reportRepository.findAllByStatOrderByFrstCrtDtDesc(stat, PageRequest.of(page, PAGE_SIZE));
+            Page<TblReport> p = reportRepository.findQueue(stat, PageRequest.of(page, PAGE_SIZE));
 
             List<Map<String, Object>> list = new ArrayList<>();
             for (TblReport r : p.getContent()) list.add(toRow(r));

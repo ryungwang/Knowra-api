@@ -28,7 +28,8 @@ import java.util.*;
 @RequiredArgsConstructor
 public class SafetyService {
 
-    public static final Set<String> REASONS = Set.of("SPAM", "ABUSE", "SEXUAL", "ILLEGAL", "PRIVACY", "OTHER");
+    /** CHILD_SAFETY — 아동 성착취물·아동 대상 성적 내용. 신고 한 건으로 바로 가리고 관리자에게 바로 알린다(ReportAutoHide) */
+    public static final Set<String> REASONS = Set.of("SPAM", "ABUSE", "SEXUAL", "CHILD_SAFETY", "ILLEGAL", "PRIVACY", "OTHER");
     public static final Set<String> KINDS   = Set.of("POST", "CMT", "USER", "MSG");
 
     private final TblReportRepository reportRepository;
@@ -75,7 +76,7 @@ public class SafetyService {
             };
             reportRepository.save(TblReport.builder().reporterSn(me).targetKind(kind).targetSn(target).reason(reason).detail(detail)
                     .commSn(commSn).commStat(commSn == null ? null : "OPEN").build());
-            autoHide.afterReport(kind, target);
+            autoHide.afterReport(kind, target, reason);
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
             resultVO.setResultMessage("신고가 접수됐어요. 확인 후 조치할게요.");
         } catch (IllegalArgumentException e) {
