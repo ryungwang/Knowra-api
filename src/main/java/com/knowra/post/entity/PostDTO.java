@@ -45,6 +45,7 @@ public class PostDTO {
     private boolean mySaved;
     private boolean hasPoll;         // 피드 카드의 「투표」 표시
     private boolean pinned;          // 커뮤니티 상단 고정
+    private boolean spoiler;         // 스포일러 글 — 화면이 요약·사진을 가린다
     private Long flairSn;            // 말머리 — decorate 가 채운다
     private String flairName;
     private String flairColor;

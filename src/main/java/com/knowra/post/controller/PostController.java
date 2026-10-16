@@ -82,6 +82,12 @@ public class PostController {
         return postService.setCmtLock(params, me);
     }
 
+    /** body: postSn, spoiler — 글쓴이나 커뮤니티 운영진 */
+    @PostMapping("/setSpoiler")
+    public ResultVO setSpoiler(@RequestBody Map<String, Object> params, @CurrentUser Long me) {
+        return postService.setSpoiler(params, me);
+    }
+
     /** body: postSn, pin — 커뮤니티 운영진만 */
     @PostMapping("/setPostPin")
     public ResultVO setPostPin(@RequestBody Map<String, Object> params, @CurrentUser Long me) {

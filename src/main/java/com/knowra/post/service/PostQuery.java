@@ -113,6 +113,7 @@ public class PostQuery {
                 null, false);
         dto.setPfpUrl(pfpUrl(t));
         dto.setPinned(p.getPinnedAt() != null);
+        dto.setSpoiler(p.isSpoiler());
         return dto;
     }
 

@@ -191,6 +191,7 @@ public class PostService {
                 if (params.containsKey("seriesSn") && tblPost.getUserSn() == userSn)
                     tblPost.setSeriesSn(seriesService.validFor(params.get("seriesSn"), userSn, tblPost.getCommSn()));
                 tblPost.setPostTyp(resolvePostTyp(params, tblPost.getCommSn(), userSn, tblPost.getPostTyp()));
+                if (params.containsKey("spoiler")) tblPost.setSpoiler(Boolean.parseBoolean(String.valueOf(params.get("spoiler"))));
                 tblPost.setMdfrSn(userSn);
                 if (STAT_SCHEDULED.equals(tblPost.getStat())) resultVO.putResult("rsrvAt", tblPost.getRsrvAt());   // 수정해도 예약은 그대로
             } else {
@@ -1042,6 +1043,37 @@ public class PostService {
                 modLog.record(post.getCommSn(), me, lock ? com.knowra.community.modlog.ModLogService.CMT_LOCK : com.knowra.community.modlog.ModLogService.CMT_UNLOCK, post.getUserSn(), postSn, post.getPostTtl());
             resultVO.putResult("locked", lock);
             resultVO.putResult("cmtLockBy", lock ? (n > 0 ? (manager ? "MOD" : "AUTHOR") : by) : null);
+            resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
+        } catch (IllegalArgumentException e) {
+            resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
+            resultVO.setResultMessage(e.getMessage());
+        } catch (Exception e) {
+            ErrorLog.report(e);
+            resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
+            resultVO.setResultMessage(ResponseCode.SAVE_ERROR.getMessage());
+        }
+        return resultVO;
+    }
+
+    /**
+     * 스포일러 표시·풀기 — 글쓴이나 그 커뮤니티 운영진(글을 고치지 않고 바로). params: postSn, spoiler
+     * 운영진이 남의 글에 켜고 끄면 운영 기록에 남는다.
+     */
+    public ResultVO setSpoiler(Map<String, Object> params, Long me) {
+        ResultVO resultVO = new ResultVO();
+        try {
+            long postSn = Long.parseLong(String.valueOf(params.get("postSn")));
+            boolean on = Boolean.parseBoolean(String.valueOf(params.get("spoiler")));
+            TblPost post = tblPostRepository.findByPostSn(postSn);
+            if (post == null || !"Y".equals(post.getActvtnYn())) throw new IllegalArgumentException("글을 찾을 수 없어요.");
+            if (!canManage(post, me)) throw new IllegalArgumentException("글쓴이나 운영진만 바꿀 수 있어요.");
+            if (post.isSpoiler() != on) {
+                post.setSpoiler(on);
+                tblPostRepository.save(post);
+                if (post.getUserSn() != me && post.getCommSn() != null)
+                    modLog.record(post.getCommSn(), me, on ? com.knowra.community.modlog.ModLogService.POST_SPOILER : com.knowra.community.modlog.ModLogService.POST_UNSPOILER, post.getUserSn(), postSn, post.getPostTtl());
+            }
+            resultVO.putResult("spoiler", on);
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
         } catch (IllegalArgumentException e) {
             resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());

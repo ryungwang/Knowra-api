@@ -53,6 +53,10 @@ public class TblPost extends BasePostEntity {
     @Comment("커뮤니티 SN (tbl_comm 논리 참조) — NULL 이면 전체 공개 글")
     private Long commSn;
 
+    /** 스포일러 글 — 목록·미리보기에서 본문 요약과 사진을 가린다. 글쓴이·운영진이 켜고 끈다. V54. */
+    @Column(name = "SPOILER", nullable = false)
+    private boolean spoiler;
+
     /** 커뮤니티 상단 고정 시각. NULL 이면 고정 아님. 커뮤니티 운영진만, 커뮤니티당 최대 3개. */
     @Column(name = "PINNED_AT")
     private java.time.LocalDateTime pinnedAt;

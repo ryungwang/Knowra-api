@@ -605,6 +605,12 @@
   "zh-Hans": "只有作者或管理员可以锁定评论。",
   "zh-Hant": "只有作者或管理員可以鎖定留言。"
  },
+ "글쓴이나 운영진만 바꿀 수 있어요.": {
+  "en": "Only the author or moderators can change this.",
+  "ja": "変更できるのは投稿者かモデレーターだけです。",
+  "zh-Hans": "只有作者或管理员可以更改。",
+  "zh-Hant": "只有作者或管理員可以變更。"
+ },
  "글을 찾을 수 없어요.": {
   "en": "Post not found.",
   "ja": "投稿が見つかりません。",
@@ -1426,6 +1432,12 @@
   "ja": "自分で退出した人や拒否された人は再追加できません。招待リンクを送ってください。",
   "zh-Hans": "无法重新加入已退出或被拒绝的用户。请发送邀请链接。",
   "zh-Hant": "無法重新加入已退出或被拒絕的使用者。請傳送邀請連結。"
+ },
+ "스포일러가 포함된 글이에요.": {
+  "en": "This post contains spoilers.",
+  "ja": "ネタバレを含む投稿です。",
+  "zh-Hans": "此帖子包含剧透。",
+  "zh-Hant": "這篇貼文含有劇透。"
  },
  "승인제 커뮤니티는 운영진만 초대 링크를 만들 수 있어요.": {
   "en": "In approval-only communities, only moderators can create invite links.",

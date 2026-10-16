@@ -56,12 +56,13 @@ public class ShareController {
         if (t == null) return page(target, "knowra", Msg.tl(lang(req), "로그인하면 볼 수 있는 글이거나 삭제된 글이에요."), null, "website", req);
 
         PostDTO p = postQuery.toDto(t);
-        String plain = plain(p.getPostCntnt());
+        // 스포일러는 미리보기 카드에도 새면 안 된다 — 글 전체면 본문·사진을 빼고, ||부분||은 가린 채로
+        String plain = p.isSpoiler() ? Msg.tl(lang(req), "스포일러가 포함된 글이에요.") : hideSpoilers(plain(p.getPostCntnt()));
         String where = p.getCommDsplNm() != null ? p.getCommDsplNm() : (p.getCommNm() != null ? p.getCommNm() : null);
         if (postQuery.isAnonymousComm(p.getCommSn())) com.knowra.post.service.PostQuery.anonymize(p);   // 미리보기 카드도 익명
         String desc = (where != null ? where + " · " : "") + (p.getAuthorNm() != null ? p.getAuthorNm() : p.getNickName())
                 + (plain.isEmpty() ? "" : " — " + cut(plain, 120));
-        String img = firstImage(p.getPostCntnt(), req);
+        String img = p.isSpoiler() ? null : firstImage(p.getPostCntnt(), req);
         return page(target, p.getPostTtl(), desc, img, "article", req);
     }
 
@@ -173,6 +174,9 @@ public class ShareController {
     }
 
     private static String cut(String s, int n) { return s.length() > n ? s.substring(0, n) + "…" : s; }
+
+    /** ||가린 부분|| 은 미리보기에서 ▒ 로 — 글자 수도 드러나지 않게 길이를 고정한다 */
+    static String hideSpoilers(String s) { return s.replaceAll("\\|\\|.+?\\|\\|", "▒▒▒"); }
 
     private static String esc(String s) {
         if (s == null) return "";
