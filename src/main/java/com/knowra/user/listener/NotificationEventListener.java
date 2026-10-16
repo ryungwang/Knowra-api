@@ -130,6 +130,7 @@ public class NotificationEventListener {
     private String linkFor(NotifTriggerEvent e, String senderNick) {
         if ("NEW_LOGIN".equals(e.notifTyp())) return "/user/settings?tab=security";
         if ("POST".equals(e.targetKind()) && e.targetSn() != null) return "/posts/" + e.targetSn();
+        if ("MODMAIL".equals(e.targetKind()) && e.targetSn() != null) return "/modmail/" + e.targetSn();
         if ("FOLLOW".equals(e.notifTyp()) && senderNick != null) return "/user/" + senderNick;
         if ("COMM".equals(e.targetKind()) && e.targetSn() != null) {
             com.knowra.community.entity.TblComm c = commRepository.findByCommSn(e.targetSn());
@@ -177,6 +178,8 @@ public class NotificationEventListener {
             case "SERIES_NEW"     -> tr(lang, "구독 중인 연재 「{0}」 새 편: {1}", a0, a1);
             case "CMT_PINNED"     -> tr(lang, "{0}이(가) 「{1}」에서 회원님의 댓글을 맨 위에 고정했어요.", sender, nz(extra));
             case "HOLD_NEW"       -> tr(lang, "{0}에 검토할 새 멤버 글이 있어요.", place);
+            case "MODMAIL_NEW"    -> tr(lang, "{0} 운영진 문의함에 새 문의가 왔어요.", place);
+            case "MODMAIL_REPLY"  -> tr(lang, "{0} 운영진이 문의에 답했어요.", place);
             case "HOLD_APPROVED"  -> tr(lang, "{0} 운영진이 확인해 글이 올라갔어요: {1}", a0, a1);
             case "HOLD_REJECTED"  -> tr(lang, "{0} 운영진이 확인한 뒤 글을 올리지 않았어요: {1}", a0, a1);
             case "NEW_LOGIN"      -> tr(lang, "새 기기에서 로그인했어요: {0}. 본인이 아니면 비밀번호를 바꾸고 그 기기를 로그아웃하세요.", nz(extra));

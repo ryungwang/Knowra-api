@@ -56,6 +56,7 @@ public class CommunityService {
     private final com.knowra.community.modlog.ModLogService modLog;
     private final com.knowra.community.report.CommunityReportService communityReports;
     private final com.knowra.community.joinq.JoinQuestionService joinQuestions;
+    private final com.knowra.community.modmail.ModmailService modmail;
     private final com.knowra.community.hold.HoldService holdService;
 
     @PersistenceContext
@@ -201,6 +202,7 @@ public class CommunityService {
                 resultVO.putResult("reportCnt", communityReports.openCount(tblComm.getCommSn()));
                 resultVO.putResult("heldCnt", holdService.count(tblComm.getCommSn()));
                 resultVO.putResult("holdDays", holdService.days(tblComm.getCommSn()));
+                resultVO.putResult("modmailCnt", modmail.unreadForMods(tblComm.getCommSn()));   // 안 읽은 문의
             }
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
             resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());

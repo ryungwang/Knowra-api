@@ -34,6 +34,8 @@ public class ContentFilterAdvice extends RequestBodyAdviceAdapter {
             Map.entry("/api/post/setPostCmt",     new Target(ContentFilter.Kind.CMT,  new String[]{"cmtCntnt"}, null)),
             Map.entry("/api/post/setPostCmtEdit", new Target(ContentFilter.Kind.CMT,  new String[]{"cmtCntnt"}, "postCmtSn")),
             Map.entry("/api/chat/sendMsg",        new Target(ContentFilter.Kind.MSG,  new String[]{"msgCntnt"}, null)),
+            Map.entry("/api/community/modmail/create", new Target(ContentFilter.Kind.MSG, new String[]{"subject", "body"}, null)),
+            Map.entry("/api/community/modmail/reply",  new Target(ContentFilter.Kind.MSG, new String[]{"body"}, null)),
             // 글·댓글 말고도 남에게 보이는 글자 — 금칙어만 본다(TEXT). 폼으로 오는 것(프로필·커뮤니티)은 ContentFilterParamInterceptor
             Map.entry("/api/community/wiki/page/save", new Target(ContentFilter.Kind.TEXT, new String[]{"title", "content"}, null)),
             Map.entry("/api/community/event/save",     new Target(ContentFilter.Kind.TEXT, new String[]{"title", "descr", "place"}, null)),

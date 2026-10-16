@@ -131,6 +131,18 @@
   "zh-Hans": "你在 {0} 的禁止已解除，可以重新加入。",
   "zh-Hant": "你在 {0} 的禁止已解除，可以重新加入。"
  },
+ "{0} 운영진 문의함에 새 문의가 왔어요.": {
+  "en": "New inquiry in the {0} mod inbox.",
+  "ja": "{0}のモデレーター受信箱に新しい問い合わせが届きました。",
+  "zh-Hans": "{0} 的管理员收件箱有新咨询。",
+  "zh-Hant": "{0} 的管理員收件匣有新詢問。"
+ },
+ "{0} 운영진이 문의에 답했어요.": {
+  "en": "The {0} moderators replied to your inquiry.",
+  "ja": "{0}のモデレーターが問い合わせに返信しました。",
+  "zh-Hans": "{0} 的管理员回复了你的咨询。",
+  "zh-Hant": "{0} 的管理員回覆了你的詢問。"
+ },
  "{0} 운영진이 확인한 뒤 글을 올리지 않았어요: {1}": {
   "en": "The {0} moderators reviewed your post and didn't publish it: {1}",
   "ja": "{0}の運営メンバーが確認した結果、投稿は公開されませんでした：{1}",
@@ -298,6 +310,12 @@
   "ja": "{0}さんがあなたをメンションしました。",
   "zh-Hans": "{0} 提到了你。",
   "zh-Hant": "{0} 提到了你。"
+ },
+ "{0}자까지 쓸 수 있어요.": {
+  "en": "You can write up to {0} characters.",
+  "ja": "{0}文字まで入力できます。",
+  "zh-Hans": "最多可输入 {0} 个字符。",
+  "zh-Hant": "最多可輸入 {0} 個字元。"
  },
  "■ 다가오는 모임": {
   "en": "■ Upcoming events",
@@ -664,6 +682,12 @@
   "ja": "削除できるのは自分が送ったメッセージだけです。",
   "zh-Hans": "只能删除自己发送的消息。",
   "zh-Hant": "只能刪除自己傳送的訊息。"
+ },
+ "내용을 써 주세요.": {
+  "en": "Please write a message.",
+  "ja": "内容を入力してください。",
+  "zh-Hans": "请填写内容。",
+  "zh-Hant": "請填寫內容。"
  },
  "내용이 비어 있습니다.": {
   "en": "The content is empty.",
@@ -1072,6 +1096,12 @@
   "ja": "イベントが見つかりません。",
   "zh-Hans": "找不到该活动。",
   "zh-Hant": "找不到此活動。"
+ },
+ "문의를 찾을 수 없어요.": {
+  "en": "Inquiry not found.",
+  "ja": "問い合わせが見つかりません。",
+  "zh-Hans": "找不到该咨询。",
+  "zh-Hant": "找不到該詢問。"
  },
  "반응할 수 없는 댓글이에요.": {
   "en": "You can't react to this comment.",
@@ -1667,6 +1697,12 @@
   "zh-Hans": "仅管理员可以执行此操作。",
   "zh-Hant": "僅管理員可以執行此操作。"
  },
+ "운영진은 문의함에서 바로 볼 수 있어요.": {
+  "en": "Moderators can see inquiries directly in the inbox.",
+  "ja": "モデレーターは受信箱で直接確認できます。",
+  "zh-Hans": "管理员可直接在收件箱中查看。",
+  "zh-Hant": "管理員可直接在收件匣中查看。"
+ },
  "운영진은 주인만 바꿀 수 있습니다.": {
   "en": "Only the owner can change moderators.",
   "ja": "運営メンバーを変更できるのはオーナーのみです。",
@@ -2027,6 +2063,12 @@
   "zh-Hans": "小小掌声",
   "zh-Hant": "小小掌聲"
  },
+ "잘못된 요청이에요.": {
+  "en": "Invalid request.",
+  "ja": "不正なリクエストです。",
+  "zh-Hans": "请求无效。",
+  "zh-Hant": "請求無效。"
+ },
  "잠시 후 다시 시도해주세요. (재발송은 1분에 한 번)": {
   "en": "Please try again shortly. (You can resend once a minute.)",
   "ja": "しばらくしてからもう一度お試しください。（再送信は1分に1回まで）",
@@ -2068,6 +2110,12 @@
   "ja": "タイトルは{0}文字までです。",
   "zh-Hans": "标题最多 {0} 个字。",
   "zh-Hant": "標題最多 {0} 個字。"
+ },
+ "제목을 써 주세요.": {
+  "en": "Please add a subject.",
+  "ja": "件名を入力してください。",
+  "zh-Hans": "请填写主题。",
+  "zh-Hant": "請填寫主旨。"
  },
  "조회 중 오류가 발생했습니다.": {
   "en": "Something went wrong while loading.",
@@ -2182,6 +2230,12 @@
   "ja": "サポートされていないプッシュアドレスです。",
   "zh-Hans": "不支持该推送地址。",
   "zh-Hant": "不支援此推播位址。"
+ },
+ "진행 중인 문의가 {0}개 있어요. 이어서 써 주세요.": {
+  "en": "You already have {0} open inquiries. Please continue in one of them.",
+  "ja": "進行中の問い合わせが{0}件あります。そちらに続けて書いてください。",
+  "zh-Hans": "你已有 {0} 个进行中的咨询，请在其中继续留言。",
+  "zh-Hant": "你已有 {0} 個進行中的詢問，請在其中繼續留言。"
  },
  "질문은 {0}개까지예요.": {
   "en": "You can add up to {0} questions.",
