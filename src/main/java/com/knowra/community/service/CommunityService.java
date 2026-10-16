@@ -92,7 +92,7 @@ public class CommunityService {
             tblComm.setBnrFileSn(null);  tblComm.setBnrFile(null);
             tblComm.setFrstCrtDt(java.time.LocalDateTime.now());
             tblComm.setMdfrSn(null); tblComm.setMdfcnDt(null);
-            if (!java.util.Set.of("public", "restricted", "anonymous", "private").contains(tblComm.getPrvcyStng()))
+            if (tblComm.getPrvcyStng() == null || !java.util.Set.of("public", "restricted", "anonymous", "private").contains(tblComm.getPrvcyStng()))
                 tblComm.setPrvcyStng("public");
             tblComm.setLang(com.knowra.cmm.i18n.LangDetect.commLang(tblComm.getLang()));   // 고를 수 있는 값만
             tblComm.setCreatrSn(userSn);
