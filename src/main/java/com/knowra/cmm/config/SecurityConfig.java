@@ -91,9 +91,10 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/notice/current", "/api/sitemap.xml", "/api/auth/sns/providers", "/api/push/publicKey", "/api/link/preview", "/api/link/image", "/api/badge/list").permitAll()
                         // 공유 링크 미리보기 — 봇은 로그인하지 않는다. 비로그인 기준 공개 정보만 낸다(ShareController).
                         .requestMatchers(HttpMethod.GET, "/s/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/feed/**", "/api/post/getPost", "/api/post/getPostHistory", "/api/post/getCmtHistory", "/api/series/get", "/api/series/byUser", "/api/search", "/api/search/suggest", "/api/tag/info", "/api/tag/posts", "/api/legal/info").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/feed/**", "/api/post/getPost", "/api/post/getPostHistory", "/api/post/getCmtHistory", "/api/series/get", "/api/series/byUser", "/api/search", "/api/search/suggest", "/api/tag/info", "/api/tag/posts", "/api/legal/info", "/api/appeal/suspended").permitAll()
                         .requestMatchers(HttpMethod.POST,
-                                "/api/post/getPostCmtList", "/api/post/viewPost", "/api/post/getCommPostList").permitAll()
+                                "/api/post/getPostCmtList", "/api/post/viewPost", "/api/post/getCommPostList",
+                                "/api/appeal/suspended").permitAll()   // 정지돼 로그인할 수 없는 사람의 이의 — 로그인 때 받은 확인표로만
 
                         // 비로그인 열람 — 커뮤니티
                         .requestMatchers(HttpMethod.GET,

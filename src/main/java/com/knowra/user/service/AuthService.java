@@ -46,6 +46,7 @@ public class AuthService {
 
     private final RestTemplate restTemplate = new RestTemplate();
     private final com.knowra.legal.LegalService legalService;
+    private final com.knowra.safety.appeal.ModDecisionService decisionService;
 
     private final AuthenticationManager authenticationManager;
     private final JwtProvider jwtProvider;
@@ -131,7 +132,7 @@ public class AuthService {
             long userSn = userService.getUserSn(loginId);
             // 정지(status='S')된 계정은 비밀번호가 맞아도 들여보내지 않는다 — 관리자 콘솔이 정지한다
             tblUserRepository.findById(userSn).ifPresent(u -> {
-                if (suspensionService.isSuspended(u)) throw new IllegalStateException("SUSPENDED|" + suspendedMessage(u));
+                if (suspensionService.isSuspended(u)) throw new IllegalStateException("SUSPENDED|" + u.getUserSn() + "|" + suspendedMessage(u));
                 if (!"Y".equals(u.getActvtnYn())) throw new IllegalStateException("DELETED");   // 탈퇴한 계정 — 예전엔 비밀번호로 다시 들어왔다
             });
             // 2단계 인증이 켜져 있으면 토큰 대신 확인표 — 인증 앱 코드까지 맞아야 /login/2fa 가 토큰을 준다
@@ -143,7 +144,13 @@ public class AuthService {
         } catch (IllegalStateException e) {
             resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());
             String m = String.valueOf(e.getMessage());
-            resultVO.setResultMessage(m.startsWith("SUSPENDED|") ? m.substring("SUSPENDED|".length()) : "이메일 또는 비밀번호가 올바르지 않습니다.");
+            if (m.startsWith("SUSPENDED|")) {
+                // 비밀번호까지 맞은 정지 계정 — 이의를 낼 수 있게 짧은 확인표를 준다(로그인은 여전히 안 된다)
+                String[] parts = m.split("\\|", 3);
+                resultVO.setResultMessage(parts[2]);
+                resultVO.putResult("suspended", true);
+                resultVO.putResult("appealTicket", decisionService.ticketFor(Long.parseLong(parts[1])));
+            } else resultVO.setResultMessage("이메일 또는 비밀번호가 올바르지 않습니다.");
         } catch (Exception e) {
             ErrorLog.report(e);
             resultVO.setResultCode(ResponseCode.SELECT_ERROR.getCode());

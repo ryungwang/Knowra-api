@@ -131,6 +131,7 @@ public class NotificationEventListener {
         if ("NEW_LOGIN".equals(e.notifTyp())) return "/user/settings?tab=security";
         if ("POST".equals(e.targetKind()) && e.targetSn() != null) return "/posts/" + e.targetSn();
         if ("MODMAIL".equals(e.targetKind()) && e.targetSn() != null) return "/modmail/" + e.targetSn();
+        if ("DECISION".equals(e.targetKind()) && e.targetSn() != null) return "/appeal/" + e.targetSn();
         if ("FOLLOW".equals(e.notifTyp()) && senderNick != null) return "/user/" + senderNick;
         if ("COMM".equals(e.targetKind()) && e.targetSn() != null) {
             com.knowra.community.entity.TblComm c = commRepository.findByCommSn(e.targetSn());
@@ -180,6 +181,9 @@ public class NotificationEventListener {
             case "HOLD_NEW"       -> tr(lang, "{0}에 검토할 새 멤버 글이 있어요.", place);
             case "MODMAIL_NEW"    -> tr(lang, "{0} 운영진 문의함에 새 문의가 왔어요.", place);
             case "QUOTE"          -> tr(lang, "{0}이(가) 회원님의 글 「{1}」을(를) 인용했어요.", sender, nz(extra));
+            case "MOD_DECISION"   -> tr(lang, "운영 정책에 따라 회원님의 {0}에 조치했어요. 눌러서 사유를 보고 이의를 낼 수 있어요.", tr(lang, decisionTarget(extra)));
+            case "APPEAL_UPHELD"  -> tr(lang, "이의를 검토했지만 조치를 유지하기로 했어요. 눌러서 결과를 볼 수 있어요.");
+            case "APPEAL_REVERSED" -> tr(lang, "이의를 받아들여 조치를 되돌렸어요.");
             case "MODMAIL_REPLY"  -> tr(lang, "{0} 운영진이 문의에 답했어요.", place);
             case "HOLD_APPROVED"  -> tr(lang, "{0} 운영진이 확인해 글이 올라갔어요: {1}", a0, a1);
             case "HOLD_REJECTED"  -> tr(lang, "{0} 운영진이 확인한 뒤 글을 올리지 않았어요: {1}", a0, a1);
@@ -218,4 +222,9 @@ public class NotificationEventListener {
     static String subjectJosa(String word) { return "을".equals(objectJosa(word)) ? "이" : "가"; }
 
     private static String nz(String s) { return s == null ? "" : s; }
+
+    /** 조치 종류 → 알림 문장에 들어갈 낱말(번역표 키) */
+    private static String decisionTarget(String kind) {
+        return switch (String.valueOf(kind)) { case "POST_REMOVE" -> "글"; case "CMT_REMOVE" -> "댓글"; case "MSG_HIDE" -> "메시지"; default -> "계정"; };
+    }
 }
