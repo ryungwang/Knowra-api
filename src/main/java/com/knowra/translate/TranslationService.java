@@ -19,7 +19,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 글·댓글을 읽는 사람 언어로. (대상, 언어)마다 한 번 번역해 두고 같이 쓴다.
+ * 글·댓글·대화 메시지를 읽는 사람 언어로. (대상, 언어)마다 한 번 번역해 두고 같이 쓴다.
  *
  * <p>돌려주는 status:
  * <ul>
@@ -75,26 +75,52 @@ public class TranslationService {
                   AND (CAST(? AS BIGINT) IS NULL OR NOT EXISTS (SELECT 1 FROM knowra_user.tbl_user_block b
                        WHERE (b.user_sn = ? AND b.blocked_sn = c.user_sn) OR (b.user_sn = c.user_sn AND b.blocked_sn = ?)))""",
                 postSn, me, me, me);
+        Map<Long, String> texts = new LinkedHashMap<>();
+        for (Map<String, Object> r : rows) texts.put(((Number) r.get("post_cmt_sn")).longValue(), (String) r.get("cmt_cntnt"));
+        return plainMany("CMT", texts, to, res);
+    }
+
+    /**
+     * 대화방 메시지 여러 개 — 그 방의 멤버만, 남이 보낸 것만(내 메시지는 내 언어다). 지운·가린 메시지는 번역하지 않는다.
+     * 결과는 메시지 번호 → {status, body, from}
+     */
+    public Map<Long, Map<String, Object>> messages(long roomSn, List<Long> msgSns, Long me, String to) {
+        Integer member = jdbc.queryForObject("SELECT COUNT(*) FROM knowra_user.tbl_chat_room_mbr WHERE room_sn = ? AND user_sn = ? AND stat IN ('ACTIVE', 'REQUEST')",
+                Integer.class, roomSn, me);
+        if (member == null || member == 0) throw new IllegalArgumentException("대화방을 찾을 수 없어요.");
+        List<Long> want = msgSns.stream().distinct().limit(MAX_CMTS).toList();
+        Map<Long, Map<String, Object>> res = new LinkedHashMap<>();
+        if (want.isEmpty()) return res;
+        String in = String.join(",", want.stream().map(String::valueOf).toList());
+        Map<Long, String> texts = new LinkedHashMap<>();
+        jdbc.query("""
+                SELECT msg_sn, msg_cntnt FROM knowra_user.tbl_chat_msg
+                WHERE room_sn = ? AND msg_sn IN (""" + in + """
+                ) AND user_sn <> ? AND hidden_at IS NULL AND deleted_at IS NULL AND COALESCE(msg_cntnt, '') <> ''""",
+                rs -> { texts.put(rs.getLong(1), rs.getString(2)); }, roomSn, me);
+        return plainMany("MSG", texts, to, res);
+    }
+
+    /** 일반 글자(댓글·메시지) 여럿을 한 번에 — 캐시에 있는 건 그대로, 나머지만 업체에 */
+    private Map<Long, Map<String, Object>> plainMany(String kind, Map<Long, String> texts, String to, Map<Long, Map<String, Object>> res) {
         List<Long> sendSn = new ArrayList<>();
         List<String> sendText = new ArrayList<>(), sendHash = new ArrayList<>();
-        for (Map<String, Object> r : rows) {
-            long sn = ((Number) r.get("post_cmt_sn")).longValue();
-            String text = (String) r.get("cmt_cntnt");
+        texts.forEach((sn, text) -> {
             String script = LangDetect.detect(null, text);
-            if (!needs(script, to)) { res.put(sn, status(script == null ? "skip" : "same")); continue; }
-            String hash = sha1("CMT", null, text);
-            Map<String, Object> hit = cached("CMT", sn, to, hash);
-            if (hit != null) { res.put(sn, hit); continue; }
+            if (!needs(script, to)) { res.put(sn, status(script == null ? "skip" : "same")); return; }
+            String hash = sha1(kind, null, text);
+            Map<String, Object> hit = cached(kind, sn, to, hash);
+            if (hit != null) { res.put(sn, hit); return; }
             sendSn.add(sn); sendText.add(TranslateMarkup.plainOut(text)); sendHash.add(hash);
-        }
+        });
         if (sendSn.isEmpty()) return res;
         List<Translator.Out> out = call(sendText, to);
         for (int i = 0; i < sendSn.size(); i++) {
             if (out == null) { res.put(sendSn.get(i), status("unavailable")); continue; }
             Translator.Out o = out.get(i);
             res.put(sendSn.get(i), sameLang(o.from(), to)
-                    ? save("CMT", sendSn.get(i), to, sendHash.get(i), o.from(), true, null, null)
-                    : save("CMT", sendSn.get(i), to, sendHash.get(i), o.from(), false, null, TranslateMarkup.plainBack(o.html())));
+                    ? save(kind, sendSn.get(i), to, sendHash.get(i), o.from(), true, null, null)
+                    : save(kind, sendSn.get(i), to, sendHash.get(i), o.from(), false, null, TranslateMarkup.plainBack(o.html())));
         }
         return res;
     }
@@ -147,7 +173,7 @@ public class TranslationService {
         return same ? status("same") : ok(from, title, body);
     }
 
-    /** 지운 글·댓글의 번역본도 지운다 — 원문이 사라졌는데 사본이 남으면 안 된다 */
+    /** 지운 글·댓글·메시지의 번역본도 지운다 — 원문이 사라졌는데 사본이 남으면 안 된다 */
     @Scheduled(cron = "0 17 4 * * *", zone = "UTC")
     public void purge() {
         jdbc.update("""
@@ -156,6 +182,9 @@ public class TranslationService {
         jdbc.update("""
                 DELETE FROM knowra_com.tbl_translation t WHERE t.target_kind = 'CMT'
                 AND NOT EXISTS (SELECT 1 FROM knowra_post.tbl_post_cmt c WHERE c.post_cmt_sn = t.target_sn AND c.actvtn_yn = 'Y')""");
+        jdbc.update("""
+                DELETE FROM knowra_com.tbl_translation t WHERE t.target_kind = 'MSG'
+                AND NOT EXISTS (SELECT 1 FROM knowra_user.tbl_chat_msg m WHERE m.msg_sn = t.target_sn AND m.hidden_at IS NULL AND m.deleted_at IS NULL)""");
     }
 
     private static Map<String, Object> status(String s) { return Map.of("status", s); }

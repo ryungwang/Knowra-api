@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
 
-/** 글·댓글 번역 — 로그인한 사람만(번역 한도를 아무나 쓰지 못하게). 언어는 to 가 없으면 지금 화면 언어 */
+/** 글·댓글·대화 메시지 번역 — 로그인한 사람만(번역 한도를 아무나 쓰지 못하게). 언어는 to 가 없으면 지금 화면 언어 */
 @RestController
 @RequiredArgsConstructor
 public class TranslateController {
@@ -31,6 +31,13 @@ public class TranslateController {
     public ResultVO comments(@RequestBody Map<String, Object> b, @CurrentUser Long me) {
         List<Long> sns = b.get("cmtSns") instanceof List<?> l ? l.stream().map(x -> Long.parseLong(String.valueOf(x))).toList() : List.of();
         return run(() -> Map.of("list", svc.comments(Long.parseLong(String.valueOf(b.get("postSn"))), sns, me, to(b))));
+    }
+
+    /** body: roomSn, msgSns[], to? — 결과 result.list = {메시지번호: {status, body, from}} */
+    @PostMapping("/api/translate/messages")
+    public ResultVO messages(@RequestBody Map<String, Object> b, @CurrentUser Long me) {
+        List<Long> sns = b.get("msgSns") instanceof List<?> l ? l.stream().map(x -> Long.parseLong(String.valueOf(x))).toList() : List.of();
+        return run(() -> Map.of("list", svc.messages(Long.parseLong(String.valueOf(b.get("roomSn"))), sns, me, to(b))));
     }
 
     private static String to(Map<String, Object> b) {
