@@ -42,6 +42,7 @@ public class SearchService {
     private EntityManager em;
 
     private final PostQuery postQuery;
+    private final com.knowra.translate.TranslationService translation;
 
     private static final int LIMIT_POSTS = 20;
     private static final int LIMIT_OTHER = 10;
@@ -75,17 +76,34 @@ public class SearchService {
             List<String> tokens = tokens(q);
             boolean all = "all".equals(o.type());
             // 글 다음 쪽만 부를 때(page>0)는 나머지 묶음을 다시 찾지 않는다
+            List<String> hlTokens = tokens;
             if (all || "posts".equals(o.type())) {
-                PostPage pp = searchPosts(q, tokens, me, o);
+                // 다른 언어로 쓴 글도 찾는다 — 검색어를 사이트의 다른 언어로 옮겨 그중 하나라도 맞으면(글만. 커뮤니티·사람·태그는 원문으로)
+                List<Query> queries = new ArrayList<>();
+                queries.add(new Query(q.toLowerCase(Locale.ROOT), tokens, 1.0));
+                List<String> also = new ArrayList<>();
+                for (String alt : altQueries(q, me)) {
+                    List<String> tk = tokens(alt);
+                    if (tk.isEmpty()) continue;
+                    queries.add(new Query(alt, tk, ALT_WEIGHT));
+                    also.add(alt);
+                }
+                PostPage pp = searchPosts(queries, me, o);
                 resultVO.putResult("posts", pp.items());
                 resultVO.putResult("postsHasMore", pp.hasMore());
+                resultVO.putResult("alsoQueries", also);
+                if (!also.isEmpty()) {
+                    LinkedHashSet<String> hl = new LinkedHashSet<>(tokens);
+                    queries.forEach(x -> hl.addAll(x.tokens()));
+                    hlTokens = new ArrayList<>(hl);
+                }
             }
             if (o.page() == 0) {
                 if (all || "communities".equals(o.type())) resultVO.putResult("communities", searchCommunities(tokens, me));
                 if (all || "users".equals(o.type()))       resultVO.putResult("users", searchUsers(tokens, me));
                 if (all || "tags".equals(o.type()))        resultVO.putResult("tags", searchTags(tokens));
             }
-            resultVO.putResult("tokens", tokens);
+            resultVO.putResult("tokens", hlTokens);   // 화면이 찾은 낱말을 칠한다 — 옮긴 검색어 낱말까지
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
             resultVO.setResultMessage(ResponseCode.SUCCESS.getMessage());
         } catch (Exception e) {
@@ -146,17 +164,36 @@ public class SearchService {
      * 관련도를 SQL 로 짜기보다 이쪽이 단순하고, 지금 규모(글 수백)에선 후보 안에 다 들어온다.
      * 글이 수만 개가 되면 이 창 밖의 오래된 글이 관련도 정렬에서 빠진다 — 그때 엔진을 붙인다.
      */
-    private PostPage searchPosts(String q, List<String> tokens, Long me, Options o) {
+    /** 검색어를 다른 언어로 옮긴 것 — 실패해도 검색은 원문으로 된다 */
+    private List<String> altQueries(String q, Long me) {
+        try { return translation.searchQueries(q, me); }
+        catch (Exception e) { ErrorLog.report(e); return List.of(); }
+    }
+
+    /** 검색어 하나(원문 또는 다른 언어로 옮긴 것). weight — 옮긴 검색어로 맞은 글은 원문으로 맞은 글보다 조금 뒤에 */
+    record Query(String phrase, List<String> tokens, double weight) {}
+
+    static final double ALT_WEIGHT = 0.8;
+
+    private PostPage searchPosts(List<Query> queries, Long me, Options o) {
         QTblPostTag qPostTag = QTblPostTag.tblPostTag;
         QTblTag     qTag     = QTblTag.tblTag;
         List<BooleanExpression> where = new ArrayList<>(java.util.stream.Stream.of(PostQuery.alive(), PostQuery.visibleTo(me), PostQuery.notMuted(me)).filter(java.util.Objects::nonNull).toList());
-        for (String t : tokens) {
-            BooleanExpression byTag = POST.postSn.in(
-                    JPAExpressions.select(qPostTag.postSn).from(qPostTag)
-                            .join(qTag).on(qPostTag.tagSn.eq(qTag.tagSn))
-                            .where(qTag.tagNm.containsIgnoreCase(t)));
-            where.add(POST.postTtl.containsIgnoreCase(t).or(POST.postCntnt.containsIgnoreCase(t)).or(byTag));
+        // 검색어마다 낱말이 모두 들어 있어야 하고(AND), 검색어(원문·옮긴 것) 중 하나만 맞으면 된다(OR)
+        BooleanExpression anyQuery = null;
+        for (Query qq : queries) {
+            BooleanExpression allTokens = null;
+            for (String t : qq.tokens()) {
+                BooleanExpression byTag = POST.postSn.in(
+                        JPAExpressions.select(qPostTag.postSn).from(qPostTag)
+                                .join(qTag).on(qPostTag.tagSn.eq(qTag.tagSn))
+                                .where(qTag.tagNm.containsIgnoreCase(t)));
+                BooleanExpression m = POST.postTtl.containsIgnoreCase(t).or(POST.postCntnt.containsIgnoreCase(t)).or(byTag);
+                allTokens = allTokens == null ? m : allTokens.and(m);
+            }
+            if (allTokens != null) anyQuery = anyQuery == null ? allTokens : anyQuery.or(allTokens);
         }
+        if (anyQuery != null) where.add(anyQuery);
         LocalDateTime since = switch (o.period()) {
             case "day" -> LocalDateTime.now().minusDays(1);
             case "week" -> LocalDateTime.now().minusWeeks(1);
@@ -178,10 +215,9 @@ public class SearchService {
 
         List<PostDTO> cands = postQuery.decorate(
                 postQuery.base().where(w).orderBy(POST.frstCrtDt.desc()).limit(CANDIDATES).fetch(), me);
-        String phrase = q.toLowerCase(Locale.ROOT);
         Comparator<PostDTO> cmp = "popular".equals(o.sort())
                 ? Comparator.comparingDouble(SearchService::popularity)
-                : Comparator.comparingDouble((PostDTO d) -> relevance(d, phrase, tokens));
+                : Comparator.comparingDouble((PostDTO d) -> relevance(d, queries));
         cands.sort(cmp.reversed().thenComparing(PostDTO::getFrstCrtDt, Comparator.nullsLast(Comparator.reverseOrder())));
         int to = Math.min(cands.size(), from + LIMIT_POSTS);
         List<PostDTO> page = from >= cands.size() ? List.of() : cands.subList(from, to);
@@ -189,6 +225,13 @@ public class SearchService {
     }
 
     private static final int CANDIDATES = 300;
+
+    /** 검색어(원문·옮긴 것) 중 가장 잘 맞는 것의 점수 */
+    static double relevance(PostDTO d, List<Query> queries) {
+        double best = 0;
+        for (Query qq : queries) best = Math.max(best, relevance(d, qq.phrase(), qq.tokens()) * qq.weight());
+        return best;
+    }
 
     /** 제목 > 태그 > 본문. 검색어 전체가 제목에 그대로 있으면 크게 가산, 최근 글엔 조금. */
     static double relevance(PostDTO d, String phrase, List<String> tokens) {

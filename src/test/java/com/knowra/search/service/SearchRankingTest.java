@@ -47,4 +47,14 @@ class SearchRankingTest {
         double partial = SearchService.relevance(post("글", "", List.of("코인시장"), 100), "코인", tk);
         assertThat(exact).isGreaterThan(partial);
     }
+
+    @Test
+    void 다른_언어로_옮긴_검색어로_맞은_글은_원문으로_맞은_글보다_조금_뒤() {
+        List<SearchService.Query> qs = List.of(
+                new SearchService.Query("등산", List.of("등산"), 1.0),
+                new SearchService.Query("hiking", List.of("hiking"), SearchService.ALT_WEIGHT));
+        double native_ = SearchService.relevance(post("주말 등산 코스", "", List.of(), 100), qs);
+        double alt     = SearchService.relevance(post("Weekend hiking course", "", List.of(), 100), qs);
+        assertThat(alt).isGreaterThan(0).isLessThan(native_);
+    }
 }

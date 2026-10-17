@@ -20,6 +20,13 @@ public final class LangDetect {
 
     public static String detect(String title, String html) {
         String text = ((title == null ? "" : title) + " " + (html == null ? "" : html.replaceAll("<[^>]+>", " ").replace("&nbsp;", " ")));
+        return classify(text, 4);
+    }
+
+    /** 검색어 — 「등산」처럼 두 글자여도 가린다 */
+    public static String detectQuery(String q) { return q == null ? null : classify(q, 1); }
+
+    private static String classify(String text, int min) {
         int hangul = 0, kana = 0, han = 0, latin = 0;
         for (int i = 0; i < text.length(); ) {
             int c = text.codePointAt(i);
@@ -34,7 +41,7 @@ public final class LangDetect {
             }
         }
         int total = hangul + kana + han + latin;
-        if (total < 4) return null;
+        if (total < min) return null;
         if (hangul * 5 >= total) return "ko";      // 한국어 글에 영어 낱말이 섞여도 한국어
         if (kana > 0 && (kana + han) * 3 >= total) return "ja";
         if (han * 3 >= total) return "zh";

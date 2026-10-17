@@ -72,4 +72,12 @@ class TranslateTest {
         assertThat(out).containsExactly(new Translator.Out("Hello", "ko"), new Translator.Out("World", "ja"));
         assertThatThrownBy(() -> AzureTranslator.parse(body, 3)).isInstanceOf(IllegalStateException.class);
     }
+
+    @Test
+    void 검색어는_두_글자여도_언어를_가린다() {
+        assertThat(com.knowra.cmm.i18n.LangDetect.detectQuery("등산")).isEqualTo("ko");
+        assertThat(com.knowra.cmm.i18n.LangDetect.detectQuery("登山")).isEqualTo("zh");
+        assertThat(com.knowra.cmm.i18n.LangDetect.detectQuery("go")).isEqualTo("latn");
+        assertThat(com.knowra.cmm.i18n.LangDetect.detect(null, "등산")).isNull();   // 글은 그대로 4글자부터
+    }
 }

@@ -34,12 +34,13 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class TranslationService {
 
-    static final int MAX_CMTS = 100, MAX_TITLES = 50;
+    static final int MAX_CMTS = 100, MAX_TITLES = 50, MAX_QUERY = 100;
 
     private final JdbcTemplate jdbc;
     private final ObjectProvider<Translator> translator;
     private final TranslateQuota quota;
     private final PostService postService;
+    private final com.knowra.cmm.ratelimit.RateLimiter limiter;
 
     public boolean available() { return translator.getIfAvailable() != null; }
 
@@ -95,6 +96,39 @@ public class TranslationService {
                     : save("TITLE", sendSn.get(i), to, sendHash.get(i), o.from(), false, TranslateMarkup.titleBack(o.html()), null)));
         }
         return res;
+    }
+
+    /**
+     * 다른 언어 글 검색 — 검색어를 사이트의 다른 언어로 옮긴 것들(원문 제외). 「등산」 → hiking, ハイキング, 登山 …
+     * (검색어, 언어)마다 한 번 번역하고 기억한다. 로그인하지 않은 사람은 기억해 둔 것만(call). 너무 긴 검색어는 하지 않는다.
+     */
+    @org.springframework.transaction.annotation.Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)   // 검색은 읽기 전용 거래 안에서 부른다 — 기억은 따로 쓴다
+    public List<String> searchQueries(String q, Long me) {
+        String norm = q == null ? "" : q.trim().toLowerCase(java.util.Locale.ROOT).replaceAll("\\s+", " ");
+        if (norm.isEmpty() || norm.length() > MAX_QUERY) return List.of();
+        String script = LangDetect.detectQuery(norm);
+        if (unknown(script)) return List.of();
+        Map<String, String> known = new java.util.HashMap<>();
+        jdbc.query("SELECT lang, text FROM knowra_com.tbl_query_translation WHERE q = ?", rs -> { known.put(rs.getString(1), rs.getString(2)); }, norm);
+        List<String> out = new ArrayList<>();
+        Boolean fresh = null;   // 새로 번역할 수 있나 — 한 사람이 검색어를 바꿔 가며 한도를 쓰지 못하게 시간당 100개
+        for (String to : com.knowra.cmm.i18n.Lang.ALL) {
+            if (!needs(script, to)) continue;
+            String text = known.get(to);
+            if (text == null) {
+                if (fresh == null) fresh = me != null && limiter.tryHit("api:translate-q:u:" + me, 100, 3600);
+                List<Translator.Out> r = fresh ? call(List.of(TranslateMarkup.titleOut(norm)), to, me) : null;
+                if (r == null) continue;
+                Translator.Out o = r.getFirst();
+                text = sameLang(o.from(), to) ? "" : TranslateMarkup.titleBack(o.html()).trim().toLowerCase(java.util.Locale.ROOT);
+                if (text.length() > 400) text = "";
+                jdbc.update("""
+                        INSERT INTO knowra_com.tbl_query_translation (q, lang, text) VALUES (?, ?, ?)
+                        ON CONFLICT (q, lang) DO UPDATE SET text = EXCLUDED.text, created_at = now()""", norm, to, text);
+            }
+            if (!text.isEmpty() && !text.equals(norm) && !out.contains(text)) out.add(text);
+        }
+        return out;
     }
 
     private static Map<String, Object> titleOnly(Map<String, Object> m) {
@@ -235,7 +269,7 @@ public class TranslationService {
         return same ? status("same") : ok(from, title, body);
     }
 
-    /** 지운 글·댓글·메시지의 번역본도 지운다 — 원문이 사라졌는데 사본이 남으면 안 된다 */
+    /** 지운 글·댓글·메시지의 번역본도 지운다 — 원문이 사라졌는데 사본이 남으면 안 된다. 검색어 번역은 30일만 */
     @Scheduled(cron = "0 17 4 * * *", zone = "UTC")
     public void purge() {
         jdbc.update("""
@@ -247,6 +281,7 @@ public class TranslationService {
         jdbc.update("""
                 DELETE FROM knowra_com.tbl_translation t WHERE t.target_kind = 'MSG'
                 AND NOT EXISTS (SELECT 1 FROM knowra_user.tbl_chat_msg m WHERE m.msg_sn = t.target_sn AND m.hidden_at IS NULL AND m.deleted_at IS NULL)""");
+        jdbc.update("DELETE FROM knowra_com.tbl_query_translation WHERE created_at < now() - INTERVAL '30 days'");
     }
 
     private static Map<String, Object> status(String s) { return Map.of("status", s); }
