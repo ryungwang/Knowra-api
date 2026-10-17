@@ -47,6 +47,11 @@ class TranslateTest {
         assertThat(TranslationService.needs("latn", "en")).as("영어인지 스페인어인지 모른다").isTrue();
         assertThat(TranslationService.needs("zh", "zh-Hant")).as("간체일 수 있다").isTrue();
         assertThat(TranslationService.needs(null, "en")).as("너무 짧다").isFalse();
+        // 업체가 알려 준 정확한 언어를 적어 둔 글
+        assertThat(TranslationService.needs("en", "en")).isFalse();
+        assertThat(TranslationService.needs("es", "en")).isTrue();
+        assertThat(TranslationService.needs("zh-Hans", "zh-Hans")).isFalse();
+        assertThat(TranslationService.needs("zh-Hans", "zh-Hant")).isTrue();
     }
 
     @Test

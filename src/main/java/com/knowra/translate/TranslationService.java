@@ -1,6 +1,5 @@
 package com.knowra.translate;
 
-import com.knowra.cmm.i18n.Lang;
 import com.knowra.cmm.i18n.LangDetect;
 import com.knowra.post.service.PostService;
 import lombok.RequiredArgsConstructor;
@@ -56,6 +55,7 @@ public class TranslationService {
         List<Translator.Out> out = call(List.of(TranslateMarkup.titleOut(title), TranslateMarkup.htmlOut(body)), to);
         if (out == null) return status("unavailable");
         String from = out.get(1).from() != null ? out.get(1).from() : out.get(0).from();
+        learnLang(postSn, script, from);
         if (sameLang(from, to)) return save("POST", postSn, to, hash, from, true, null, null);
         return save("POST", postSn, to, hash, from, false, TranslateMarkup.titleBack(out.get(0).html()), TranslateMarkup.htmlBack(out.get(1).html()));
     }
@@ -125,14 +125,24 @@ public class TranslationService {
         return res;
     }
 
-    /** 원문 글자 체계로 보아 번역이 필요할 수 있나 — 확실히 같은 언어면 업체에 묻지 않는다 */
+    /**
+     * 원문 언어로 보아 번역이 필요할 수 있나 — 확실히 같은 언어면 업체에 묻지 않는다.
+     * script 는 글자 체계(ko·ja·zh·latn, LangDetect) 또는 업체가 알려 준 정확한 언어(en·es·zh-Hans …, learnLang).
+     */
     static boolean needs(String script, String to) {
         if (script == null || script.equals("und")) return false;
-        return switch (script) {
-            case "ko" -> !Lang.KO.equals(to);
-            case "ja" -> !Lang.JA.equals(to);
-            default -> true;   // zh(간체·번체는 업체가 가린다)·latn(영어인지 다른 언어인지 업체가 가린다)
-        };
+        if (script.equals("latn") || script.equals("zh")) return true;   // 영어인지 스페인어인지, 간체인지 번체인지 업체가 가린다
+        return !sameLang(script, to);
+    }
+
+    /**
+     * 업체가 판별한 원문 언어를 글에 적어 둔다 — 글자 체계(latn·zh)만 알던 글이 en·es·zh-Hans 처럼 정확해져,
+     * 다음부터 같은 언어 독자에게는 업체에 묻지 않는다. 글을 고치면 글자 체계로 다시 돌아간다(PostService).
+     */
+    private void learnLang(long postSn, String script, String from) {
+        if (from == null || !("latn".equals(script) || "zh".equals(script))) return;
+        String lang = from.length() > 10 ? from.substring(0, 10) : from;
+        jdbc.update("UPDATE knowra_post.tbl_post SET lang = ? WHERE post_sn = ? AND lang IN ('latn', 'zh')", lang, postSn);
     }
 
     /** 업체가 판별한 원문 언어가 읽는 사람 언어와 같은가 — zh 는 간체·번체까지 같아야 같다 */
