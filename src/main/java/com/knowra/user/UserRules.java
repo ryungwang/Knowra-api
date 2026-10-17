@@ -23,6 +23,8 @@ public final class UserRules {
     private static final Pattern LATIN = Pattern.compile("\\p{IsLatin}"), LOOKALIKE = Pattern.compile("[\\p{IsCyrillic}\\p{IsGreek}]");
     /** 운영자·시스템처럼 보이는 이름 — 사칭 방지 */
     private static final Pattern RESERVED = Pattern.compile("(?i)^(admin|administrator|moderator|root|system|official|knowra|운영자|관리자|운영진|공지|管理者|運営|公式|管理员|管理員|官方)$");
+    /** 탈퇴한 사람에게 붙이는 이름과 그 번역 — 사람이 고르면 탈퇴한 사람처럼 보이고, 화면이 이름을 바꿔 버린다(DeletedUser) */
+    private static final Pattern DELETED = Pattern.compile("(?i)^(탈퇴회원|탈퇴한사용자|deleted[_.-]?(user)?|退会ユーザー|已注销用户|已註銷用戶)\\d*$");
 
     public static String loginIdError(String v) {
         if (v == null || !LOGIN_ID.matcher(v).matches()) return "아이디는 영문 소문자·숫자·밑줄 3~20자로 만들어 주세요.";
@@ -43,7 +45,7 @@ public final class UserRules {
         if (v == null || !NICKNAME.matcher(v).matches()) return "닉네임은 글자·숫자와 . _ - 로 2~30자예요.";
         if (!isNormalizedNick(v)) return "닉네임에 쓸 수 없는 글자가 있어요.";
         if (LATIN.matcher(v).find() && LOOKALIKE.matcher(v).find()) return "로마자와 키릴·그리스 문자를 섞은 닉네임은 쓸 수 없어요.";
-        if (RESERVED.matcher(v).matches()) return "쓸 수 없는 닉네임이에요.";
+        if (RESERVED.matcher(v).matches() || DELETED.matcher(v).matches()) return "쓸 수 없는 닉네임이에요.";
         return null;
     }
 }

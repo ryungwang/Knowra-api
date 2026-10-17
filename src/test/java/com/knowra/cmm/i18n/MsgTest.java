@@ -9,8 +9,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class MsgTest {
 
+    // 원래 표로 되돌린다 — 빈 표를 남기면 뒤에 도는 다른 테스트가 번역 없이 돌아 엉뚱하게 깨진다
     @AfterEach
-    void reset() { Msg.useTable(Map.of()); }
+    void reset() { Msg.useTable(null); }
 
     @Test
     void 언어_태그를_다섯_개_중_하나로() {

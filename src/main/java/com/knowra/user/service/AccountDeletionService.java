@@ -186,8 +186,8 @@ public class AccountDeletionService {
         random.nextBytes(b);
         u.setPassword(passwordEncoder.encode(HexFormat.of().formatHex(b)));
         u.setLoginId("deleted_" + me);
-        u.setNickName("탈퇴회원" + me);
-        u.setName("탈퇴한 사용자");
+        u.setNickName(com.knowra.user.DeletedUser.NICK_PREFIX + me);
+        u.setName(com.knowra.user.DeletedUser.NAME);
         u.setEmail(null);
         u.setPhone(null);
         u.setBio(null);

@@ -64,6 +64,6 @@ public final class Msg {
         return s;
     }
 
-    /** 테스트용 — 표를 바꿔 끼운다 */
-    static void useTable(Map<String, Map<String, String>> t) { table = t; }
+    /** 테스트용 — 표를 바꿔 끼운다. null 이면 원래 표(messages.json)로 */
+    static void useTable(Map<String, Map<String, String>> t) { table = t == null ? load() : t; }
 }
