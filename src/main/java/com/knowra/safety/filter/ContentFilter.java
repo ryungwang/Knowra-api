@@ -68,9 +68,19 @@ public class ContentFilter {
             try {
                 if (!redis.setIfAbsent(REDIS_DB, key, "1", DUP_WINDOW_SEC))
                     return "방금 올린 것과 같은 내용이에요. 같은 글을 여러 번 올리지 말아 주세요.";
+                // 저장이 뒤에서 실패하면(가입 안 한 커뮤니티 등) 풀어 준다 — 고쳐서 다시 올리면 「같은 내용」에 막히던 문제(DupKeyRelease)
+                if (org.springframework.web.context.request.RequestContextHolder.getRequestAttributes() instanceof org.springframework.web.context.request.ServletRequestAttributes a)
+                    a.getRequest().setAttribute(DUP_KEY_ATTR, key);
             } catch (Exception ignored) { /* Redis 가 없으면 이 검사만 건너뛴다 */ }
         }
         return null;
+    }
+
+    /** 이번 요청이 잡아 둔 「같은 내용」 표시 — 저장이 실패하면 DupKeyRelease 가 지운다 */
+    static final String DUP_KEY_ATTR = "knowra.contentFilter.dupKey";
+
+    void releaseDup(String key) {
+        try { redis.delRedis(REDIS_DB, key); } catch (Exception ignored) { /* Redis 가 없으면 원래 잡히지도 않았다 */ }
     }
 
     /** 관리자 목록을 고친 뒤 바로 반영. */
