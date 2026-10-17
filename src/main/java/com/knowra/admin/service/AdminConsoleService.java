@@ -108,7 +108,8 @@ public class AdminConsoleService {
         row.put("createdAt", r.getFrstCrtDt()); row.put("handledAt", r.getHandledAt());
         // 커뮤니티 운영진이 이미 손댔는지 — 「문제없음」으로 덮은 걸 사이트 관리자가 알아보게
         if (r.getCommSn() != null) { row.put("commStat", r.getCommStat()); row.put("commSn", r.getCommSn()); }
-        userRepository.findById(r.getReporterSn()).ifPresent(u -> row.put("reporter", userBrief(u)));
+        if (r.getReporterSn() == null) row.put("auto", true);   // 자동 검수(AI)가 올린 신고
+        else userRepository.findById(r.getReporterSn()).ifPresent(u -> row.put("reporter", userBrief(u)));
         row.put("sameTargetCnt", reportRepository.countByTargetKindAndTargetSn(r.getTargetKind(), r.getTargetSn()));
 
         Map<String, Object> t = new LinkedHashMap<>();

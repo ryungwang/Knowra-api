@@ -10,7 +10,8 @@ import java.time.LocalDateTime;
 @Getter @Setter @Builder @NoArgsConstructor @AllArgsConstructor
 public class TblReport {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY) @Column(name = "REPORT_SN") private Long reportSn;
-    @Column(name = "REPORTER_SN", nullable = false) private long reporterSn;
+    /** 신고한 회원. null = 자동 검수(AI)가 올린 신고(V63) */
+    @Column(name = "REPORTER_SN") private Long reporterSn;
     @Column(name = "TARGET_KIND", length = 10, nullable = false) private String targetKind;
     @Column(name = "TARGET_SN", nullable = false) private long targetSn;
     @Column(name = "REASON", length = 20, nullable = false) private String reason;
