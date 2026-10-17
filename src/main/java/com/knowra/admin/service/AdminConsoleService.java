@@ -194,7 +194,8 @@ public class AdminConsoleService {
             reportRepository.save(r);
             // 기각이면 신고 누적으로 가려 둔 것을 되돌린다 — 몰려와서 신고로 남의 글을 가리는 걸 여기서 푼다
             if ("DISMISSED".equals(stat)) autoHide.restore(r.getTargetKind(), r.getTargetSn());
-            adminLog.record(admin, "REPORT_" + action, "REPORT", reportSn, r.getTargetKind() + " #" + r.getTargetSn() + " · " + r.getReason());
+            adminLog.record(admin, "REPORT_" + action, "REPORT", reportSn,
+                    com.knowra.community.modlog.ModLogDetail.of(java.util.Map.of("kind", r.getTargetKind(), "sn", r.getTargetSn(), "reason", r.getReason())));
             resultVO.putResult("report", toRow(r));
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
         } catch (IllegalArgumentException e) {
@@ -323,8 +324,9 @@ public class AdminConsoleService {
                 u.setStatus("Y"); u.setSuspendedUntil(null); u.setSuspendReason(null);
             }
             userRepository.save(u);
+            // 상세는 값만(JSON) — 관리자 화면이 보는 사람 언어로 「무기한」·「…까지」를 만든다
             adminLog.record(admin, suspend ? "USER_SUSPEND" : "USER_UNSUSPEND", "USER", userSn, suspend
-                    ? (u.getSuspendedUntil() == null ? "무기한" : u.getSuspendedUntil().toLocalDate() + "까지") + (u.getSuspendReason() == null ? "" : " · " + u.getSuspendReason())
+                    ? com.knowra.community.modlog.ModLogDetail.ban(u.getSuspendedUntil(), u.getSuspendReason())
                     : null);
             // 정지된 사람의 열린 알림 소켓도 닫는다(새 요청만 막으면 이미 열린 소켓으로 알림이 계속 간다)
             // 정지하면 모든 세션을 끊는다 — 소켓만 닫던 시절엔 이미 받은 토큰으로 한 시간 동안 글·DM 을 계속 썼다

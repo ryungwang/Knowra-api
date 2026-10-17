@@ -54,4 +54,7 @@ public final class ModLogDetail {
     public static String holdDays(int days) { return json(Map.of("days", days)); }
 
     public static String reports(String kind, int n) { return json(Map.of("kind", kind, "count", n)); }
+
+    /** 사이트 관리자 기록(audit log)도 같은 방식 — 문장 대신 값만 두고 화면이 언어별로 만든다 */
+    public static String of(Map<String, Object> m) { return json(m); }
 }

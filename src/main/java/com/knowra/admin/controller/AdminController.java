@@ -22,7 +22,7 @@ public class AdminController {
         ResultVO resultVO = new ResultVO();
         try {
             resultVO.putResult("summary", contentGenerationService.generate());
-            adminLog.record(me, "CONTENT_GENERATE", null, null, "전체");
+            adminLog.record(me, "CONTENT_GENERATE", null, null, com.knowra.community.modlog.ModLogDetail.of(java.util.Map.of("scope", "all")));
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
         } catch (Exception e) {
             resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
@@ -37,7 +37,7 @@ public class AdminController {
         ResultVO resultVO = new ResultVO();
         try {
             int count = contentGenerationService.generateUser();
-            adminLog.record(me, "CONTENT_GENERATE", null, null, "사용자 " + count);
+            adminLog.record(me, "CONTENT_GENERATE", null, null, com.knowra.community.modlog.ModLogDetail.of(java.util.Map.of("users", count)));
             resultVO.putResult("userCount", count);
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
         } catch (Exception e) {
@@ -53,7 +53,7 @@ public class AdminController {
         ResultVO resultVO = new ResultVO();
         try {
             int count = contentGenerationService.generateCommunity();
-            adminLog.record(me, "CONTENT_GENERATE", null, null, "커뮤니티 " + count);
+            adminLog.record(me, "CONTENT_GENERATE", null, null, com.knowra.community.modlog.ModLogDetail.of(java.util.Map.of("communities", count)));
             resultVO.putResult("communityCount", count);
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
         } catch (Exception e) {
