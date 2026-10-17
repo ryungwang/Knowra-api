@@ -49,6 +49,8 @@ public class RateLimitInterceptor implements HandlerInterceptor {
             Map.entry("/api/copyright/notice",        new Rule("copyright", 10, 3600)),   // 로그인 없이 받으니 IP 로 묶인다
             Map.entry("/api/appeal/suspended",        new Rule("appeal", 10, 3600)),
             Map.entry("/api/chat/searchMsg",          new Rule("chat-search", 30, 60)),
+            Map.entry("/api/translate/post",          new Rule("translate", 300, 3600)),   // 번역 한도(달마다)를 한 사람이 다 쓰지 못하게
+            Map.entry("/api/translate/comments",      new Rule("translate-cmt", 300, 3600)),
             Map.entry("/api/community/modmail/reply",  new Rule("modmail-re", 30, 600)),
             Map.entry("/api/community/invite/accept", new Rule("invite-use", 30, 3600)),
             Map.entry("/api/community/wiki/page/save", new Rule("wiki", 30, 600)),
