@@ -40,6 +40,13 @@ public class TranslateController {
         return run(() -> Map.of("list", svc.messages(Long.parseLong(String.valueOf(b.get("roomSn"))), sns, me, to(b))));
     }
 
+    /** body: postSns[], to? — 목록 카드 제목. 결과 result.list = {글번호: {status, title, from}} */
+    @PostMapping("/api/translate/titles")
+    public ResultVO titles(@RequestBody Map<String, Object> b, @CurrentUser Long me) {
+        List<Long> sns = b.get("postSns") instanceof List<?> l ? l.stream().map(x -> Long.parseLong(String.valueOf(x))).toList() : List.of();
+        return run(() -> Map.of("list", svc.titles(sns, me, to(b))));
+    }
+
     private static String to(Map<String, Object> b) {
         String t = b.get("to") == null ? null : Lang.normalize(String.valueOf(b.get("to")));
         return t != null && Lang.ALL.contains(t) ? t : Lang.current();

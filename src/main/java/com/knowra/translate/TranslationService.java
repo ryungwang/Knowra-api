@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 글·댓글·대화 메시지를 읽는 사람 언어로. (대상, 언어)마다 한 번 번역해 두고 같이 쓴다.
+ * 글·목록 제목·댓글·대화 메시지를 읽는 사람 언어로. (대상, 언어)마다 한 번 번역해 두고 같이 쓴다.
  *
  * <p>돌려주는 status:
  * <ul>
@@ -34,7 +34,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class TranslationService {
 
-    static final int MAX_CMTS = 100;
+    static final int MAX_CMTS = 100, MAX_TITLES = 50;
 
     private final JdbcTemplate jdbc;
     private final ObjectProvider<Translator> translator;
@@ -48,7 +48,7 @@ public class TranslationService {
         Map<String, Object> p = jdbc.queryForMap("SELECT post_ttl, post_cntnt, lang FROM knowra_post.tbl_post WHERE post_sn = ?", postSn);
         String title = (String) p.get("post_ttl"), body = (String) p.get("post_cntnt");
         String script = p.get("lang") != null ? (String) p.get("lang") : LangDetect.detect(title, body);
-        if (!needs(script, to)) return status(script == null ? "skip" : "same");
+        if (!needs(script, to)) return status(unknown(script) ? "skip" : "same");
         String hash = sha1("POST", title, body);
         Map<String, Object> hit = cached("POST", postSn, to, hash);
         if (hit != null) return hit;
@@ -58,6 +58,52 @@ public class TranslationService {
         learnLang(postSn, script, from);
         if (sameLang(from, to)) return save("POST", postSn, to, hash, from, true, null, null);
         return save("POST", postSn, to, hash, from, false, TranslateMarkup.titleBack(out.get(0).html()), TranslateMarkup.htmlBack(out.get(1).html()));
+    }
+
+    /**
+     * 목록 카드의 제목 여럿 — 결과는 글 번호 → {status, title, from}. 볼 수 있는 글만.
+     * 본문까지 번역해 둔 글은 그 제목을 쓰고, 아니면 제목만 따로 번역해 둔다(TITLE) — 목록은 본문을 번역하지 않는다(한도를 아낀다).
+     * 제목은 짧아 언어 판별이 덜 정확하므로 글의 원문 언어로 적지 않는다(learnLang 은 본문 번역에서만).
+     */
+    public Map<Long, Map<String, Object>> titles(List<Long> postSns, Long me, String to) {
+        List<Long> want = postSns.stream().distinct().limit(MAX_TITLES).toList();
+        Map<Long, Map<String, Object>> res = new LinkedHashMap<>();
+        java.util.Set<Long> visible = postService.visiblePostSns(want, me);
+        if (visible.isEmpty()) return res;
+        String in = String.join(",", visible.stream().map(String::valueOf).toList());
+        List<Long> sendSn = new ArrayList<>();
+        List<String> sendText = new ArrayList<>(), sendHash = new ArrayList<>();
+        jdbc.query("SELECT post_sn, post_ttl, post_cntnt, lang FROM knowra_post.tbl_post WHERE post_sn IN (" + in + ")", rs -> {
+            long sn = rs.getLong(1);
+            String title = rs.getString(2), body = rs.getString(3), lang = rs.getString(4);
+            String script = lang != null ? lang : LangDetect.detect(title, body);
+            if (title == null || title.isBlank() || !needs(script, to)) { res.put(sn, status(unknown(script) || title == null || title.isBlank() ? "skip" : "same")); return; }
+            Map<String, Object> full = cached("POST", sn, to, sha1("POST", title, body));
+            if (full != null) { res.put(sn, titleOnly(full)); return; }
+            String hash = sha1("TITLE", title, null);
+            Map<String, Object> hit = cached("TITLE", sn, to, hash);
+            if (hit != null) { res.put(sn, titleOnly(hit)); return; }
+            sendSn.add(sn); sendText.add(TranslateMarkup.titleOut(title)); sendHash.add(hash);
+        });
+        if (sendSn.isEmpty()) return res;
+        List<Translator.Out> out = call(sendText, to);
+        for (int i = 0; i < sendSn.size(); i++) {
+            if (out == null) { res.put(sendSn.get(i), status("unavailable")); continue; }
+            Translator.Out o = out.get(i);
+            res.put(sendSn.get(i), titleOnly(sameLang(o.from(), to)
+                    ? save("TITLE", sendSn.get(i), to, sendHash.get(i), o.from(), true, null, null)
+                    : save("TITLE", sendSn.get(i), to, sendHash.get(i), o.from(), false, TranslateMarkup.titleBack(o.html()), null)));
+        }
+        return res;
+    }
+
+    private static Map<String, Object> titleOnly(Map<String, Object> m) {
+        if (!"ok".equals(m.get("status"))) return m;
+        Map<String, Object> t = new LinkedHashMap<>();
+        t.put("status", "ok");
+        t.put("from", m.get("from"));
+        t.put("title", m.get("title"));
+        return t;
     }
 
     /** 한 글의 댓글 여러 개 — 결과는 댓글 번호 → {status, body, from} */
@@ -107,7 +153,7 @@ public class TranslationService {
         List<String> sendText = new ArrayList<>(), sendHash = new ArrayList<>();
         texts.forEach((sn, text) -> {
             String script = LangDetect.detect(null, text);
-            if (!needs(script, to)) { res.put(sn, status(script == null ? "skip" : "same")); return; }
+            if (!needs(script, to)) { res.put(sn, status(unknown(script) ? "skip" : "same")); return; }
             String hash = sha1(kind, null, text);
             Map<String, Object> hit = cached(kind, sn, to, hash);
             if (hit != null) { res.put(sn, hit); return; }
@@ -130,10 +176,12 @@ public class TranslationService {
      * script 는 글자 체계(ko·ja·zh·latn, LangDetect) 또는 업체가 알려 준 정확한 언어(en·es·zh-Hans …, learnLang).
      */
     static boolean needs(String script, String to) {
-        if (script == null || script.equals("und")) return false;
+        if (unknown(script)) return false;
         if (script.equals("latn") || script.equals("zh")) return true;   // 영어인지 스페인어인지, 간체인지 번체인지 업체가 가린다
         return !sameLang(script, to);
     }
+
+    private static boolean unknown(String script) { return script == null || script.equals("und"); }
 
     /**
      * 업체가 판별한 원문 언어를 글에 적어 둔다 — 글자 체계(latn·zh)만 알던 글이 en·es·zh-Hans 처럼 정확해져,
@@ -187,7 +235,7 @@ public class TranslationService {
     @Scheduled(cron = "0 17 4 * * *", zone = "UTC")
     public void purge() {
         jdbc.update("""
-                DELETE FROM knowra_com.tbl_translation t WHERE t.target_kind = 'POST'
+                DELETE FROM knowra_com.tbl_translation t WHERE t.target_kind IN ('POST', 'TITLE')
                 AND NOT EXISTS (SELECT 1 FROM knowra_post.tbl_post p WHERE p.post_sn = t.target_sn AND p.actvtn_yn = 'Y')""");
         jdbc.update("""
                 DELETE FROM knowra_com.tbl_translation t WHERE t.target_kind = 'CMT'

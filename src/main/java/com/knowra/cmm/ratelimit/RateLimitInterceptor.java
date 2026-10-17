@@ -52,6 +52,7 @@ public class RateLimitInterceptor implements HandlerInterceptor {
             Map.entry("/api/translate/post",          new Rule("translate", 300, 3600)),   // 번역 한도(달마다)를 한 사람이 다 쓰지 못하게
             Map.entry("/api/translate/comments",      new Rule("translate-cmt", 300, 3600)),
             Map.entry("/api/translate/messages",      new Rule("translate-msg", 600, 3600)),   // 새 메시지가 올 때마다 그것만 묻는다
+            Map.entry("/api/translate/titles",        new Rule("translate-ttl", 600, 3600)),   // 목록을 내릴 때마다 새로 보인 카드만 묻는다
             Map.entry("/api/community/modmail/reply",  new Rule("modmail-re", 30, 600)),
             Map.entry("/api/community/invite/accept", new Rule("invite-use", 30, 3600)),
             Map.entry("/api/community/wiki/page/save", new Rule("wiki", 30, 600)),

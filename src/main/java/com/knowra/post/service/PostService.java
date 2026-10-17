@@ -271,6 +271,13 @@ public class PostService {
         return postQuery.base().where(POST.postSn.eq(postSn), PostQuery.alive(), PostQuery.visibleTo(me)).fetchFirst() != null;
     }
 
+    /** canSeePost 를 여러 글에 한 번에 — 그중 볼 수 있는 글 번호만 */
+    public java.util.Set<Long> visiblePostSns(java.util.Collection<Long> postSns, Long me) {
+        if (postSns.isEmpty()) return java.util.Set.of();
+        return new java.util.HashSet<>(postQuery.base().select(POST.postSn)
+                .where(POST.postSn.in(postSns), PostQuery.alive(), PostQuery.visibleTo(me)).fetch());
+    }
+
     /** 읽기 전용 경로(댓글 목록) — 신고가 몰려 가려진 자기 글은 쓴 사람이 계속 본다. 반응·댓글 쓰기는 canSeePost 로 막는다 */
     private boolean canReadPost(long postSn, Long me) {
         if (canSeePost(postSn, me)) return true;
