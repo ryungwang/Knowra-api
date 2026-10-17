@@ -23,9 +23,12 @@ public class BannedWordController {
     @PostMapping("/bannedWords")
     public ResultVO list() {
         ResultVO r = new ResultVO();
+        // mode: PART(들어 있으면) | WORD(낱말로 있으면) — 낱말의 글자가 정한다(BannedWords)
         r.putResult("list", jdbc.queryForList("""
                 SELECT WORD_SN AS "wordSn", WORD AS "word", FRST_CRT_DT AS "createdAt"
-                FROM knowra_com.tbl_banned_word ORDER BY WORD_SN DESC"""));
+                FROM knowra_com.tbl_banned_word ORDER BY WORD_SN DESC""").stream()
+                .map(m -> { var row = new java.util.LinkedHashMap<>(m); row.put("mode", BannedWords.modeOf(String.valueOf(m.get("word"))).name()); return row; })
+                .toList());
         r.setResultCode(ResponseCode.SUCCESS.getCode());
         return r;
     }
