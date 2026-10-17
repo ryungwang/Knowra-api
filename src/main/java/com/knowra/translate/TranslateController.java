@@ -13,7 +13,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
 
-/** 글·댓글·대화 메시지 번역 — 로그인한 사람만(번역 한도를 아무나 쓰지 못하게). 언어는 to 가 없으면 지금 화면 언어 */
+/**
+ * 글·목록 제목·댓글·대화 메시지 번역. 언어는 to 가 없으면 지금 화면 언어.
+ * 글·제목·댓글은 로그인하지 않아도 묻는다 — 단 이미 해 둔 번역만 돌려준다(번역 한도를 아무나 쓰지 못하게, TranslationService.call).
+ * 대화는 로그인한 멤버만.
+ */
 @RestController
 @RequiredArgsConstructor
 public class TranslateController {

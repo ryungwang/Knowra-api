@@ -52,7 +52,7 @@ public class TranslationService {
         String hash = sha1("POST", title, body);
         Map<String, Object> hit = cached("POST", postSn, to, hash);
         if (hit != null) return hit;
-        List<Translator.Out> out = call(List.of(TranslateMarkup.titleOut(title), TranslateMarkup.htmlOut(body)), to);
+        List<Translator.Out> out = call(List.of(TranslateMarkup.titleOut(title), TranslateMarkup.htmlOut(body)), to, me);
         if (out == null) return status("unavailable");
         String from = out.get(1).from() != null ? out.get(1).from() : out.get(0).from();
         learnLang(postSn, script, from);
@@ -86,7 +86,7 @@ public class TranslationService {
             sendSn.add(sn); sendText.add(TranslateMarkup.titleOut(title)); sendHash.add(hash);
         });
         if (sendSn.isEmpty()) return res;
-        List<Translator.Out> out = call(sendText, to);
+        List<Translator.Out> out = call(sendText, to, me);
         for (int i = 0; i < sendSn.size(); i++) {
             if (out == null) { res.put(sendSn.get(i), status("unavailable")); continue; }
             Translator.Out o = out.get(i);
@@ -123,7 +123,7 @@ public class TranslationService {
                 postSn, me, me, me);
         Map<Long, String> texts = new LinkedHashMap<>();
         for (Map<String, Object> r : rows) texts.put(((Number) r.get("post_cmt_sn")).longValue(), (String) r.get("cmt_cntnt"));
-        return plainMany("CMT", texts, to, res);
+        return plainMany("CMT", texts, to, me, res);
     }
 
     /**
@@ -144,11 +144,11 @@ public class TranslationService {
                 WHERE room_sn = ? AND msg_sn IN (""" + in + """
                 ) AND user_sn <> ? AND hidden_at IS NULL AND deleted_at IS NULL AND COALESCE(msg_cntnt, '') <> ''""",
                 rs -> { texts.put(rs.getLong(1), rs.getString(2)); }, roomSn, me);
-        return plainMany("MSG", texts, to, res);
+        return plainMany("MSG", texts, to, me, res);
     }
 
     /** 일반 글자(댓글·메시지) 여럿을 한 번에 — 캐시에 있는 건 그대로, 나머지만 업체에 */
-    private Map<Long, Map<String, Object>> plainMany(String kind, Map<Long, String> texts, String to, Map<Long, Map<String, Object>> res) {
+    private Map<Long, Map<String, Object>> plainMany(String kind, Map<Long, String> texts, String to, Long me, Map<Long, Map<String, Object>> res) {
         List<Long> sendSn = new ArrayList<>();
         List<String> sendText = new ArrayList<>(), sendHash = new ArrayList<>();
         texts.forEach((sn, text) -> {
@@ -160,7 +160,7 @@ public class TranslationService {
             sendSn.add(sn); sendText.add(TranslateMarkup.plainOut(text)); sendHash.add(hash);
         });
         if (sendSn.isEmpty()) return res;
-        List<Translator.Out> out = call(sendText, to);
+        List<Translator.Out> out = call(sendText, to, me);
         for (int i = 0; i < sendSn.size(); i++) {
             if (out == null) { res.put(sendSn.get(i), status("unavailable")); continue; }
             Translator.Out o = out.get(i);
@@ -200,10 +200,14 @@ public class TranslationService {
         return from.split("-")[0].equalsIgnoreCase(to.split("-")[0]);
     }
 
-    /** 한도 안에서 업체를 부른다. 꺼져 있거나 한도를 넘거나 실패하면 null */
-    private List<Translator.Out> call(List<String> html, String to) {
+    /**
+     * 한도 안에서 업체를 부른다. 꺼져 있거나 한도를 넘거나 실패하면 null.
+     * 로그인하지 않은 사람은 부르지 않는다 — 이미 해 둔 번역(로그인한 독자가 연 글)만 같이 본다.
+     * 봇·크롤러가 글을 훑어도 이달 한도가 줄지 않는다.
+     */
+    private List<Translator.Out> call(List<String> html, String to, Long me) {
         Translator t = translator.getIfAvailable();
-        if (t == null) return null;
+        if (t == null || me == null) return null;
         long chars = html.stream().mapToLong(String::length).sum();
         if (!quota.reserve(chars)) { log.info("번역 이달 한도({}자) 도달 — 원문으로", quota.limit()); return null; }
         try {
