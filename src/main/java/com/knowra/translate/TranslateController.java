@@ -15,7 +15,7 @@ import java.util.function.Supplier;
 
 /**
  * 글·목록 제목·댓글·대화 메시지 번역. 언어는 to 가 없으면 지금 화면 언어.
- * 글·제목·댓글은 로그인하지 않아도 묻는다 — 단 이미 해 둔 번역만 돌려준다(번역 한도를 아무나 쓰지 못하게, TranslationService.call).
+ * 글·제목·댓글·커뮤니티는 로그인하지 않아도 묻는다 — 단 이미 해 둔 번역만 돌려준다(번역 한도를 아무나 쓰지 못하게, TranslationService.call).
  * 대화는 로그인한 멤버만.
  */
 @RestController
@@ -49,6 +49,12 @@ public class TranslateController {
     public ResultVO titles(@RequestBody Map<String, Object> b, @CurrentUser Long me) {
         List<Long> sns = b.get("postSns") instanceof List<?> l ? l.stream().map(x -> Long.parseLong(String.valueOf(x))).toList() : List.of();
         return run(() -> Map.of("list", svc.titles(sns, me, to(b))));
+    }
+
+    /** body: commSn, to? — 커뮤니티 이름·소개·규칙. 결과 {status, from, name, desc, rules[]} */
+    @PostMapping("/api/translate/community")
+    public ResultVO community(@RequestBody Map<String, Object> b, @CurrentUser Long me) {
+        return run(() -> svc.community(Long.parseLong(String.valueOf(b.get("commSn"))), me, to(b)));
     }
 
     private static String to(Map<String, Object> b) {

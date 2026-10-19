@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 글·목록 제목·댓글·대화 메시지를 읽는 사람 언어로. (대상, 언어)마다 한 번 번역해 두고 같이 쓴다.
+ * 글·목록 제목·댓글·대화 메시지·커뮤니티 소개를 읽는 사람 언어로. (대상, 언어)마다 한 번 번역해 두고 같이 쓴다.
  *
  * <p>돌려주는 status:
  * <ul>
@@ -138,6 +138,73 @@ public class TranslationService {
         t.put("from", m.get("from"));
         t.put("title", m.get("title"));
         return t;
+    }
+
+    private static final com.fasterxml.jackson.databind.ObjectMapper JSON = new com.fasterxml.jackson.databind.ObjectMapper();
+
+    /**
+     * 커뮤니티 이름·소개·규칙 — 다른 언어 커뮤니티에 들어가기 전에 무엇을 하는 곳인지, 어떤 규칙에 동의하는지 읽을 수 있게.
+     * 결과 {status, from, name, desc, rules:[{title, body}]}. 셋을 한 번에 번역해 (커뮤니티, 언어)마다 기억한다(COMM).
+     * 이름·소개는 탐색 화면에도 보이니 누구에게나, 규칙은 볼 수 있는 사람에게만(비공개 커뮤니티는 멤버만 — WikiService 와 같은 기준).
+     */
+    public Map<String, Object> community(long commSn, Long me, String to) {
+        List<Map<String, Object>> cs = jdbc.queryForList("SELECT comm_dspl_nm, comm_nm, comm_desc, prvcy_stng, lang FROM knowra_community.tbl_comm WHERE comm_sn = ? AND stat = 'Y' AND actvtn_yn = 'Y'", commSn);
+        if (cs.isEmpty()) throw new IllegalArgumentException("커뮤니티를 찾을 수 없어요.");
+        Map<String, Object> c = cs.getFirst();
+        String name = c.get("comm_dspl_nm") != null && !((String) c.get("comm_dspl_nm")).isBlank() ? (String) c.get("comm_dspl_nm") : (String) c.get("comm_nm");
+        String desc = c.get("comm_desc") == null ? "" : (String) c.get("comm_desc");
+        List<String[]> rules = jdbc.query("SELECT title, body FROM knowra_community.tbl_comm_rule WHERE comm_sn = ? ORDER BY ord", (rs, i) -> new String[]{rs.getString(1), rs.getString(2) == null ? "" : rs.getString(2)}, commSn);
+        boolean rulesVisible = !"private".equals(c.get("prvcy_stng")) || (me != null && Boolean.TRUE.equals(jdbc.queryForObject(
+                "SELECT EXISTS (SELECT 1 FROM knowra_community.tbl_comm_mbr WHERE comm_sn = ? AND user_sn = ? AND stat = 'ACTIVE' AND actvtn_yn = 'Y')", Boolean.class, commSn, me)));
+
+        // 원문 — 이름, 소개, 규칙 제목·설명 순서. 빈 칸은 업체에 보내지 않는다
+        List<String> src = new ArrayList<>(List.of(name, desc));
+        for (String[] r : rules) { src.add(r[0]); src.add(r[1]); }
+        StringBuilder all = new StringBuilder();
+        for (int i = 1; i < src.size(); i++) all.append(src.get(i)).append('\n');
+        // 운영진이 고른 주 언어가 있으면 그것, 여러 언어(null)면 글자로 판별
+        String script = c.get("lang") != null ? (String) c.get("lang") : LangDetect.detect(name, all.toString());
+        if (!needs(script, to)) return status(unknown(script) ? "skip" : "same");
+        String hash = sha1("COMM", name, String.join("\u0001", src));
+        Map<String, Object> hit = cached("COMM", commSn, to, hash);
+        Map<String, Object> res = hit != null ? hit : translateCommunity(commSn, src, to, hash, me);
+        return "ok".equals(res.get("status")) ? communityOut(res, rulesVisible) : res;
+    }
+
+    private Map<String, Object> translateCommunity(long commSn, List<String> src, String to, String hash, Long me) {
+        List<Integer> idx = new ArrayList<>();
+        List<String> send = new ArrayList<>();
+        for (int i = 0; i < src.size(); i++) if (!src.get(i).isBlank()) { idx.add(i); send.add(TranslateMarkup.plainOut(src.get(i))); }
+        List<Translator.Out> out = call(send, to, me);
+        if (out == null) return status("unavailable");
+        String from = out.getFirst().from();
+        for (Translator.Out o : out) if (o.from() != null && !sameLang(o.from(), to)) { from = o.from(); break; }   // 이름만 영어인 한국어 커뮤니티 같은 경우 — 다른 칸으로 본다
+        if (sameLang(from, to)) return save("COMM", commSn, to, hash, from, true, null, null);
+        String[] tr = new String[src.size()];
+        for (int i = 0; i < src.size(); i++) tr[i] = "";
+        for (int k = 0; k < idx.size(); k++) tr[idx.get(k)] = TranslateMarkup.plainBack(out.get(k).html());
+        List<Map<String, String>> rules = new ArrayList<>();
+        for (int i = 2; i + 1 < tr.length; i += 2) rules.add(Map.of("title", tr[i], "body", tr[i + 1]));
+        String body;
+        try { body = JSON.writeValueAsString(Map.of("desc", tr[1], "rules", rules)); }
+        catch (Exception e) { return status("unavailable"); }
+        return save("COMM", commSn, to, hash, from, false, tr[0], body);
+    }
+
+    /** 기억해 둔 꼴(title = 이름, body = {desc, rules} JSON)을 화면이 쓰는 꼴로. 규칙을 못 보는 사람에게는 규칙을 빼고 */
+    private static Map<String, Object> communityOut(Map<String, Object> m, boolean rulesVisible) {
+        Map<String, Object> o = new LinkedHashMap<>();
+        o.put("status", "ok");
+        o.put("from", m.get("from"));
+        o.put("name", m.get("title"));
+        try {
+            var b = JSON.readTree((String) m.get("body"));
+            o.put("desc", b.path("desc").asText(""));
+            List<Map<String, String>> rules = new ArrayList<>();
+            if (rulesVisible) for (var r : b.path("rules")) rules.add(Map.of("title", r.path("title").asText(""), "body", r.path("body").asText("")));
+            o.put("rules", rules);
+        } catch (Exception e) { return status("unavailable"); }
+        return o;
     }
 
     /** 한 글의 댓글 여러 개 — 결과는 댓글 번호 → {status, body, from} */
@@ -281,6 +348,9 @@ public class TranslationService {
         jdbc.update("""
                 DELETE FROM knowra_com.tbl_translation t WHERE t.target_kind = 'MSG'
                 AND NOT EXISTS (SELECT 1 FROM knowra_user.tbl_chat_msg m WHERE m.msg_sn = t.target_sn AND m.hidden_at IS NULL AND m.deleted_at IS NULL)""");
+        jdbc.update("""
+                DELETE FROM knowra_com.tbl_translation t WHERE t.target_kind = 'COMM'
+                AND NOT EXISTS (SELECT 1 FROM knowra_community.tbl_comm c WHERE c.comm_sn = t.target_sn AND c.stat = 'Y' AND c.actvtn_yn = 'Y')""");
         jdbc.update("DELETE FROM knowra_com.tbl_query_translation WHERE created_at < now() - INTERVAL '30 days'");
     }
 
