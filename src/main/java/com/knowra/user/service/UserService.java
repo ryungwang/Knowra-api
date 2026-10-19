@@ -229,6 +229,7 @@ public class UserService {
             if (lang != null) org.setLang(lang);
             if (b.get("timeZone") != null && validZone(String.valueOf(b.get("timeZone")))) org.setTimeZone(String.valueOf(b.get("timeZone")));
             if (isYn(b.get("digestYn")))     org.setDigestYn(String.valueOf(b.get("digestYn")));
+            if (isYn(b.get("autoTrYn")))     org.setAutoTrYn(String.valueOf(b.get("autoTrYn")));
             if ("Y".equals(b.get("digestYn"))) mailSuppression.clearComplaint(userSn);   // 본인이 다시 켰다 — 예전 스팸 신고를 지운다
             org.setMdfrSn(userSn);
             tblUserStngRepository.save(org);

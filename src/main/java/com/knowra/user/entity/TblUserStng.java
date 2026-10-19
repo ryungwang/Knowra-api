@@ -63,6 +63,10 @@ public class TblUserStng {
   @Comment("주간 소식 메일 수신 동의 (Y / N) — 기본 N")
   private String digestYn = "N";
 
+  @Column(name = "AUTO_TR_YN", length = 1, nullable = false)
+  @Comment("다른 언어 글 자동 번역 (Y / N) — 기본 Y. 기기 사이에 따라간다")
+  private String autoTrYn = "Y";
+
   @Column(name = "ACTVTN_YN", nullable = false)
   @Comment("활성여부")
   private String actvtnYn = "Y";
