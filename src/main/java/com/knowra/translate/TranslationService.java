@@ -45,7 +45,49 @@ public class TranslationService {
 
     public boolean available() { return translator.getIfAvailable() != null; }
 
+    /** 글 제목·본문 — 번역했으면 투표 선택지도 같이(poll: {선택지번호: 번역}) */
     public Map<String, Object> post(long postSn, Long me, String to) {
+        Map<String, Object> res = postOnly(postSn, me, to);
+        if (!"ok".equals(res.get("status"))) return res;
+        Map<Long, String> poll = pollOptions(postSn, (String) res.get("from"), me, to);
+        if (poll.isEmpty()) return res;
+        Map<String, Object> out = new LinkedHashMap<>(res);
+        out.put("poll", poll);
+        return out;
+    }
+
+    /**
+     * 투표 선택지 — 글이 번역된 경우만(글이 그 언어라 보고). 「はい」「Yes」처럼 짧아 글자로 언어를 못 가리므로
+     * 하나씩 판별하지 않고 한 번에 업체에 보낸다. 선택지마다 (POLLO, 선택지번호, 언어)로 기억한다.
+     */
+    private Map<Long, String> pollOptions(long postSn, String from, Long me, String to) {
+        Map<Long, String> out = new LinkedHashMap<>();
+        if (from == null || sameLang(from, to)) return out;
+        List<Long> sendSn = new ArrayList<>();
+        List<String> sendText = new ArrayList<>(), sendHash = new ArrayList<>(), sendLabel = new ArrayList<>();
+        jdbc.query("""
+                SELECT o.option_sn, o.label FROM knowra_post.tbl_poll_option o JOIN knowra_post.tbl_poll p ON p.poll_sn = o.poll_sn
+                WHERE p.post_sn = ? ORDER BY o.ord""", rs -> {
+            long sn = rs.getLong(1);
+            String label = rs.getString(2), hash = sha1("POLLO", null, label);
+            Map<String, Object> hit = cached("POLLO", sn, to, hash);
+            if (hit != null) { if ("ok".equals(hit.get("status"))) out.put(sn, (String) hit.get("body")); return; }
+            sendSn.add(sn); sendText.add(TranslateMarkup.plainOut(label)); sendHash.add(hash); sendLabel.add(label);
+        }, postSn);
+        if (sendSn.isEmpty()) return out;
+        List<Translator.Out> got = call(sendText, to, me);
+        if (got == null) return out;
+        for (int i = 0; i < sendSn.size(); i++) {
+            String tr = TranslateMarkup.plainBack(got.get(i).html());
+            // 「OK」「100%」처럼 번역해도 같은 선택지는 같음으로 기억한다
+            boolean same = tr.equals(sendLabel.get(i)) || sameLang(got.get(i).from(), to);
+            save("POLLO", sendSn.get(i), to, sendHash.get(i), got.get(i).from(), same, null, same ? null : tr);
+            if (!same) out.put(sendSn.get(i), tr);
+        }
+        return out;
+    }
+
+    private Map<String, Object> postOnly(long postSn, Long me, String to) {
         if (!postService.canSeePost(postSn, me)) throw new IllegalArgumentException("게시글을 찾을 수 없습니다.");
         Map<String, Object> p = jdbc.queryForMap("SELECT post_ttl, post_cntnt, lang FROM knowra_post.tbl_post WHERE post_sn = ?", postSn);
         String title = (String) p.get("post_ttl"), body = (String) p.get("post_cntnt");
@@ -485,6 +527,10 @@ public class TranslationService {
         jdbc.update("""
                 DELETE FROM knowra_com.tbl_translation t WHERE t.target_kind = 'MSG'
                 AND NOT EXISTS (SELECT 1 FROM knowra_user.tbl_chat_msg m WHERE m.msg_sn = t.target_sn AND m.hidden_at IS NULL AND m.deleted_at IS NULL)""");
+        jdbc.update("""
+                DELETE FROM knowra_com.tbl_translation t WHERE t.target_kind = 'POLLO'
+                AND NOT EXISTS (SELECT 1 FROM knowra_post.tbl_poll_option o JOIN knowra_post.tbl_post p ON p.post_sn = (SELECT post_sn FROM knowra_post.tbl_poll WHERE poll_sn = o.poll_sn)
+                                WHERE o.option_sn = t.target_sn AND p.actvtn_yn = 'Y')""");
         jdbc.update("""
                 DELETE FROM knowra_com.tbl_translation t WHERE t.target_kind = 'MML'
                 AND NOT EXISTS (SELECT 1 FROM knowra_community.tbl_comm_modmail_msg x WHERE x.msg_sn = t.target_sn)""");
