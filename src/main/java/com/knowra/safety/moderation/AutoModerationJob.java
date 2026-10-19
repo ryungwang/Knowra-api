@@ -103,9 +103,9 @@ public class AutoModerationJob {
         if (open != null && open > 0) return;
         String reason = reasonOf(v);
         jdbc.update("""
-                INSERT INTO knowra_user.tbl_report (reporter_sn, target_kind, target_sn, reason, detail, comm_sn, comm_stat)
-                VALUES (NULL, ?, ?, ?, ?, ?, ?)""",
-                it.kind(), it.sn(), reason, detailOf(v), it.commSn(), it.commSn() == null ? null : "OPEN");
+                INSERT INTO knowra_user.tbl_report (reporter_sn, target_kind, target_sn, reason, detail, comm_sn, comm_stat, lang)
+                VALUES (NULL, ?, ?, ?, ?, ?, ?, ?)""",
+                it.kind(), it.sn(), reason, detailOf(v), it.commSn(), it.commSn() == null ? null : "OPEN", com.knowra.safety.service.ReportLang.ofText(it.text()));
         autoHide.afterReport(it.kind(), it.sn(), reason);   // 아동 안전만 바로 가린다 — 나머지는 문턱에 세지 않는다
     }
 

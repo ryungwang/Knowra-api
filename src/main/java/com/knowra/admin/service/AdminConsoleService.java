@@ -77,20 +77,33 @@ public class AdminConsoleService {
         return resultVO;
     }
 
-    /** params: stat(OPEN|RESOLVED|DISMISSED, 기본 OPEN), page(0부터) */
-    public ResultVO getReportList(Map<String, Object> params) {
+    /**
+     * params: stat(OPEN|RESOLVED|DISMISSED, 기본 OPEN), page(0부터), langs(ko·ja·zh·latn 목록 — 없으면 내 검수 언어, 빈 목록 = 전부).
+     * 아동 안전과 언어를 모르는 신고는 거름과 상관없이 나온다.
+     */
+    public ResultVO getReportList(Map<String, Object> params, Long me) {
         ResultVO resultVO = new ResultVO();
         try {
             String stat = params.get("stat") == null ? "OPEN" : String.valueOf(params.get("stat"));
             if (!REPORT_STATS.contains(stat)) stat = "OPEN";
             int page = params.get("page") == null ? 0 : Integer.parseInt(String.valueOf(params.get("page")));
-            Page<TblReport> p = reportRepository.findQueue(stat, PageRequest.of(page, PAGE_SIZE));
+            List<String> myLangs = userRepository.findById(me).map(u -> com.knowra.safety.service.ReportLang.parse(u.getModLangs())).orElse(List.of());
+            List<String> langs = params.containsKey("langs") ? com.knowra.safety.service.ReportLang.parse(params.get("langs")) : myLangs;
+            Page<TblReport> p = langs.isEmpty() ? reportRepository.findQueue(stat, PageRequest.of(page, PAGE_SIZE))
+                    : reportRepository.findQueueByLangs(stat, langs, PageRequest.of(page, PAGE_SIZE));
 
             List<Map<String, Object>> list = new ArrayList<>();
             for (TblReport r : p.getContent()) list.add(toRow(r));
             resultVO.putResult("list", list);
             resultVO.putResult("hasMore", p.hasNext());
             resultVO.putResult("total", p.getTotalElements());
+            resultVO.putResult("langs", langs);
+            resultVO.putResult("myLangs", myLangs);
+            // 언어마다 처리 안 된 신고 몇 건 — 어느 언어에 검수자가 모자란지 보인다
+            Map<String, Object> counts = new LinkedHashMap<>();
+            jdbc.query("SELECT COALESCE(lang, 'und'), COUNT(*) FROM knowra_user.tbl_report WHERE stat = 'OPEN' GROUP BY 1",
+                    rs -> { counts.put(rs.getString(1), rs.getLong(2)); });
+            resultVO.putResult("langCounts", counts);
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
         } catch (Exception e) {
             ErrorLog.report(e);
@@ -106,6 +119,7 @@ public class AdminConsoleService {
         row.put("reportSn", r.getReportSn()); row.put("targetKind", r.getTargetKind()); row.put("targetSn", r.getTargetSn());
         row.put("reason", r.getReason()); row.put("detail", r.getDetail()); row.put("stat", r.getStat());
         row.put("createdAt", r.getFrstCrtDt()); row.put("handledAt", r.getHandledAt());
+        row.put("lang", r.getLang() == null ? com.knowra.safety.service.ReportLang.UNKNOWN : r.getLang());
         // 커뮤니티 운영진이 이미 손댔는지 — 「문제없음」으로 덮은 걸 사이트 관리자가 알아보게
         if (r.getCommSn() != null) { row.put("commStat", r.getCommStat()); row.put("commSn", r.getCommSn()); }
         if (r.getReporterSn() == null) row.put("auto", true);   // 자동 검수(AI)가 올린 신고
@@ -180,6 +194,28 @@ public class AdminConsoleService {
         if (s == null) return "";
         String plain = s.replaceAll("<[^>]+>", " ").replaceAll("\\s+", " ").trim();
         return plain.length() > 140 ? plain.substring(0, 140) + "…" : plain;
+    }
+
+    /** params: langs(ko·ja·zh·latn 목록, 빈 목록 = 전부) — 신고 큐의 기본 거름. 검수자 본인 것만 바꾼다 */
+    @Transactional
+    public ResultVO setMyModLangs(Map<String, Object> params, Long me) {
+        ResultVO resultVO = new ResultVO();
+        try {
+            List<String> langs = com.knowra.safety.service.ReportLang.parse(params.get("langs"));
+            TblUser u = userRepository.findById(me).orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+            u.setModLangs(langs.isEmpty() ? null : String.join(",", langs));
+            userRepository.save(u);
+            resultVO.putResult("myLangs", langs);
+            resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
+        } catch (IllegalArgumentException e) {
+            resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
+            resultVO.setResultMessage(e.getMessage());
+        } catch (Exception e) {
+            ErrorLog.report(e);
+            resultVO.setResultCode(ResponseCode.SAVE_ERROR.getCode());
+            resultVO.setResultMessage(ResponseCode.SAVE_ERROR.getMessage());
+        }
+        return resultVO;
     }
 
     /** params: reportSn, action(RESOLVE|DISMISS) */

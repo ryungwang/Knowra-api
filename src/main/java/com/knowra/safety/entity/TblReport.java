@@ -24,5 +24,7 @@ public class TblReport {
     @Column(name = "COMM_STAT", length = 10) private String commStat;
     @Column(name = "COMM_HANDLED_BY") private Long commHandledBy;
     @Column(name = "COMM_HANDLED_AT") private LocalDateTime commHandledAt;
+    /** 대상 언어 — ko·ja·zh·latn·und(V69). 검수자를 언어로 나눈다 */
+    @Column(name = "LANG", length = 10) private String lang;
     @Builder.Default @Column(name = "FRST_CRT_DT", nullable = false, updatable = false) private LocalDateTime frstCrtDt = LocalDateTime.now();
 }

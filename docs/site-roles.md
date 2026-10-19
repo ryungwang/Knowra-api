@@ -24,5 +24,12 @@
 `SecurityConfig` — `/api/admin/console/{stats, reportList, handleReport, deletePost, deleteCmt, hideMsg, userList, setUserSuspend, appealList, appealDecide, auditLog}` 는 `ROLE_MOD`, 나머지 `/api/admin/**` 는 `ROLE_ADMIN`.
 새 관리 기능을 만들면 **기본은 관리자 전용**이다. 검수자에게도 열려면 위 목록에 넣는다.
 
+## 언어별 검수 (V69)
+- 신고마다 대상의 언어를 적는다(`tbl_report.lang`) — 글자 체계로 가린 `ko`·`ja`·`zh`·`latn`(로마자: 영어·스페인어 등), 모르면 `und`.
+  글은 글 언어, 댓글·메시지는 본문, 사용자 신고는 그 사람의 화면 언어로 정한다(`ReportLang`).
+- 검수자는 신고 큐에서 언어를 골라 「내 검수 언어로 저장」을 누른다(`tbl_user.mod_langs`) — 다음부터 그 언어로 걸러 열린다.
+- **아동 안전 신고와 `und` 는 거름과 상관없이 모두에게 보인다.** 아무도 안 보는 신고가 생기면 안 된다.
+- 언어 줄의 건수는 처리 안 된 신고 수다 — 어느 언어에 검수자가 모자란지 여기서 본다.
+
 ## 운영 DB
 배포하면 V66 이 1번 회원을 관리자로 둔다. 다른 사람을 처음 지정할 때는 콘솔을 쓴다(쿼리 불필요).

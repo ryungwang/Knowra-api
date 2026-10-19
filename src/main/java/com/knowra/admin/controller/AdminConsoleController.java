@@ -21,7 +21,10 @@ public class AdminConsoleController {
 
     /** body: stat(OPEN|RESOLVED|DISMISSED), page */
     @PostMapping("/reportList")
-    public ResultVO reportList(@RequestBody(required = false) Map<String, Object> params) { return service.getReportList(params == null ? Map.of() : params); }
+    public ResultVO reportList(@RequestBody(required = false) Map<String, Object> params, @CurrentUser Long me) { return service.getReportList(params == null ? Map.of() : params, me); }
+
+    @PostMapping("/setMyModLangs")
+    public ResultVO setMyModLangs(@RequestBody Map<String, Object> params, @CurrentUser Long me) { return service.setMyModLangs(params, me); }
 
     /** body: reportSn, action(RESOLVE|DISMISS|REOPEN) */
     @PostMapping("/handleReport")

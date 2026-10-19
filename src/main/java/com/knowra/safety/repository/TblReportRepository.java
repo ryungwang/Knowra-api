@@ -12,6 +12,9 @@ public interface TblReportRepository extends JpaRepository<TblReport, Long> {
     /** 아동 안전 신고를 맨 위로 — 관리자가 가장 먼저 봐야 한다 */
     @org.springframework.data.jpa.repository.Query("SELECT r FROM TblReport r WHERE r.stat = :stat ORDER BY CASE WHEN r.reason = 'CHILD_SAFETY' THEN 0 ELSE 1 END, r.frstCrtDt DESC")
     Page<TblReport> findQueue(@org.springframework.data.repository.query.Param("stat") String stat, Pageable pageable);
+    /** 언어로 거른 큐 — 아동 안전과 언어를 모르는 신고(und·NULL)는 거름과 상관없이 넣는다. 아무도 안 보는 신고가 생기면 안 된다 */
+    @org.springframework.data.jpa.repository.Query("SELECT r FROM TblReport r WHERE r.stat = :stat AND (r.lang IN :langs OR r.lang IS NULL OR r.lang = 'und' OR r.reason = 'CHILD_SAFETY') ORDER BY CASE WHEN r.reason = 'CHILD_SAFETY' THEN 0 ELSE 1 END, r.frstCrtDt DESC")
+    Page<TblReport> findQueueByLangs(@org.springframework.data.repository.query.Param("stat") String stat, @org.springframework.data.repository.query.Param("langs") java.util.Collection<String> langs, Pageable pageable);
     long countByStat(String stat);
     long countByTargetKindAndTargetSnAndStat(String targetKind, long targetSn, String stat);
     long countByTargetKindAndTargetSn(String targetKind, long targetSn);

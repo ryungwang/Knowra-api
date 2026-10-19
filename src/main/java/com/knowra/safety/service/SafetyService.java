@@ -40,6 +40,7 @@ public class SafetyService {
     private final com.knowra.post.service.PostQuery postQuery;
     private final org.springframework.jdbc.core.JdbcTemplate jdbc;
     private final ReportAutoHide autoHide;
+    private final ReportLang reportLang;
 
     /** params: targetKind(POST|CMT|USER|MSG), targetSn, reason, detail? — 같은 대상은 한 번만. */
     @Transactional
@@ -75,7 +76,7 @@ public class SafetyService {
                 default -> null;
             };
             reportRepository.save(TblReport.builder().reporterSn(me).targetKind(kind).targetSn(target).reason(reason).detail(detail)
-                    .commSn(commSn).commStat(commSn == null ? null : "OPEN").build());
+                    .commSn(commSn).commStat(commSn == null ? null : "OPEN").lang(reportLang.of(kind, target)).build());
             autoHide.afterReport(kind, target, reason);
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
             resultVO.setResultMessage("신고가 접수됐어요. 확인 후 조치할게요.");

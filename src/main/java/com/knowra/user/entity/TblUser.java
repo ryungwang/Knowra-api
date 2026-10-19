@@ -79,6 +79,11 @@ public class TblUser {
   @Comment("사이트 운영 역할(USER / MOD / ADMIN)")
   private String siteRole = "USER";
 
+  @Column(name = "MOD_LANGS", length = 60)
+  @Comment("검수자가 맡는 언어(쉼표) — NULL = 전부")
+  @com.fasterxml.jackson.annotation.JsonIgnore
+  private String modLangs;
+
   @Column(name = "SUSPENDED_UNTIL")
   @Comment("정지 끝나는 때 — status='S' 인데 NULL 이면 무기한")
   @com.fasterxml.jackson.annotation.JsonIgnore
