@@ -57,6 +57,12 @@ public class TranslateController {
         return run(() -> svc.community(Long.parseLong(String.valueOf(b.get("commSn"))), me, to(b)));
     }
 
+    /** body: nickName, to? — 프로필 자기소개. 결과 {status, body, from} */
+    @PostMapping("/api/translate/bio")
+    public ResultVO bio(@RequestBody Map<String, Object> b, @CurrentUser Long me) {
+        return run(() -> svc.bio(String.valueOf(b.get("nickName")), me, to(b)));
+    }
+
     /** body: commSn, slug, to? — 커뮤니티 위키 페이지. 결과 {status, title, body, from} */
     @PostMapping("/api/translate/wiki")
     public ResultVO wiki(@RequestBody Map<String, Object> b, @CurrentUser Long me) {

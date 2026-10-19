@@ -62,6 +62,15 @@ public class TranslationService {
         return save("POST", postSn, to, hash, from, false, TranslateMarkup.titleBack(out.get(0).html()), TranslateMarkup.htmlBack(out.get(1).html()));
     }
 
+    /** 프로필 자기소개 — 프로필은 누구나 보므로 권한은 따로 없다. 결과 {status, body, from} */
+    public Map<String, Object> bio(String nickName, Long me, String to) {
+        List<Map<String, Object>> us = jdbc.queryForList("SELECT user_sn, bio FROM knowra_user.tbl_user WHERE nick_name = ? AND COALESCE(bio, '') <> ''", nickName);
+        if (us.isEmpty()) return status("skip");
+        long sn = ((Number) us.getFirst().get("user_sn")).longValue();
+        Map<Long, Map<String, Object>> res = plainMany("BIO", Map.of(sn, (String) us.getFirst().get("bio")), to, me, new LinkedHashMap<>());
+        return res.getOrDefault(sn, status("skip"));
+    }
+
     /**
      * 커뮤니티 위키 페이지 제목·본문 — 위키를 읽을 수 있는 사람만(비공개 커뮤니티는 멤버). 본문은 글과 같은 HTML 이다.
      * 운영진이 고친 뒤에는 원문이 달라져 다시 번역한다.
@@ -459,6 +468,10 @@ public class TranslationService {
         jdbc.update("""
                 DELETE FROM knowra_com.tbl_translation t WHERE t.target_kind = 'EVT'
                 AND NOT EXISTS (SELECT 1 FROM knowra_community.tbl_comm_event e WHERE e.event_sn = t.target_sn)""");
+        // 소개를 지웠거나 탈퇴했으면(탈퇴는 소개를 비운다) 번역본도
+        jdbc.update("""
+                DELETE FROM knowra_com.tbl_translation t WHERE t.target_kind = 'BIO'
+                AND NOT EXISTS (SELECT 1 FROM knowra_user.tbl_user u WHERE u.user_sn = t.target_sn AND COALESCE(u.bio, '') <> '')""");
         jdbc.update("""
                 DELETE FROM knowra_com.tbl_translation t WHERE t.target_kind = 'WIKI'
                 AND NOT EXISTS (SELECT 1 FROM knowra_community.tbl_comm_page g WHERE g.page_sn = t.target_sn)""");

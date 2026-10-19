@@ -118,6 +118,7 @@ public class UserService {
             profile.put("nickName", tblUser.getNickName());
             profile.put("name", tblUser.getName());
             profile.put("bio", tblUser.getBio());
+            profile.put("bioLang", com.knowra.cmm.i18n.LangDetect.detect(null, tblUser.getBio()));   // 화면이 번역을 물을지 정한다
             profile.put("interest", tblUser.getInterest());
             profile.put("pfp", tblUser.getPfp());
             profile.put("joinYmd", tblUser.getJoinYmd());
