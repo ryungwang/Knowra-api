@@ -57,6 +57,12 @@ public class TranslateController {
         return run(() -> Map.of("list", svc.flairs(sns, me, to(b))));
     }
 
+    /** body: seriesSn, to? — 연재 제목·소개. 결과 {status, title, body, from} */
+    @PostMapping("/api/translate/series")
+    public ResultVO series(@RequestBody Map<String, Object> b, @CurrentUser Long me) {
+        return run(() -> svc.series(Long.parseLong(String.valueOf(b.get("seriesSn"))), me, to(b)));
+    }
+
     /** body: postSns[], to? — 목록 카드 제목. 결과 result.list = {글번호: {status, title, from}} */
     @PostMapping("/api/translate/titles")
     public ResultVO titles(@RequestBody Map<String, Object> b, @CurrentUser Long me) {

@@ -111,6 +111,7 @@ public class SeriesService {
                 WHERE s.series_sn = ?""", seriesSn);
         if (rows.isEmpty()) throw new IllegalArgumentException("없는 연재예요.");
         Map<String, Object> out = new LinkedHashMap<>(rows.get(0));
+        out.put("lang", com.knowra.cmm.i18n.LangDetect.detect((String) out.get("title"), (String) out.get("desc")));   // 화면이 번역을 물을지 정한다
         out.put("mine", viewer != null && viewer == ((Number) out.get("userSn")).longValue());
         out.put("subscribers", jdbc.queryForObject("SELECT COUNT(*) FROM knowra_post.tbl_series_sub WHERE series_sn = ?", Long.class, seriesSn));
         out.put("subscribed", viewer != null && jdbc.queryForObject("SELECT COUNT(*) FROM knowra_post.tbl_series_sub WHERE series_sn = ? AND user_sn = ?", Long.class, seriesSn, viewer) > 0);

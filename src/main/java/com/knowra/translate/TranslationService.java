@@ -105,6 +105,24 @@ public class TranslationService {
         return save("POST", postSn, to, hash, from, false, TranslateMarkup.titleBack(out.get(0).html()), TranslateMarkup.htmlBack(out.get(1).html()));
     }
 
+    /** 연재 제목·소개 — 연재 정보는 누구나 본다(회차 글은 따로 권한을 본다). 결과 {status, title, body, from} */
+    public Map<String, Object> series(long seriesSn, Long me, String to) {
+        List<Map<String, Object>> rs = jdbc.queryForList("SELECT title, COALESCE(dscrptn, '') AS d FROM knowra_post.tbl_series WHERE series_sn = ?", seriesSn);
+        if (rs.isEmpty()) return status("skip");
+        String title = (String) rs.getFirst().get("title"), desc = (String) rs.getFirst().get("d");
+        String script = LangDetect.detect(title, desc);
+        if (!needs(script, to)) return status(unknown(script) ? "skip" : "same");
+        String hash = sha1("SER", title, desc);
+        Map<String, Object> hit = cached("SER", seriesSn, to, hash);
+        if (hit != null) return hit;
+        List<String> send = desc.isBlank() ? List.of(TranslateMarkup.plainOut(title)) : List.of(TranslateMarkup.plainOut(title), TranslateMarkup.plainOut(desc));
+        List<Translator.Out> out = call(send, to, me);
+        if (out == null) return status("unavailable");
+        String from = out.size() > 1 && out.get(1).from() != null ? out.get(1).from() : out.get(0).from();
+        if (sameLang(from, to)) return save("SER", seriesSn, to, hash, from, true, null, null);
+        return save("SER", seriesSn, to, hash, from, false, TranslateMarkup.plainBack(out.get(0).html()), out.size() > 1 ? TranslateMarkup.plainBack(out.get(1).html()) : "");
+    }
+
     /** 프로필 자기소개 — 프로필은 누구나 보므로 권한은 따로 없다. 결과 {status, body, from} */
     public Map<String, Object> bio(String nickName, Long me, String to) {
         List<Map<String, Object>> us = jdbc.queryForList("SELECT user_sn, bio FROM knowra_user.tbl_user WHERE nick_name = ? AND COALESCE(bio, '') <> ''", nickName);
@@ -573,6 +591,9 @@ public class TranslationService {
         jdbc.update("""
                 DELETE FROM knowra_com.tbl_translation t WHERE t.target_kind = 'MSG'
                 AND NOT EXISTS (SELECT 1 FROM knowra_user.tbl_chat_msg m WHERE m.msg_sn = t.target_sn AND m.hidden_at IS NULL AND m.deleted_at IS NULL)""");
+        jdbc.update("""
+                DELETE FROM knowra_com.tbl_translation t WHERE t.target_kind = 'SER'
+                AND NOT EXISTS (SELECT 1 FROM knowra_post.tbl_series x WHERE x.series_sn = t.target_sn)""");
         jdbc.update("""
                 DELETE FROM knowra_com.tbl_translation t WHERE t.target_kind = 'FLAIR'
                 AND NOT EXISTS (SELECT 1 FROM knowra_community.tbl_comm_flair f WHERE f.flair_sn = t.target_sn)""");
