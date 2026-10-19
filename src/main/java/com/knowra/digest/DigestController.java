@@ -19,9 +19,9 @@ public class DigestController {
     @GetMapping("/api/digest/preview")
     public ResultVO preview(@CurrentUser Long me) {
         ResultVO r = new ResultVO();
-        DigestService.Digest d = svc.build(me, LocalDateTime.now());
-        r.putResult("empty", d.isEmpty());
         var p = svc.prefs(me);   // 미리보기도 실제로 받을 언어로
+        DigestService.Digest d = svc.translated(svc.build(me, LocalDateTime.now()), me, p.lang());
+        r.putResult("empty", d.isEmpty());
         r.putResult("subject", d.isEmpty() ? "" : svc.subject(d, p.lang()));
         r.putResult("text", d.isEmpty() ? "" : svc.render(d, me, p));
         r.setResultCode(ResponseCode.SUCCESS.getCode());

@@ -55,20 +55,25 @@ public class DigestService {
     private final MailService mail;
     private final RedisApiService redis;
     private final TblUserStngRepository stngs;
+    private final org.springframework.beans.factory.ObjectProvider<com.knowra.translate.TranslationService> translation;
     private final String front;
     private final byte[] secret;
 
     public DigestService(MailService mail, RedisApiService redis, TblUserStngRepository stngs,
+                         org.springframework.beans.factory.ObjectProvider<com.knowra.translate.TranslationService> translation,
                          @Value("${knowra.front.base-url:http://localhost:5111}") String front,
                          @Value("${jwt.secret}") String secret) {
-        this.mail = mail; this.redis = redis; this.stngs = stngs;
+        this.mail = mail; this.redis = redis; this.stngs = stngs; this.translation = translation;
         this.front = front.replaceAll("/+$", "");
         this.secret = ("digest-off:" + secret).getBytes(StandardCharsets.UTF_8);
     }
 
     private JPAQueryFactory q() { return new JPAQueryFactory(em); }
 
-    public record Post(long postSn, String title, String commNm, String commName, int likeCnt, int cmtCnt) {}
+    /** translated — 받는 사람 언어로 옮긴 제목이다(원문은 다른 언어) */
+    public record Post(long postSn, String title, String commNm, String commName, int likeCnt, int cmtCnt, boolean translated) {
+        public Post(long postSn, String title, String commNm, String commName, int likeCnt, int cmtCnt) { this(postSn, title, commNm, commName, likeCnt, cmtCnt, false); }
+    }
     public record Event(String title, String commNm, String commName, LocalDateTime startsAt) {}
     public record Comm(String commNm, String commName, long newPosts) {}
     public record Digest(String name, List<Post> posts, List<Event> events, List<Comm> comms) {
@@ -129,6 +134,27 @@ public class DigestService {
         return new Digest(name, posts, events, comms);
     }
 
+    /**
+     * 다른 언어로 쓴 글 제목을 받는 사람 언어로 — 글 목록 카드와 같은 제목 번역(TranslationService.titles, 글마다 한 번 번역하고 기억)을 쓴다.
+     * 번역이 꺼져 있거나 실패하면 원문 그대로 보낸다. 메일이 번역 때문에 멈추면 안 된다.
+     */
+    public Digest translated(Digest d, long userSn, String lang) {
+        var tr = translation.getIfAvailable();
+        if (d.posts().isEmpty() || tr == null || !tr.available()) return d;
+        try {
+            Map<Long, Map<String, Object>> got = tr.titles(d.posts().stream().map(Post::postSn).toList(), userSn, lang);
+            List<Post> posts = d.posts().stream().map(x -> {
+                Map<String, Object> t = got.get(x.postSn());
+                return t != null && "ok".equals(t.get("status")) && t.get("title") instanceof String s && !s.isBlank()
+                        ? new Post(x.postSn(), s, x.commNm(), x.commName(), x.likeCnt(), x.cmtCnt(), true) : x;
+            }).toList();
+            return new Digest(d.name(), posts, d.events(), d.comms());
+        } catch (RuntimeException e) {
+            log.warn("주간 소식 제목 번역 건너뜀 — 원문으로: {}", e.toString());
+            return d;
+        }
+    }
+
     private static String label(Tuple t, QTblComm c) {
         String d = t.get(c.commDsplNm);
         return d != null && !d.isBlank() ? d : t.get(c.commNm);
@@ -177,6 +203,8 @@ public class DigestService {
             for (Comm x : d.comms()) sb.append("· ").append(Msg.tl(lang, "{0} {1}개", x.commName(), x.newPosts())).append("\n");
             sb.append("\n");
         }
+        if (d.posts().stream().anyMatch(Post::translated))
+            sb.append(Msg.tl(lang, "다른 언어로 쓴 글의 제목은 자동 번역했어요. 글을 열면 원문도 볼 수 있어요.")).append("\n\n");
         sb.append("—\n")
           .append(Msg.tl(lang, "설정에서 「주간 소식 메일」을 켠 분께 매주 월요일 아침에 보내요.")).append("\n")
           .append(Msg.tl(lang, "그만 받기: {0}", unsubscribeUrl(userSn))).append("\n");
@@ -257,6 +285,7 @@ public class DigestService {
                 if (d.isEmpty()) { empty++; continue; }
                 if (!redis.setIfAbsent(REDIS_DB, "digest:sent:" + week + ":" + sn, "1", 8L * 24 * 3600)) { dup++; continue; }
                 Prefs p = prefs(sn);
+                d = translated(d, sn, p.lang());
                 try { mail.send(t.get(u.email), subject(d, p.lang()), render(d, sn, p), unsubscribeHeaders(sn)); sent++; }
                 catch (RuntimeException ex) { redis.delRedis(REDIS_DB, "digest:sent:" + week + ":" + sn); throw ex; }   // 실패하면 표식을 지워 다음 실행에서 다시
             } catch (RuntimeException ex) {
