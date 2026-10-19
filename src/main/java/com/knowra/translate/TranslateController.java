@@ -50,6 +50,13 @@ public class TranslateController {
         return run(() -> svc.modmail(Long.parseLong(String.valueOf(b.get("mailSn"))), me, to(b)));
     }
 
+    /** body: flairSns[], to? — 말머리. 결과 result.list = {말머리번호: {status, body, from}} */
+    @PostMapping("/api/translate/flairs")
+    public ResultVO flairs(@RequestBody Map<String, Object> b, @CurrentUser Long me) {
+        List<Long> sns = b.get("flairSns") instanceof List<?> l ? l.stream().map(x -> Long.parseLong(String.valueOf(x))).toList() : List.of();
+        return run(() -> Map.of("list", svc.flairs(sns, me, to(b))));
+    }
+
     /** body: postSns[], to? — 목록 카드 제목. 결과 result.list = {글번호: {status, title, from}} */
     @PostMapping("/api/translate/titles")
     public ResultVO titles(@RequestBody Map<String, Object> b, @CurrentUser Long me) {

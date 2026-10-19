@@ -13,6 +13,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.HexFormat;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -427,6 +428,51 @@ public class TranslationService {
         return out;
     }
 
+    /**
+     * 말머리 여러 개 — 글 목록·글·커뮤니티 머리에 붙는 짧은 낱말. 비공개 커뮤니티 것은 멤버만.
+     * 「질문」「후기」처럼 짧아 하나로는 언어를 못 가리므로 커뮤니티 주 언어, 없으면 그 커뮤니티 말머리를 모아 글자로 가린다.
+     * 결과는 말머리 번호 → {status, body, from}
+     */
+    public Map<Long, Map<String, Object>> flairs(List<Long> flairSns, Long me, String to) {
+        List<Long> want = flairSns.stream().distinct().limit(MAX_TITLES).toList();
+        Map<Long, Map<String, Object>> res = new LinkedHashMap<>();
+        if (want.isEmpty()) return res;
+        String in = String.join(",", want.stream().map(String::valueOf).toList());
+        record F(long sn, long comm, String name, String lang) {}
+        List<F> fs = jdbc.query("""
+                SELECT f.flair_sn, f.comm_sn, f.name, c.lang FROM knowra_community.tbl_comm_flair f JOIN knowra_community.tbl_comm c ON c.comm_sn = f.comm_sn
+                WHERE f.flair_sn IN (""" + in + """
+                ) AND c.stat = 'Y' AND c.actvtn_yn = 'Y'
+                AND (COALESCE(c.prvcy_stng, '') <> 'private' OR EXISTS (SELECT 1 FROM knowra_community.tbl_comm_mbr m WHERE m.comm_sn = c.comm_sn AND m.user_sn = ? AND m.stat = 'ACTIVE' AND m.actvtn_yn = 'Y'))""",
+                (rs, i) -> new F(rs.getLong(1), rs.getLong(2), rs.getString(3), rs.getString(4)), me == null ? -1L : me);
+        Map<Long, String> script = new HashMap<>();
+        for (F f : fs) script.computeIfAbsent(f.comm(), c -> {
+            if (f.lang() != null) return f.lang();
+            List<String> names = jdbc.queryForList("SELECT name FROM knowra_community.tbl_comm_flair WHERE comm_sn = ?", String.class, c);
+            return LangDetect.detect(null, String.join(" ", names));
+        });
+        List<Long> sendSn = new ArrayList<>();
+        List<String> sendText = new ArrayList<>(), sendHash = new ArrayList<>(), sendName = new ArrayList<>();
+        for (F f : fs) {
+            String sc = script.get(f.comm());
+            if (!needs(sc, to)) { res.put(f.sn(), status(unknown(sc) ? "skip" : "same")); continue; }
+            String hash = sha1("FLAIR", null, f.name());
+            Map<String, Object> hit = cached("FLAIR", f.sn(), to, hash);
+            if (hit != null) { res.put(f.sn(), hit); continue; }
+            sendSn.add(f.sn()); sendText.add(TranslateMarkup.plainOut(f.name())); sendHash.add(hash); sendName.add(f.name());
+        }
+        if (sendSn.isEmpty()) return res;
+        List<Translator.Out> out = call(sendText, to, me);
+        for (int i = 0; i < sendSn.size(); i++) {
+            if (out == null) { res.put(sendSn.get(i), status("unavailable")); continue; }
+            Translator.Out o = out.get(i);
+            String tr = TranslateMarkup.plainBack(o.html());
+            boolean same = sameLang(o.from(), to) || tr.equals(sendName.get(i));
+            res.put(sendSn.get(i), save("FLAIR", sendSn.get(i), to, sendHash.get(i), o.from(), same, null, same ? null : tr));
+        }
+        return res;
+    }
+
     /** 일반 글자(댓글·메시지) 여럿을 한 번에 — 캐시에 있는 건 그대로, 나머지만 업체에 */
     private Map<Long, Map<String, Object>> plainMany(String kind, Map<Long, String> texts, String to, Long me, Map<Long, Map<String, Object>> res) {
         List<Long> sendSn = new ArrayList<>();
@@ -527,6 +573,9 @@ public class TranslationService {
         jdbc.update("""
                 DELETE FROM knowra_com.tbl_translation t WHERE t.target_kind = 'MSG'
                 AND NOT EXISTS (SELECT 1 FROM knowra_user.tbl_chat_msg m WHERE m.msg_sn = t.target_sn AND m.hidden_at IS NULL AND m.deleted_at IS NULL)""");
+        jdbc.update("""
+                DELETE FROM knowra_com.tbl_translation t WHERE t.target_kind = 'FLAIR'
+                AND NOT EXISTS (SELECT 1 FROM knowra_community.tbl_comm_flair f WHERE f.flair_sn = t.target_sn)""");
         jdbc.update("""
                 DELETE FROM knowra_com.tbl_translation t WHERE t.target_kind = 'POLLO'
                 AND NOT EXISTS (SELECT 1 FROM knowra_post.tbl_poll_option o JOIN knowra_post.tbl_post p ON p.post_sn = (SELECT post_sn FROM knowra_post.tbl_poll WHERE poll_sn = o.poll_sn)
