@@ -63,6 +63,12 @@ public class TranslateController {
         return run(() -> svc.series(Long.parseLong(String.valueOf(b.get("seriesSn"))), me, to(b)));
     }
 
+    /** body: commSn, to? — 위키 목차의 페이지 제목. 결과 result.list = {slug: {status, body, from}} */
+    @PostMapping("/api/translate/wikiTitles")
+    public ResultVO wikiTitles(@RequestBody Map<String, Object> b, @CurrentUser Long me) {
+        return run(() -> Map.of("list", svc.wikiTitles(Long.parseLong(String.valueOf(b.get("commSn"))), me, to(b))));
+    }
+
     /** body: postSns[], to? — 목록 카드 제목. 결과 result.list = {글번호: {status, title, from}} */
     @PostMapping("/api/translate/titles")
     public ResultVO titles(@RequestBody Map<String, Object> b, @CurrentUser Long me) {

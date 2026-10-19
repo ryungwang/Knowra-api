@@ -59,6 +59,7 @@ public class RateLimitInterceptor implements HandlerInterceptor {
             Map.entry("/api/translate/community",     new Rule("translate-comm", 300, 3600)),
             Map.entry("/api/translate/communityCards", new Rule("translate-cc", 600, 3600)),   // 탐색을 내릴 때마다 새로 보인 카드만
             Map.entry("/api/translate/bio",           new Rule("translate-bio", 300, 3600)),
+            Map.entry("/api/translate/wikiTitles",    new Rule("translate-wikit", 300, 3600)),
             Map.entry("/api/translate/wiki",          new Rule("translate-wiki", 300, 3600)),
             Map.entry("/api/translate/events",        new Rule("translate-evt", 300, 3600)),
             Map.entry("/api/community/modmail/reply",  new Rule("modmail-re", 30, 600)),

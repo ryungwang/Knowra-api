@@ -469,24 +469,51 @@ public class TranslationService {
             List<String> names = jdbc.queryForList("SELECT name FROM knowra_community.tbl_comm_flair WHERE comm_sn = ?", String.class, c);
             return LangDetect.detect(null, String.join(" ", names));
         });
+        Map<Long, String> texts = new LinkedHashMap<>(), scriptOf = new HashMap<>();
+        for (F f : fs) { texts.put(f.sn(), f.name()); scriptOf.put(f.sn(), script.get(f.comm())); }
+        return shortMany("FLAIR", texts, scriptOf, to, me, res);
+    }
+
+    /**
+     * 위키 목차의 페이지 제목 — 위키를 읽을 수 있는 사람만. 짧은 제목이 많아 커뮤니티 주 언어, 없으면 제목을 모아 글자로 가린다.
+     * 결과는 slug → {status, body, from}
+     */
+    public Map<String, Map<String, Object>> wikiTitles(long commSn, Long me, String to) {
+        com.knowra.community.entity.TblComm comm = wiki.requireReadable(commSn, me);
+        Map<Long, String> texts = new LinkedHashMap<>(), slugs = new HashMap<>();
+        jdbc.query("SELECT page_sn, slug, title FROM knowra_community.tbl_comm_page WHERE comm_sn = ? ORDER BY ord, page_sn LIMIT ?",
+                rs -> { texts.put(rs.getLong(1), rs.getString(3)); slugs.put(rs.getLong(1), rs.getString(2)); }, commSn, MAX_TITLES);
+        String script = comm.getLang() != null ? comm.getLang() : LangDetect.detect(null, String.join(" ", texts.values()));
+        Map<Long, String> scriptOf = new HashMap<>();
+        texts.keySet().forEach(sn -> scriptOf.put(sn, script));
+        Map<String, Map<String, Object>> out = new LinkedHashMap<>();
+        shortMany("WIKIT", texts, scriptOf, to, me, new LinkedHashMap<>()).forEach((sn, r) -> out.put(slugs.get(sn), r));
+        return out;
+    }
+
+    /**
+     * 짧은 낱말(말머리·위키 제목) 여럿 — 하나로는 언어를 못 가려 부르는 쪽이 정한 글자 체계(scriptOf)를 쓴다.
+     * 캐시에 있는 건 그대로, 나머지만 한 번에 업체에. 번역해도 같은 낱말(Q&A 등)은 같음으로 기억한다.
+     */
+    private Map<Long, Map<String, Object>> shortMany(String kind, Map<Long, String> texts, Map<Long, String> scriptOf, String to, Long me, Map<Long, Map<String, Object>> res) {
         List<Long> sendSn = new ArrayList<>();
-        List<String> sendText = new ArrayList<>(), sendHash = new ArrayList<>(), sendName = new ArrayList<>();
-        for (F f : fs) {
-            String sc = script.get(f.comm());
-            if (!needs(sc, to)) { res.put(f.sn(), status(unknown(sc) ? "skip" : "same")); continue; }
-            String hash = sha1("FLAIR", null, f.name());
-            Map<String, Object> hit = cached("FLAIR", f.sn(), to, hash);
-            if (hit != null) { res.put(f.sn(), hit); continue; }
-            sendSn.add(f.sn()); sendText.add(TranslateMarkup.plainOut(f.name())); sendHash.add(hash); sendName.add(f.name());
-        }
+        List<String> sendText = new ArrayList<>(), sendHash = new ArrayList<>(), sendSrc = new ArrayList<>();
+        texts.forEach((sn, text) -> {
+            String sc = scriptOf.get(sn);
+            if (!needs(sc, to)) { res.put(sn, status(unknown(sc) ? "skip" : "same")); return; }
+            String hash = sha1(kind, null, text);
+            Map<String, Object> hit = cached(kind, sn, to, hash);
+            if (hit != null) { res.put(sn, hit); return; }
+            sendSn.add(sn); sendText.add(TranslateMarkup.plainOut(text)); sendHash.add(hash); sendSrc.add(text);
+        });
         if (sendSn.isEmpty()) return res;
         List<Translator.Out> out = call(sendText, to, me);
         for (int i = 0; i < sendSn.size(); i++) {
             if (out == null) { res.put(sendSn.get(i), status("unavailable")); continue; }
             Translator.Out o = out.get(i);
             String tr = TranslateMarkup.plainBack(o.html());
-            boolean same = sameLang(o.from(), to) || tr.equals(sendName.get(i));
-            res.put(sendSn.get(i), save("FLAIR", sendSn.get(i), to, sendHash.get(i), o.from(), same, null, same ? null : tr));
+            boolean same = sameLang(o.from(), to) || tr.equals(sendSrc.get(i));
+            res.put(sendSn.get(i), save(kind, sendSn.get(i), to, sendHash.get(i), o.from(), same, null, same ? null : tr));
         }
         return res;
     }
@@ -591,6 +618,9 @@ public class TranslationService {
         jdbc.update("""
                 DELETE FROM knowra_com.tbl_translation t WHERE t.target_kind = 'MSG'
                 AND NOT EXISTS (SELECT 1 FROM knowra_user.tbl_chat_msg m WHERE m.msg_sn = t.target_sn AND m.hidden_at IS NULL AND m.deleted_at IS NULL)""");
+        jdbc.update("""
+                DELETE FROM knowra_com.tbl_translation t WHERE t.target_kind = 'WIKIT'
+                AND NOT EXISTS (SELECT 1 FROM knowra_community.tbl_comm_page x WHERE x.page_sn = t.target_sn)""");
         jdbc.update("""
                 DELETE FROM knowra_com.tbl_translation t WHERE t.target_kind = 'SER'
                 AND NOT EXISTS (SELECT 1 FROM knowra_post.tbl_series x WHERE x.series_sn = t.target_sn)""");
