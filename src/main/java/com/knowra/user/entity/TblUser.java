@@ -75,6 +75,10 @@ public class TblUser {
   @Comment("상태")
   private String status = "Y";
 
+  @Column(name = "SITE_ROLE", length = 10, nullable = false)
+  @Comment("사이트 운영 역할(USER / MOD / ADMIN)")
+  private String siteRole = "USER";
+
   @Column(name = "SUSPENDED_UNTIL")
   @Comment("정지 끝나는 때 — status='S' 인데 NULL 이면 무기한")
   @com.fasterxml.jackson.annotation.JsonIgnore

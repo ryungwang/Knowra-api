@@ -58,4 +58,8 @@ public class AdminConsoleController {
     /** body: userSn, suspend */
     @PostMapping("/setUserSuspend")
     public ResultVO setUserSuspend(@RequestBody Map<String, Object> params, @CurrentUser Long me) { return service.setUserSuspend(params, me); }
+
+    /** body: userSn, role(USER|MOD|ADMIN) — 관리자만(SecurityConfig) */
+    @PostMapping("/setUserRole")
+    public ResultVO setUserRole(@RequestBody Map<String, Object> params, @CurrentUser Long me) { return service.setUserRole(params, me); }
 }

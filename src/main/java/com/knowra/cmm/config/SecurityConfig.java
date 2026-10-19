@@ -3,6 +3,7 @@ package com.knowra.cmm.config;
 import com.knowra.cmm.jwt.JwtAuthenticationFilter;
 import com.knowra.cmm.security.JsonAuthErrorHandler;
 import lombok.RequiredArgsConstructor;
+import java.util.stream.Stream;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -115,7 +116,11 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/common/getCategoryList", "/upload/**", "/api/files/**").permitAll()   // /api/files = 로컬·dev 저장소(공개 파일만)
                         .requestMatchers("/ws/**").permitAll()
 
-                        // 관리자 — 역할까지 본다(토큰 role 클레임 → ROLE_ADMIN)
+                        // 검수자(MOD)도 쓰는 것 — 신고·이의 제기·사용자 정지·기록 보기. 관리자는 ROLE_MOD 도 갖는다
+                        .requestMatchers(HttpMethod.POST, Stream.of("stats", "reportList", "handleReport", "deletePost", "deleteCmt", "hideMsg",
+                                "userList", "setUserSuspend", "appealList", "appealDecide", "auditLog")
+                                .map(p -> "/api/admin/console/" + p).toArray(String[]::new)).hasRole("MOD")
+                        // 그 밖의 관리 — 관리자만(토큰 role 클레임 → ROLE_ADMIN). 역할 지정·공지·금칙어·오류·저작권·콘텐츠 생성
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
 
                         .anyRequest().authenticated()

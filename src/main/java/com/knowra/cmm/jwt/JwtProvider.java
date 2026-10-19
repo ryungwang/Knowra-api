@@ -75,8 +75,7 @@ public class JwtProvider {
                 .claim("loginId", loginId)
                 .claim("nickName", tblUser != null ? tblUser.getNickName() : null)
                 .claim("userSn", userSn)
-                // TODO 역할을 DB 컬럼으로 — 지금은 1번 사용자만 관리자라는 암묵 규칙이다.
-                .claim("role", userSn == 1 ? "ADMIN" : "USER")
+                .claim("role", tblUser != null && tblUser.getSiteRole() != null ? tblUser.getSiteRole() : "USER")   // V66 site_role
                 .claim("typ", typ)
                 .claim("sid", sid)
                 .issuedAt(now)

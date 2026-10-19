@@ -171,6 +171,7 @@ public class AdminConsoleService {
     private static Map<String, Object> userBrief(TblUser u) {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("userSn", u.getUserSn()); m.put("nickName", u.getNickName()); m.put("name", u.getName()); m.put("status", u.getStatus());
+        m.put("siteRole", u.getSiteRole());
         if ("S".equals(u.getStatus())) { m.put("suspendedUntil", u.getSuspendedUntil()); m.put("suspendReason", u.getSuspendReason()); }
         return m;
     }
@@ -284,6 +285,7 @@ public class AdminConsoleService {
             for (TblUser u : p.getContent()) {
                 Map<String, Object> m = userBrief(u);
                 m.put("loginId", u.getLoginId()); m.put("email", u.getEmail()); m.put("joinedAt", u.getFrstCrtDt());
+                m.put("deleted", !"Y".equals(u.getActvtnYn()));   // 탈퇴 — 역할·정지를 걸 수 없다
                 m.put("reportedCnt", reportRepository.countByTargetKindAndTargetSn("USER", u.getUserSn()));
                 list.add(m);
             }
@@ -311,6 +313,8 @@ public class AdminConsoleService {
             boolean suspend = Boolean.parseBoolean(String.valueOf(params.get("suspend")));
             if (userSn == admin) throw new IllegalArgumentException("자기 자신은 정지할 수 없습니다.");
             TblUser u = userRepository.findById(userSn).orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+            // 운영진끼리 정지로 다투지 않게 — 관리자가 역할을 먼저 내린 뒤에 정지한다
+            if (suspend && !"USER".equals(u.getSiteRole())) throw new IllegalArgumentException("운영진은 역할을 먼저 내린 뒤 정지할 수 있어요.");
             if (suspend) {
                 Object d = params.get("days");
                 int days = d == null || String.valueOf(d).isBlank() ? 0 : Integer.parseInt(String.valueOf(d));
@@ -334,6 +338,48 @@ public class AdminConsoleService {
                     u.getSuspendedUntil() == null ? null : u.getSuspendedUntil().toString(), admin);
             if (suspend) sessionService.revokeOthers(userSn, null);
             if (suspend) publisher.publishEvent(new com.knowra.session.SessionRevokedEvent(userSn, null));
+            resultVO.putResult("user", userBrief(u));
+            resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
+        } catch (IllegalArgumentException e) {
+            resultVO.setResultCode(ResponseCode.UPDATE_ERROR.getCode());
+            resultVO.setResultMessage(e.getMessage());
+        } catch (Exception e) {
+            ErrorLog.report(e);
+            resultVO.setResultCode(ResponseCode.UPDATE_ERROR.getCode());
+            resultVO.setResultMessage(ResponseCode.UPDATE_ERROR.getMessage());
+        }
+        return resultVO;
+    }
+
+    private static final List<String> SITE_ROLES = List.of("USER", "MOD", "ADMIN");
+
+    /**
+     * 사이트 운영 역할 바꾸기(관리자만 — SecurityConfig). params: userSn, role(USER|MOD|ADMIN).
+     * 자기 역할은 못 바꾼다 — 마지막 관리자가 스스로 내려 아무도 관리할 수 없게 되는 일을 막는다.
+     * 올리면 다음 토큰 갱신(길어야 액세스 토큰 수명)부터, 내리면 세션을 끊어 바로 반영한다.
+     */
+    @Transactional
+    public ResultVO setUserRole(Map<String, Object> params, Long admin) {
+        ResultVO resultVO = new ResultVO();
+        try {
+            long userSn = Long.parseLong(String.valueOf(params.get("userSn")));
+            String role = String.valueOf(params.get("role"));
+            if (!SITE_ROLES.contains(role)) throw new IllegalArgumentException("지원하지 않는 역할입니다.");
+            if (userSn == admin) throw new IllegalArgumentException("자기 역할은 바꿀 수 없어요.");
+            TblUser u = userRepository.findById(userSn).orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+            if (!"Y".equals(u.getActvtnYn())) throw new IllegalArgumentException("사용자를 찾을 수 없습니다.");
+            if (!"USER".equals(role) && "S".equals(u.getStatus())) throw new IllegalArgumentException("정지된 사람에게는 역할을 줄 수 없어요.");
+            String from = u.getSiteRole();
+            if (!role.equals(from)) {
+                u.setSiteRole(role);
+                userRepository.save(u);
+                adminLog.record(admin, "USER_ROLE", "USER", userSn, com.knowra.community.modlog.ModLogDetail.of(Map.of("roleFrom", from, "roleTo", role)));
+                // 내렸으면 이미 받은 토큰의 관리 권한이 남지 않게 모든 세션을 끊는다
+                if (SITE_ROLES.indexOf(role) < SITE_ROLES.indexOf(from)) {
+                    sessionService.revokeOthers(userSn, null);
+                    publisher.publishEvent(new com.knowra.session.SessionRevokedEvent(userSn, null));
+                }
+            }
             resultVO.putResult("user", userBrief(u));
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
         } catch (IllegalArgumentException e) {

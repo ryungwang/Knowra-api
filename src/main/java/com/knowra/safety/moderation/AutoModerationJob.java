@@ -33,7 +33,6 @@ public class AutoModerationJob {
 
     static final int BATCH = 32;
     static final int MAX_CHARS = 4000;
-    private static final long SITE_ADMIN_SN = 1L;
 
     private final JdbcTemplate jdbc;
     private final TextModerator moderator;
@@ -58,19 +57,19 @@ public class AutoModerationJob {
         List<Item> items = "POST".equals(kind) ? jdbc.query("""
                 SELECT p.post_sn, p.comm_sn, p.post_ttl, p.post_cntnt, COALESCE(p.mdfcn_dt, p.frst_crt_dt) AS ts
                 FROM knowra_post.tbl_post p
-                WHERE p.actvtn_yn = 'Y' AND p.stat = 'ACTIVE' AND p.user_sn <> ?
+                WHERE p.actvtn_yn = 'Y' AND p.stat = 'ACTIVE' AND p.user_sn NOT IN (SELECT user_sn FROM knowra_user.tbl_user WHERE site_role = 'ADMIN')
                   AND COALESCE(p.mdfcn_dt, p.frst_crt_dt) > ? AND COALESCE(p.mdfcn_dt, p.frst_crt_dt) <= now() - interval '30 seconds'
                 ORDER BY ts LIMIT ?""",
                 (rs, i) -> new Item(kind, rs.getLong(1), (Long) rs.getObject(2, Long.class), text(rs.getString(3), rs.getString(4)), rs.getTimestamp(5)),
-                SITE_ADMIN_SN, cursor, BATCH)
+                cursor, BATCH)
                 : jdbc.query("""
                 SELECT c.post_cmt_sn, p.comm_sn, c.cmt_cntnt, COALESCE(c.mdfcn_dt, c.frst_crt_dt) AS ts
                 FROM knowra_post.tbl_post_cmt c JOIN knowra_post.tbl_post p ON p.post_sn = c.post_sn
-                WHERE c.actvtn_yn = 'Y' AND c.stat = 'ACTIVE' AND c.user_sn <> ?
+                WHERE c.actvtn_yn = 'Y' AND c.stat = 'ACTIVE' AND c.user_sn NOT IN (SELECT user_sn FROM knowra_user.tbl_user WHERE site_role = 'ADMIN')
                   AND COALESCE(c.mdfcn_dt, c.frst_crt_dt) > ? AND COALESCE(c.mdfcn_dt, c.frst_crt_dt) <= now() - interval '30 seconds'
                 ORDER BY ts LIMIT ?""",
                 (rs, i) -> new Item(kind, rs.getLong(1), (Long) rs.getObject(2, Long.class), text(null, rs.getString(3)), rs.getTimestamp(4)),
-                SITE_ADMIN_SN, cursor, BATCH);
+                cursor, BATCH);
         if (items.isEmpty()) return;
 
         List<Item> send = new ArrayList<>();

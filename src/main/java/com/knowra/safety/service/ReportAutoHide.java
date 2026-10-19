@@ -26,9 +26,6 @@ public class ReportAutoHide {
     @Value("${knowra.report.auto-hide-threshold:5}")
     private int threshold;
 
-    /** 사이트 관리자 — 지금은 1번 회원뿐이다(JwtProvider 와 같은 기준). 아동 안전 신고를 바로 알린다 */
-    static final long SITE_ADMIN_SN = 1L;
-
     /** 신고 한 건이 들어온 뒤 부른다. 이번에 가렸으면 true */
     public boolean afterReport(String kind, long targetSn) { return afterReport(kind, targetSn, null); }
 
@@ -39,7 +36,9 @@ public class ReportAutoHide {
      */
     public boolean afterReport(String kind, long targetSn, String reason) {
         boolean child = "CHILD_SAFETY".equals(reason);
-        if (child) publisher.publishEvent(new NotifTriggerEvent(SITE_ADMIN_SN, null, "CHILD_SAFETY_REPORT", null, "ADMIN", kind));
+        if (child) for (Long staff : jdbc.queryForList(   // 관리자·검수자 모두(V66 site_role) — 한 사람만 알면 그 사람이 자는 동안 퍼진다
+                "SELECT user_sn FROM knowra_user.tbl_user WHERE site_role IN ('ADMIN', 'MOD') AND actvtn_yn = 'Y' AND status <> 'S'", Long.class))
+            publisher.publishEvent(new NotifTriggerEvent(staff, null, "CHILD_SAFETY_REPORT", null, "ADMIN", kind));
         if (child && "MSG".equals(kind))
             return jdbc.update("UPDATE knowra_user.tbl_chat_msg SET hidden_at = now() WHERE msg_sn = ? AND hidden_at IS NULL", targetSn) == 1;
         if (!"POST".equals(kind) && !"CMT".equals(kind)) return false;

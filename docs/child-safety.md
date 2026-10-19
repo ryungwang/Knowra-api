@@ -8,7 +8,7 @@
 | 상황 | 동작 | 코드 |
 |---|---|---|
 | 누군가 「아동 안전」으로 신고 | 신고 **한 건**으로 글·댓글을 바로 가린다(REVIEW), 메시지는 바로 가린다 | `ReportAutoHide.afterReport` |
-| 같은 때 | 사이트 관리자(1번 회원)에게 알림·푸시 — 알림 설정과 상관없이 | `NotificationEventListener.wantsPush` |
+| 같은 때 | 관리자·검수자 모두(`site_role` ADMIN·MOD)에게 알림·푸시 — 알림 설정과 상관없이 | `NotificationEventListener.wantsPush` |
 | 같은 때 | 글쓴이에게는 **알리지 않는다**(증거 인멸·경고가 된다) | `ReportAutoHide` |
 | 관리자 신고함 | 아동 안전 신고가 맨 위 | `TblReportRepository.findQueue` |
 | 사진 올리기 | 불법 이미지 해시 대조 자리(지금은 **대조하지 않음**) | `ImageScanner`, `NoopImageScanner` |

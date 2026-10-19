@@ -68,9 +68,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         long userSn = jwtProvider.extractUserSn(token);
-        List<GrantedAuthority> authorities = "ADMIN".equals(jwtProvider.extractRole(token))
-                ? List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))
-                : List.of();
+        // 관리자는 검수자가 하는 일도 한다 — ROLE_MOD 를 함께 준다
+        List<GrantedAuthority> authorities = switch (String.valueOf(jwtProvider.extractRole(token))) {
+            case "ADMIN" -> List.of(new SimpleGrantedAuthority("ROLE_ADMIN"), new SimpleGrantedAuthority("ROLE_MOD"));
+            case "MOD" -> List.of(new SimpleGrantedAuthority("ROLE_MOD"));
+            default -> List.of();
+        };
 
         UsernamePasswordAuthenticationToken authentication =
                 new UsernamePasswordAuthenticationToken(userSn, null, authorities);
