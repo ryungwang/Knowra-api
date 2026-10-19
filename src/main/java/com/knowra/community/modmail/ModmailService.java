@@ -117,12 +117,14 @@ public class ModmailService {
             // 보낸 사람에게는 운영진 개인 이름을 주지 않는다 — 화면이 「운영진」으로 쓴다
             if (!fromMod || mod) o.put("nickName", r.get("nick_name"));
             o.put("body", r.get("body"));
+            o.put("lang", com.knowra.cmm.i18n.LangDetect.detect(null, (String) r.get("body")));   // 화면이 번역을 물을지 정한다
             o.put("createdAt", r.get("created_at"));
             msgs.add(o);
         }
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("mailSn", mailSn);
         out.put("subject", m.get("subject"));
+        out.put("subjectLang", com.knowra.cmm.i18n.LangDetect.detect((String) m.get("subject"), null));
         out.put("stat", m.get("stat"));
         out.put("createdAt", m.get("created_at"));
         out.put("community", Map.of("commSn", commSn, "commNm", m.get("comm_nm"), "commDsplNm", commName(m)));

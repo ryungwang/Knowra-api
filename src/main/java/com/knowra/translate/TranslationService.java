@@ -362,6 +362,29 @@ public class TranslationService {
         return plainMany("MSG", texts, to, me, res);
     }
 
+    /**
+     * 운영진 문의 — 보낸 사람이거나 그 커뮤니티 운영진(OWNER·ADMIN)만. 남이 쓴 것만(제목은 보낸 사람이 썼다).
+     * 결과 {subject: {status, body, from}?, list: {메시지번호: {status, body, from}}}
+     */
+    public Map<String, Object> modmail(long mailSn, Long me, String to) {
+        if (me == null) throw new IllegalArgumentException("문의를 찾을 수 없어요.");
+        List<Map<String, Object>> ms = jdbc.queryForList("SELECT comm_sn, user_sn, subject FROM knowra_community.tbl_comm_modmail WHERE mail_sn = ?", mailSn);
+        if (ms.isEmpty()) throw new IllegalArgumentException("문의를 찾을 수 없어요.");
+        Map<String, Object> m = ms.getFirst();
+        long owner = ((Number) m.get("user_sn")).longValue();
+        boolean mod = Boolean.TRUE.equals(jdbc.queryForObject("""
+                SELECT EXISTS (SELECT 1 FROM knowra_community.tbl_comm_mbr WHERE comm_sn = ? AND user_sn = ? AND stat = 'ACTIVE' AND role IN ('OWNER','ADMIN'))""",
+                Boolean.class, m.get("comm_sn"), me));
+        if (owner != me && !mod) throw new IllegalArgumentException("문의를 찾을 수 없어요.");   // 있는지조차 알리지 않는다
+        Map<Long, String> texts = new LinkedHashMap<>();
+        jdbc.query("SELECT msg_sn, body FROM knowra_community.tbl_comm_modmail_msg WHERE mail_sn = ? AND sender_sn <> ? AND COALESCE(body, '') <> '' ORDER BY msg_sn LIMIT ?",
+                rs -> { texts.put(rs.getLong(1), rs.getString(2)); }, mailSn, me, MAX_CMTS);
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("list", plainMany("MML", texts, to, me, new LinkedHashMap<>()));
+        if (owner != me) out.put("subject", plainMany("MMS", Map.of(mailSn, (String) m.get("subject")), to, me, new LinkedHashMap<>()).getOrDefault(mailSn, status("skip")));
+        return out;
+    }
+
     /** 일반 글자(댓글·메시지) 여럿을 한 번에 — 캐시에 있는 건 그대로, 나머지만 업체에 */
     private Map<Long, Map<String, Object>> plainMany(String kind, Map<Long, String> texts, String to, Long me, Map<Long, Map<String, Object>> res) {
         List<Long> sendSn = new ArrayList<>();
@@ -462,6 +485,12 @@ public class TranslationService {
         jdbc.update("""
                 DELETE FROM knowra_com.tbl_translation t WHERE t.target_kind = 'MSG'
                 AND NOT EXISTS (SELECT 1 FROM knowra_user.tbl_chat_msg m WHERE m.msg_sn = t.target_sn AND m.hidden_at IS NULL AND m.deleted_at IS NULL)""");
+        jdbc.update("""
+                DELETE FROM knowra_com.tbl_translation t WHERE t.target_kind = 'MML'
+                AND NOT EXISTS (SELECT 1 FROM knowra_community.tbl_comm_modmail_msg x WHERE x.msg_sn = t.target_sn)""");
+        jdbc.update("""
+                DELETE FROM knowra_com.tbl_translation t WHERE t.target_kind = 'MMS'
+                AND NOT EXISTS (SELECT 1 FROM knowra_community.tbl_comm_modmail x WHERE x.mail_sn = t.target_sn)""");
         jdbc.update("""
                 DELETE FROM knowra_com.tbl_translation t WHERE t.target_kind IN ('COMM', 'COMMC')
                 AND NOT EXISTS (SELECT 1 FROM knowra_community.tbl_comm c WHERE c.comm_sn = t.target_sn AND c.stat = 'Y' AND c.actvtn_yn = 'Y')""");

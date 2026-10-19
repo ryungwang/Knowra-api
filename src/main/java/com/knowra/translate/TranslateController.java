@@ -16,7 +16,7 @@ import java.util.function.Supplier;
 /**
  * 글·목록 제목·댓글·대화 메시지 번역. 언어는 to 가 없으면 지금 화면 언어.
  * 글·제목·댓글·커뮤니티는 로그인하지 않아도 묻는다 — 단 이미 해 둔 번역만 돌려준다(번역 한도를 아무나 쓰지 못하게, TranslationService.call).
- * 대화는 로그인한 멤버만.
+ * 대화는 로그인한 멤버만, 운영진 문의는 보낸 사람과 그 커뮤니티 운영진만.
  */
 @RestController
 @RequiredArgsConstructor
@@ -42,6 +42,12 @@ public class TranslateController {
     public ResultVO messages(@RequestBody Map<String, Object> b, @CurrentUser Long me) {
         List<Long> sns = b.get("msgSns") instanceof List<?> l ? l.stream().map(x -> Long.parseLong(String.valueOf(x))).toList() : List.of();
         return run(() -> Map.of("list", svc.messages(Long.parseLong(String.valueOf(b.get("roomSn"))), sns, me, to(b))));
+    }
+
+    /** body: mailSn, to? — 운영진 문의 제목·대화. 결과 {subject?, list: {메시지번호: {status, body, from}}} */
+    @PostMapping("/api/translate/modmail")
+    public ResultVO modmail(@RequestBody Map<String, Object> b, @CurrentUser Long me) {
+        return run(() -> svc.modmail(Long.parseLong(String.valueOf(b.get("mailSn"))), me, to(b)));
     }
 
     /** body: postSns[], to? — 목록 카드 제목. 결과 result.list = {글번호: {status, title, from}} */
