@@ -57,6 +57,13 @@ public class TranslateController {
         return run(() -> svc.community(Long.parseLong(String.valueOf(b.get("commSn"))), me, to(b)));
     }
 
+    /** body: eventSns[], to? — 모임 제목·설명. 결과 result.list = {모임번호: {status, title, body, from}} */
+    @PostMapping("/api/translate/events")
+    public ResultVO events(@RequestBody Map<String, Object> b, @CurrentUser Long me) {
+        List<Long> sns = b.get("eventSns") instanceof List<?> l ? l.stream().map(x -> Long.parseLong(String.valueOf(x))).toList() : List.of();
+        return run(() -> Map.of("list", svc.events(sns, me, to(b))));
+    }
+
     private static String to(Map<String, Object> b) {
         String t = b.get("to") == null ? null : Lang.normalize(String.valueOf(b.get("to")));
         return t != null && Lang.ALL.contains(t) ? t : Lang.current();

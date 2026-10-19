@@ -74,7 +74,9 @@ public class DigestService {
     public record Post(long postSn, String title, String commNm, String commName, int likeCnt, int cmtCnt, boolean translated) {
         public Post(long postSn, String title, String commNm, String commName, int likeCnt, int cmtCnt) { this(postSn, title, commNm, commName, likeCnt, cmtCnt, false); }
     }
-    public record Event(String title, String commNm, String commName, LocalDateTime startsAt) {}
+    public record Event(long eventSn, String title, String commNm, String commName, LocalDateTime startsAt, boolean translated) {
+        Event(long eventSn, String title, String commNm, String commName, LocalDateTime startsAt) { this(eventSn, title, commNm, commName, startsAt, false); }
+    }
     public record Comm(String commNm, String commName, long newPosts) {}
     public record Digest(String name, List<Post> posts, List<Event> events, List<Comm> comms) {
         public boolean isEmpty() { return posts.isEmpty() && events.isEmpty(); }
@@ -116,11 +118,11 @@ public class DigestService {
                 .map(t -> new Post(t.get(p.postSn), t.get(p.postTtl), t.get(c.commNm), label(t, c), t.get(p.likeCnt), t.get(p.cmtCnt)))
                 .toList();
 
-        List<Event> events = q().select(e.title, c.commNm, c.commDsplNm, e.startsAt)
+        List<Event> events = q().select(e.eventSn, e.title, c.commNm, c.commDsplNm, e.startsAt)
                 .from(e).join(c).on(c.commSn.eq(e.commSn))
                 .where(e.commSn.in(commSns), e.stat.eq("ACTIVE"), e.startsAt.between(now, now.plusDays(7)))
                 .orderBy(e.startsAt.asc()).limit(3).fetch().stream()
-                .map(t -> new Event(t.get(e.title), t.get(c.commNm), label(t, c), t.get(e.startsAt)))
+                .map(t -> new Event(t.get(e.eventSn), t.get(e.title), t.get(c.commNm), label(t, c), t.get(e.startsAt)))
                 .toList();
 
         List<Comm> comms = q().select(c.commNm, c.commDsplNm, p.count())
@@ -135,20 +137,27 @@ public class DigestService {
     }
 
     /**
-     * 다른 언어로 쓴 글 제목을 받는 사람 언어로 — 글 목록 카드와 같은 제목 번역(TranslationService.titles, 글마다 한 번 번역하고 기억)을 쓴다.
+     * 다른 언어로 쓴 글·모임 제목을 받는 사람 언어로 — 글 목록 카드와 같은 제목 번역(TranslationService.titles),
+     * 모임 목록과 같은 모임 번역(TranslationService.events)을 쓴다. 한 번 번역하면 기억해 두고 같이 쓴다.
      * 번역이 꺼져 있거나 실패하면 원문 그대로 보낸다. 메일이 번역 때문에 멈추면 안 된다.
      */
     public Digest translated(Digest d, long userSn, String lang) {
         var tr = translation.getIfAvailable();
-        if (d.posts().isEmpty() || tr == null || !tr.available()) return d;
+        if ((d.posts().isEmpty() && d.events().isEmpty()) || tr == null || !tr.available()) return d;
         try {
-            Map<Long, Map<String, Object>> got = tr.titles(d.posts().stream().map(Post::postSn).toList(), userSn, lang);
+            Map<Long, Map<String, Object>> got = d.posts().isEmpty() ? Map.of() : tr.titles(d.posts().stream().map(Post::postSn).toList(), userSn, lang);
             List<Post> posts = d.posts().stream().map(x -> {
                 Map<String, Object> t = got.get(x.postSn());
                 return t != null && "ok".equals(t.get("status")) && t.get("title") instanceof String s && !s.isBlank()
                         ? new Post(x.postSn(), s, x.commNm(), x.commName(), x.likeCnt(), x.cmtCnt(), true) : x;
             }).toList();
-            return new Digest(d.name(), posts, d.events(), d.comms());
+            Map<Long, Map<String, Object>> evs = d.events().isEmpty() ? Map.of() : tr.events(d.events().stream().map(Event::eventSn).toList(), userSn, lang);
+            List<Event> events = d.events().stream().map(x -> {
+                Map<String, Object> t = evs.get(x.eventSn());
+                return t != null && "ok".equals(t.get("status")) && t.get("title") instanceof String s && !s.isBlank()
+                        ? new Event(x.eventSn(), s, x.commNm(), x.commName(), x.startsAt(), true) : x;
+            }).toList();
+            return new Digest(d.name(), posts, events, d.comms());
         } catch (RuntimeException e) {
             log.warn("주간 소식 제목 번역 건너뜀 — 원문으로: {}", e.toString());
             return d;
@@ -203,8 +212,8 @@ public class DigestService {
             for (Comm x : d.comms()) sb.append("· ").append(Msg.tl(lang, "{0} {1}개", x.commName(), x.newPosts())).append("\n");
             sb.append("\n");
         }
-        if (d.posts().stream().anyMatch(Post::translated))
-            sb.append(Msg.tl(lang, "다른 언어로 쓴 글의 제목은 자동 번역했어요. 글을 열면 원문도 볼 수 있어요.")).append("\n\n");
+        if (d.posts().stream().anyMatch(Post::translated) || d.events().stream().anyMatch(Event::translated))
+            sb.append(Msg.tl(lang, "다른 언어로 쓴 제목은 자동 번역했어요. 사이트에서 열면 원문도 볼 수 있어요.")).append("\n\n");
         sb.append("—\n")
           .append(Msg.tl(lang, "설정에서 「주간 소식 메일」을 켠 분께 매주 월요일 아침에 보내요.")).append("\n")
           .append(Msg.tl(lang, "그만 받기: {0}", unsubscribeUrl(userSn))).append("\n");

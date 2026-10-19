@@ -41,6 +41,7 @@ public class TranslationService {
     private final TranslateQuota quota;
     private final PostService postService;
     private final com.knowra.cmm.ratelimit.RateLimiter limiter;
+    private final com.knowra.wiki.WikiService wiki;   // 커뮤니티 읽기 권한 — 모임 목록과 같은 기준
 
     public boolean available() { return translator.getIfAvailable() != null; }
 
@@ -207,6 +208,37 @@ public class TranslationService {
         return o;
     }
 
+    /**
+     * 모임 제목·설명 여러 개 — 결과는 모임 번호 → {status, title, body, from}. 모임 목록·상세와 같은 기준으로 볼 수 있는 것만
+     * (비공개 커뮤니티는 멤버만, 취소된 모임도 목록에 보이므로 번역한다). 설명이 비었으면 제목만 보낸다.
+     */
+    public Map<Long, Map<String, Object>> events(List<Long> eventSns, Long me, String to) {
+        List<Long> want = eventSns.stream().distinct().limit(MAX_TITLES).toList();
+        Map<Long, Map<String, Object>> res = new LinkedHashMap<>();
+        if (want.isEmpty()) return res;
+        String in = String.join(",", want.stream().map(String::valueOf).toList());
+        List<Map<String, Object>> rows = jdbc.queryForList("SELECT event_sn, comm_sn, title, descr FROM knowra_community.tbl_comm_event WHERE event_sn IN (" + in + ")");
+        Map<Long, Boolean> readable = new java.util.HashMap<>();
+        for (Map<String, Object> r : rows) {
+            long sn = ((Number) r.get("event_sn")).longValue(), comm = ((Number) r.get("comm_sn")).longValue();
+            if (!readable.computeIfAbsent(comm, c -> { try { wiki.requireReadable(c, me); return true; } catch (IllegalArgumentException e) { return false; } })) continue;
+            String title = (String) r.get("title"), descr = r.get("descr") == null ? "" : (String) r.get("descr");
+            String script = LangDetect.detect(title, descr);
+            if (!needs(script, to)) { res.put(sn, status(unknown(script) ? "skip" : "same")); continue; }
+            String hash = sha1("EVT", title, descr);
+            Map<String, Object> hit = cached("EVT", sn, to, hash);
+            if (hit != null) { res.put(sn, hit); continue; }
+            // 모임마다 따로 부른다 — 한 화면에 모임은 많아야 몇 개고, 제목·설명 짝이 어긋날 일이 없다
+            List<String> send = descr.isBlank() ? List.of(TranslateMarkup.titleOut(title)) : List.of(TranslateMarkup.titleOut(title), TranslateMarkup.plainOut(descr));
+            List<Translator.Out> out = call(send, to, me);
+            if (out == null) { res.put(sn, status("unavailable")); continue; }
+            String from = out.size() > 1 && out.get(1).from() != null ? out.get(1).from() : out.getFirst().from();
+            res.put(sn, sameLang(from, to) ? save("EVT", sn, to, hash, from, true, null, null)
+                    : save("EVT", sn, to, hash, from, false, TranslateMarkup.titleBack(out.getFirst().html()), out.size() > 1 ? TranslateMarkup.plainBack(out.get(1).html()) : ""));
+        }
+        return res;
+    }
+
     /** 한 글의 댓글 여러 개 — 결과는 댓글 번호 → {status, body, from} */
     public Map<Long, Map<String, Object>> comments(long postSn, List<Long> cmtSns, Long me, String to) {
         if (!postService.canSeePost(postSn, me)) throw new IllegalArgumentException("게시글을 찾을 수 없습니다.");
@@ -351,6 +383,9 @@ public class TranslationService {
         jdbc.update("""
                 DELETE FROM knowra_com.tbl_translation t WHERE t.target_kind = 'COMM'
                 AND NOT EXISTS (SELECT 1 FROM knowra_community.tbl_comm c WHERE c.comm_sn = t.target_sn AND c.stat = 'Y' AND c.actvtn_yn = 'Y')""");
+        jdbc.update("""
+                DELETE FROM knowra_com.tbl_translation t WHERE t.target_kind = 'EVT'
+                AND NOT EXISTS (SELECT 1 FROM knowra_community.tbl_comm_event e WHERE e.event_sn = t.target_sn)""");
         jdbc.update("DELETE FROM knowra_com.tbl_query_translation WHERE created_at < now() - INTERVAL '30 days'");
     }
 

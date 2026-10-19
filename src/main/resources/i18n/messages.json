@@ -809,11 +809,11 @@
   "zh-Hans": "你已在其他设备登录，当前设备已退出。",
   "zh-Hant": "你已在其他裝置登入，因此已登出。"
  },
- "다른 언어로 쓴 글의 제목은 자동 번역했어요. 글을 열면 원문도 볼 수 있어요.": {
-  "en": "Titles of posts written in other languages were translated automatically. Open a post to see the original.",
-  "ja": "他の言語で書かれた投稿のタイトルは自動翻訳しています。投稿を開くと原文も見られます。",
-  "zh-Hans": "其他语言帖子的标题已自动翻译。打开帖子即可查看原文。",
-  "zh-Hant": "其他語言貼文的標題已自動翻譯。打開貼文即可查看原文。"
+ "다른 언어로 쓴 제목은 자동 번역했어요. 사이트에서 열면 원문도 볼 수 있어요.": {
+  "en": "Titles written in other languages were translated automatically. Open them on the site to see the original.",
+  "ja": "他の言語で書かれたタイトルは自動翻訳しました。サイトで開くと原文も見られます。",
+  "zh-Hans": "其他语言的标题已自动翻译。在网站上打开即可查看原文。",
+  "zh-Hant": "其他語言的標題已自動翻譯。在網站上開啟即可查看原文。"
  },
  "다운로드 처리 중 오류가 발생했습니다.": {
   "en": "Something went wrong while downloading.",

@@ -107,6 +107,7 @@ public class CommEventService {
             m.put("chatRoomSn", room);
         }
         m.put("past", e.getStartsAt().isBefore(LocalDateTime.now()));
+        m.put("lang", com.knowra.cmm.i18n.LangDetect.detect(e.getTitle(), e.getDescr()));   // 화면이 번역을 물을지 정한다 — 글자 체계까지만
         return m;
     }
 

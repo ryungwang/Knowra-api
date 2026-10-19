@@ -96,7 +96,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/feed/**", "/api/post/getPost", "/api/post/getPostHistory", "/api/post/getCmtHistory", "/api/series/get", "/api/series/byUser", "/api/search", "/api/search/suggest", "/api/tag/info", "/api/tag/posts", "/api/legal/info", "/api/appeal/suspended").permitAll()
                         .requestMatchers(HttpMethod.POST,
                                 "/api/post/getPostCmtList", "/api/post/viewPost", "/api/post/getCommPostList",
-                                "/api/translate/post", "/api/translate/comments", "/api/translate/titles", "/api/translate/community",   // 비로그인은 이미 해 둔 번역만(TranslationService.call)
+                                "/api/translate/post", "/api/translate/comments", "/api/translate/titles", "/api/translate/community", "/api/translate/events",   // 비로그인은 이미 해 둔 번역만(TranslationService.call)
                                 "/api/appeal/suspended",
                                 "/api/copyright/notice").permitAll()   // 권리자는 회원이 아닐 수 있다   // 정지돼 로그인할 수 없는 사람의 이의 — 로그인 때 받은 확인표로만
 
