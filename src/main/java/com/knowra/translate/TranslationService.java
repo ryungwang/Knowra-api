@@ -192,6 +192,55 @@ public class TranslationService {
         return save("COMM", commSn, to, hash, from, false, tr[0], body);
     }
 
+    /**
+     * 탐색·목록 카드의 커뮤니티 이름·소개 여러 개 — 결과는 커뮤니티 번호 → {status, name, desc, from}.
+     * 규칙은 빼고(카드엔 안 보인다) 따로 기억한다(COMMC). 이름·소개는 비공개 커뮤니티도 탐색에 보이므로 누구에게나 준다.
+     */
+    public Map<Long, Map<String, Object>> communityCards(List<Long> commSns, Long me, String to) {
+        List<Long> want = commSns.stream().distinct().limit(MAX_TITLES).toList();
+        Map<Long, Map<String, Object>> res = new LinkedHashMap<>();
+        if (want.isEmpty()) return res;
+        String in = String.join(",", want.stream().map(String::valueOf).toList());
+        List<Long> sendSn = new ArrayList<>();
+        List<String> sendHash = new ArrayList<>(), sendText = new ArrayList<>();
+        List<Integer> sendAt = new ArrayList<>();   // 커뮤니티마다 보낸 칸 수 — 이름만(1) 또는 이름·소개(2)
+        jdbc.query("SELECT comm_sn, comm_dspl_nm, comm_nm, comm_desc, lang FROM knowra_community.tbl_comm WHERE comm_sn IN (" + in + ") AND stat = 'Y' AND actvtn_yn = 'Y'", rs -> {
+            long sn = rs.getLong(1);
+            String name = rs.getString(2) != null && !rs.getString(2).isBlank() ? rs.getString(2) : rs.getString(3);
+            String desc = rs.getString(4) == null ? "" : rs.getString(4);
+            String script = rs.getString(5) != null ? rs.getString(5) : LangDetect.detect(name, desc);
+            if (!needs(script, to)) { res.put(sn, status(unknown(script) ? "skip" : "same")); return; }
+            String hash = sha1("COMMC", name, desc);
+            Map<String, Object> hit = cached("COMMC", sn, to, hash);
+            if (hit != null) { res.put(sn, cardOut(hit)); return; }
+            sendSn.add(sn); sendHash.add(hash);
+            sendText.add(TranslateMarkup.titleOut(name));
+            if (desc.isBlank()) sendAt.add(1); else { sendAt.add(2); sendText.add(TranslateMarkup.plainOut(desc)); }
+        });
+        if (sendSn.isEmpty()) return res;
+        List<Translator.Out> out = call(sendText, to, me);
+        int k = 0;
+        for (int i = 0; i < sendSn.size(); i++) {
+            long sn = sendSn.get(i);
+            int n = sendAt.get(i);
+            if (out == null) { res.put(sn, status("unavailable")); continue; }
+            Translator.Out nm = out.get(k), ds = n > 1 ? out.get(k + 1) : null;
+            k += n;
+            String from = ds != null && ds.from() != null ? ds.from() : nm.from();
+            res.put(sn, cardOut(sameLang(from, to) ? save("COMMC", sn, to, sendHash.get(i), from, true, null, null)
+                    : save("COMMC", sn, to, sendHash.get(i), from, false, TranslateMarkup.titleBack(nm.html()), ds == null ? "" : TranslateMarkup.plainBack(ds.html()))));
+        }
+        return res;
+    }
+
+    /** 기억해 둔 꼴(title·body)을 카드 꼴(name·desc)로 */
+    private static Map<String, Object> cardOut(Map<String, Object> m) {
+        if (!"ok".equals(m.get("status"))) return m;
+        Map<String, Object> o = new LinkedHashMap<>();
+        o.put("status", "ok"); o.put("from", m.get("from")); o.put("name", m.get("title")); o.put("desc", m.get("body"));
+        return o;
+    }
+
     /** 기억해 둔 꼴(title = 이름, body = {desc, rules} JSON)을 화면이 쓰는 꼴로. 규칙을 못 보는 사람에게는 규칙을 빼고 */
     private static Map<String, Object> communityOut(Map<String, Object> m, boolean rulesVisible) {
         Map<String, Object> o = new LinkedHashMap<>();
@@ -381,7 +430,7 @@ public class TranslationService {
                 DELETE FROM knowra_com.tbl_translation t WHERE t.target_kind = 'MSG'
                 AND NOT EXISTS (SELECT 1 FROM knowra_user.tbl_chat_msg m WHERE m.msg_sn = t.target_sn AND m.hidden_at IS NULL AND m.deleted_at IS NULL)""");
         jdbc.update("""
-                DELETE FROM knowra_com.tbl_translation t WHERE t.target_kind = 'COMM'
+                DELETE FROM knowra_com.tbl_translation t WHERE t.target_kind IN ('COMM', 'COMMC')
                 AND NOT EXISTS (SELECT 1 FROM knowra_community.tbl_comm c WHERE c.comm_sn = t.target_sn AND c.stat = 'Y' AND c.actvtn_yn = 'Y')""");
         jdbc.update("""
                 DELETE FROM knowra_com.tbl_translation t WHERE t.target_kind = 'EVT'
