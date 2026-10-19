@@ -63,6 +63,30 @@ public class TranslationService {
     }
 
     /**
+     * 커뮤니티 위키 페이지 제목·본문 — 위키를 읽을 수 있는 사람만(비공개 커뮤니티는 멤버). 본문은 글과 같은 HTML 이다.
+     * 운영진이 고친 뒤에는 원문이 달라져 다시 번역한다.
+     */
+    public Map<String, Object> wikiPage(long commSn, String slug, Long me, String to) {
+        com.knowra.community.entity.TblComm comm = wiki.requireReadable(commSn, me);
+        List<Map<String, Object>> ps = jdbc.queryForList("SELECT page_sn, title, content FROM knowra_community.tbl_comm_page WHERE comm_sn = ? AND slug = ?", commSn, slug);
+        if (ps.isEmpty()) throw new IllegalArgumentException("페이지를 찾을 수 없어요.");
+        Map<String, Object> p = ps.getFirst();
+        long pageSn = ((Number) p.get("page_sn")).longValue();
+        String title = (String) p.get("title"), body = (String) p.get("content");
+        // 운영진이 고른 주 언어가 있으면 그것, 여러 언어면 글자로
+        String script = comm.getLang() != null ? comm.getLang() : LangDetect.detect(title, body);
+        if (!needs(script, to)) return status(unknown(script) ? "skip" : "same");
+        String hash = sha1("WIKI", title, body);
+        Map<String, Object> hit = cached("WIKI", pageSn, to, hash);
+        if (hit != null) return hit;
+        List<Translator.Out> out = call(List.of(TranslateMarkup.titleOut(title), TranslateMarkup.htmlOut(body)), to, me);
+        if (out == null) return status("unavailable");
+        String from = out.get(1).from() != null ? out.get(1).from() : out.get(0).from();
+        if (sameLang(from, to)) return save("WIKI", pageSn, to, hash, from, true, null, null);
+        return save("WIKI", pageSn, to, hash, from, false, TranslateMarkup.titleBack(out.get(0).html()), TranslateMarkup.htmlBack(out.get(1).html()));
+    }
+
+    /**
      * 목록 카드의 제목 여럿 — 결과는 글 번호 → {status, title, from}. 볼 수 있는 글만.
      * 본문까지 번역해 둔 글은 그 제목을 쓰고, 아니면 제목만 따로 번역해 둔다(TITLE) — 목록은 본문을 번역하지 않는다(한도를 아낀다).
      * 제목은 짧아 언어 판별이 덜 정확하므로 글의 원문 언어로 적지 않는다(learnLang 은 본문 번역에서만).
@@ -435,6 +459,9 @@ public class TranslationService {
         jdbc.update("""
                 DELETE FROM knowra_com.tbl_translation t WHERE t.target_kind = 'EVT'
                 AND NOT EXISTS (SELECT 1 FROM knowra_community.tbl_comm_event e WHERE e.event_sn = t.target_sn)""");
+        jdbc.update("""
+                DELETE FROM knowra_com.tbl_translation t WHERE t.target_kind = 'WIKI'
+                AND NOT EXISTS (SELECT 1 FROM knowra_community.tbl_comm_page g WHERE g.page_sn = t.target_sn)""");
         jdbc.update("DELETE FROM knowra_com.tbl_query_translation WHERE created_at < now() - INTERVAL '30 days'");
     }
 

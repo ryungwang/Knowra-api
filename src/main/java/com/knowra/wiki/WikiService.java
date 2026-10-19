@@ -86,6 +86,9 @@ public class WikiService {
         TblCommPage p = pages.findByCommSnAndSlug(commSn, slug).orElseThrow(() -> new IllegalArgumentException("페이지를 찾을 수 없어요."));
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("slug", p.getSlug()); m.put("title", p.getTitle()); m.put("content", p.getContent()); m.put("updatedAt", p.getUpdatedAt());
+        // 화면이 번역을 물을지 정한다 — 커뮤니티 주 언어가 있으면 그것, 없으면 글자 체계
+        TblComm c = comms.findByCommSn(commSn);
+        m.put("lang", c != null && c.getLang() != null ? c.getLang() : com.knowra.cmm.i18n.LangDetect.detect(p.getTitle(), p.getContent()));
         return m;
     }
 

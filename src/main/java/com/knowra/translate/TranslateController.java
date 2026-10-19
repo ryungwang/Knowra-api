@@ -57,6 +57,12 @@ public class TranslateController {
         return run(() -> svc.community(Long.parseLong(String.valueOf(b.get("commSn"))), me, to(b)));
     }
 
+    /** body: commSn, slug, to? — 커뮤니티 위키 페이지. 결과 {status, title, body, from} */
+    @PostMapping("/api/translate/wiki")
+    public ResultVO wiki(@RequestBody Map<String, Object> b, @CurrentUser Long me) {
+        return run(() -> svc.wikiPage(Long.parseLong(String.valueOf(b.get("commSn"))), String.valueOf(b.get("slug")), me, to(b)));
+    }
+
     /** body: commSns[], to? — 탐색·목록 카드의 커뮤니티 이름·소개. 결과 result.list = {커뮤니티번호: {status, name, desc, from}} */
     @PostMapping("/api/translate/communityCards")
     public ResultVO communityCards(@RequestBody Map<String, Object> b, @CurrentUser Long me) {
