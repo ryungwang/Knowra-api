@@ -55,7 +55,19 @@ SES 는 처음엔 샌드박스(인증한 주소에만 발송)라 **프로덕션 
 - 메일은 **받는 사람 언어·시간대**로 쓴다(V51).
 - 주간 소식은 **한 번 눌러 그만 받기** 머리글(`List-Unsubscribe`, `List-Unsubscribe-Post`, RFC 8058)을 단다 —
   2024년부터 Gmail·Yahoo 가 대량 발송자에게 요구한다. 누르면 `POST /api/digest/oneclick` 이 서명을 확인하고 끈다.
-- 반송·스팸 신고 처리(SES 의 bounce·complaint 알림을 받아 그 주소로 더 보내지 않기)는 **아직 없다** — 발송량이 늘면 붙인다.
+- **반송·스팸 신고 처리**(V67 `tbl_mail_suppression`) — SES 가 알려 주면 그 주소로 더 보내지 않는다.
+  - 영구 반송: 본인이 요청한 메일(인증 코드·비밀번호 재설정)만 보낸다. 그 주소로 코드를 확인하거나 재설정 링크를 쓰면 기록이 지워진다.
+  - 스팸 신고: 주간 소식만 보내지 않고 주간 소식 설정을 끈다. 보안·계정 안내는 계속 간다. 본인이 주간 소식을 다시 켜면 지워진다.
+  - 일시 반송(메일함 가득 등)은 적지 않는다.
+
+### 반송·스팸 신고 알림 연결 (SES 를 쓸 때)
+1. SNS 주제를 만든다(예: `ses-feedback`, SES 와 같은 지역).
+2. SES › 확인된 도메인 › 알림 — Bounce·Complaint 를 그 주제로 보낸다(「원래 머리글 포함」은 끈다).
+3. 서버 환경변수 `MAIL_SNS_TOPIC_ARN=<주제 ARN>` 을 넣고 재시작한다. 비어 있으면 받는 창구가 꺼져 있다(404).
+4. SNS › 구독 만들기 — 프로토콜 HTTPS, 엔드포인트 `https://<API 도메인>/api/mail/sns`. 서버가 구독 확인을 스스로 끝낸다(로그 「SES 알림 구독 확인 완료」).
+5. SES 시뮬레이터 주소 `bounce@simulator.amazonses.com` 으로 하나 보내 `tbl_mail_suppression` 에 들어오는지 본다.
+
+서명(SNS SignatureVersion 1·2)과 주제 ARN 을 확인하고, 인증서·구독 주소는 `sns.<지역>.amazonaws.com` 만 연다 — 아무나 남의 주소를 막을 수 없다.
 
 ## 3. 확인
 - [ ] CDN 뒤에서 `/assets/*` 응답에 `cf-cache-status: HIT`(Cloudflare) 또는 `x-cache: Hit`(CloudFront)

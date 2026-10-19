@@ -86,6 +86,7 @@ public class SecurityConfig {
                                 "/api/auth/verify/send", "/api/auth/verify/check",
                                 "/api/auth/password/forgot", "/api/auth/password/reset",
                                 "/api/digest/unsubscribe", "/api/digest/oneclick",
+                                "/api/mail/sns",   // SES 반송·스팸 신고 알림 — SNS 서명으로 확인한다(MailFeedbackController)
                                 "/api/err/report").permitAll()
 
                         // 비로그인 열람 — 피드·글·댓글

@@ -17,13 +17,15 @@ import org.springframework.stereotype.Service;
 public class MailService {
 
     private final ObjectProvider<JavaMailSender> senderProvider;
+    private final MailSuppression suppression;
     private final boolean enabled;
     private final String from;
 
-    public MailService(ObjectProvider<JavaMailSender> senderProvider,
+    public MailService(ObjectProvider<JavaMailSender> senderProvider, MailSuppression suppression,
                        @Value("${knowra.mail.enabled:false}") boolean enabled,
                        @Value("${knowra.mail.from:no-reply@knowra.local}") String from) {
         this.senderProvider = senderProvider;
+        this.suppression = suppression;
         this.enabled = enabled;
         this.from = from;
     }
@@ -33,10 +35,23 @@ public class MailService {
     public void send(String to, String subject, String text) { send(to, subject, text, null); }
 
     /**
+     * 본인이 방금 요청한 메일(인증 코드·비밀번호 재설정) — 반송 기록이 있어도 보낸다. 주소를 고쳤을 수 있고,
+     * 받아서 확인하면 기록이 지워진다(MailSuppression.clear). 1분에 한 번 제한이 이미 걸려 있다.
+     */
+    public void sendRequested(String to, String subject, String text) { deliver(to, subject, text, null); }
+
+    /**
      * 머리글을 더 붙여 보낸다 — 주간 소식처럼 한꺼번에 보내는 메일은 List-Unsubscribe(한 번 눌러 그만 받기, RFC 8058)가
      * 있어야 Gmail·Yahoo 가 스팸함으로 보내지 않는다(2024년부터 대량 발송자 요건). headers 가 없으면 예전과 같다.
      */
     public void send(String to, String subject, String text, java.util.Map<String, String> headers) {
+        // 반송된 주소엔 보내지 않는다. 머리글이 있는 메일(주간 소식)은 대량 메일이라 스팸 신고한 주소도 건너뛴다
+        String why = suppression.blocked(to, headers != null && !headers.isEmpty());
+        if (why != null) { log.info("[MAIL] 건너뜀 — 수신 거부 주소({}) subject={}", why, subject); return; }
+        deliver(to, subject, text, headers);
+    }
+
+    private void deliver(String to, String subject, String text, java.util.Map<String, String> headers) {
         if (!enabled) {
             log.info("[MAIL(dry-run)] to={} subject={} headers={}\n{}", to, subject, headers, text);
             return;

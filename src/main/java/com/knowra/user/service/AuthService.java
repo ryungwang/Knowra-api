@@ -46,6 +46,7 @@ public class AuthService {
 
     private final RestTemplate restTemplate = new RestTemplate();
     private final com.knowra.legal.LegalService legalService;
+    private final com.knowra.cmm.messaging.MailSuppression mailSuppression;
     private final com.knowra.safety.appeal.ModDecisionService decisionService;
 
     private final AuthenticationManager authenticationManager;
@@ -562,7 +563,7 @@ public class AuthService {
             }
             String lang = com.knowra.cmm.i18n.Lang.current();   // 가입 전이라 설정이 없다 — 지금 화면의 언어로
             if (isEmail) {
-                mailService.send(target, com.knowra.cmm.i18n.Msg.tl(lang, "[Knowra] 인증 코드 {0}", code),
+                mailService.sendRequested(target, com.knowra.cmm.i18n.Msg.tl(lang, "[Knowra] 인증 코드 {0}", code),
                         com.knowra.cmm.i18n.Msg.tl(lang, "Knowra 가입 인증 코드는 {0} 입니다.\n10분 안에 입력해주세요. 본인이 요청하지 않았다면 이 메일은 무시하셔도 됩니다.", code));
             } else {
                 smsService.send(target, com.knowra.cmm.i18n.Msg.tl(lang, "[Knowra] 인증 코드 {0} (10분 내 입력)", code));
@@ -585,6 +586,7 @@ public class AuthService {
         String target  = VerificationService.normalize(channel, params.get("target"));
         String ticket = verificationService.check(channel, target, params.get("code"));
         if (ticket != null) {
+            if (VerificationService.EMAIL.equals(channel)) mailSuppression.clear(target);   // 코드를 받았다 = 메일이 들어간다
             resultVO.putResult("ticket", ticket);   // 가입·이메일 변경 때 이걸 같이 보낸다(확인한 사람만 쓸 수 있게)
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
         } else {
@@ -619,7 +621,7 @@ public class AuthService {
                 String link = frontBaseUrl + "/reset-password?token=" + token;
                 TblUserStng st = tblUserStngRepository.findByUserSn(sn);   // 받는 사람의 언어 — 설정이 없으면 지금 화면의 언어
                 String lang = st != null && st.getLang() != null ? st.getLang() : com.knowra.cmm.i18n.Lang.current();
-                mailService.send(email, com.knowra.cmm.i18n.Msg.tl(lang, "[Knowra] 비밀번호 재설정"),
+                mailService.sendRequested(email, com.knowra.cmm.i18n.Msg.tl(lang, "[Knowra] 비밀번호 재설정"),
                         com.knowra.cmm.i18n.Msg.tl(lang, "아래 링크에서 새 비밀번호를 설정할 수 있습니다. 링크는 30분 동안만 유효합니다.\n\n{0}\n\n본인이 요청하지 않았다면 이 메일은 무시하셔도 됩니다.", link));
                 if (verificationService.exposeCode()) resultVO.putResult("devToken", token);
             }
@@ -655,6 +657,7 @@ public class AuthService {
             redisApiService.delRedis(REDIS_DB, "pwreset:" + token);
             redisApiService.delRedis(REDIS_DB, "pwreset:user:" + user.getUserSn());
             sessionService.revokeOthers(user.getUserSn(), null);   // 비밀번호를 잊었거나 뺏겼다 — 모든 기기를 끊는다
+            if (user.getEmail() != null) mailSuppression.clear(user.getEmail());   // 메일로 받은 링크를 썼다 = 메일이 들어간다
             resultVO.setResultCode(ResponseCode.SUCCESS.getCode());
             resultVO.setResultMessage("비밀번호가 바뀌었습니다. 새 비밀번호로 로그인해주세요.");
         } catch (Exception e) {
